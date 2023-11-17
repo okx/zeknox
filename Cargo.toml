@@ -1,0 +1,35 @@
+[package]
+name = "cryptography_cuda"
+version = "0.1.0"
+edition = "2021"
+authors = [ "" ]
+description = "An implementation of cryptography using cuda"
+homepage = ""
+repository = "https://github.com/okx/cryptography_cuda.git"
+links = "cryptography_cuda"
+include = [
+    "/Cargo.toml",
+    "/build.rs",
+    "/src/**",
+    "/cryptography_cuda/cuda/**",
+]
+
+
+[dependencies] 
+
+
+[build-dependencies]
+cc = "^1.0.70"
+which = "^4.0"
+cmake = "*"
+bindgen = "*"
+libc = "*" #TODO: move libc dependencies to build 
+
+[dev-dependencies]
+rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
+plonky2_field = {git="https://github.com/0xPolygonZero/plonky2.git"}
+"criterion" = "*"
+
+[features]
+default = ["gl64"]
+gl64 = []
