@@ -11,6 +11,12 @@ extern "C" {
         resbult: *mut u64,
     ) -> ();
 
+    fn goldilocks_sub(
+        result: *mut u64,
+        alloc: *mut u64,
+        resbult: *mut u64,
+    ) -> ();
+
     fn mul(
         result: *mut u32,
     ) -> ();
@@ -20,13 +26,25 @@ extern "C" {
     fn  cuda_available() -> bool;
 }
 
-/// Compute an in-place NTT on the input data.
 #[allow(non_snake_case)]
 pub fn goldilocks_add_rust(a: &mut u64, b: &mut u64) -> u64 {
     let mut result: u64 = 0;
     unsafe {
-        println!("a: {:?}, b: {:?}", *a, *b);
         goldilocks_add(
+            &mut result ,
+            a ,
+            b ,
+        )
+    };
+
+    result
+}
+
+#[allow(non_snake_case)]
+pub fn goldilocks_sub_rust(a: &mut u64, b: &mut u64) -> u64 {
+    let mut result: u64 = 0;
+    unsafe {
+        goldilocks_sub(
             &mut result ,
             a ,
             b ,
