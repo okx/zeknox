@@ -12,6 +12,7 @@
 #include <util/cuda_available.hpp>
 
 #ifndef __CUDA_ARCH__   // below is cpu code; __CUDA_ARCH__ should not be defined
+
 extern "C" void goldilocks_add(fr_t *result, fr_t *a, fr_t *b)
 {
 
@@ -48,12 +49,20 @@ extern "C" void goldilocks_sub(fr_t *result, fr_t *a, fr_t *b)
 
 }
 
-extern "C" void mul(uint32_t *result)
+extern "C" void goldilocks_mul(fr_t *result, fr_t *a, fr_t *b)
 {
-    uint32_t *d_result;
-    cudaMalloc((uint32_t **)&d_result, sizeof(uint32_t));
-    mul_kernel<<<1, 1>>>(d_result);
-    cudaMemcpy(&result, d_result, sizeof(uint32_t), cudaMemcpyDeviceToHost);
+       fr_t *d_result, *d_a, *d_b;
+    cudaMalloc((fr_t**)&d_result, sizeof(fr_t));
+    cudaMalloc((fr_t**)&d_a, sizeof(fr_t));
+    cudaMalloc((fr_t**)&d_b, sizeof(fr_t));
+
+    cudaMemcpy(d_a, a, sizeof(fr_t), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, b, sizeof(fr_t), cudaMemcpyHostToDevice);
+    goldilocks_mul_kernel<<<1,1>>>(
+        d_result, d_a, d_b
+        );
+
+    cudaMemcpy(result, d_result, sizeof(fr_t), cudaMemcpyDeviceToHost);
 }
 
 #endif

@@ -21,13 +21,9 @@ __global__ void goldilocks_sub_kernel(
     *d_result = *d_a - *d_b;
 }
 
-__global__ void mul_kernel(uint32_t *result)
+__global__ void goldilocks_mul_kernel(fr_t *d_result, fr_t *d_a, fr_t *d_b)
 {
-    uint32_t a = (1 << 31) +2;
-    uint32_t b = 1 << 2;
-    uint32_t lo, hi;
-    asm("mul.lo.u32 %0, %2, %3; mul.hi.u32 %1, %2, %3;" : "=r"(lo) ,"=r"(hi)  : "r"(a), "r"(b));
-    *result = lo;
+    *d_result = *d_a * *d_b;
 }
 
 #endif
