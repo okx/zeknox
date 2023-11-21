@@ -35,12 +35,28 @@ public:
     inline gl64_t(const uint64_t a)                     { val = a;  to(); }
     inline gl64_t(const uint64_t *p)                    { val = *p; to(); }
 
+    static inline const gl64_t one()
+    {   gl64_t ret; ret.val = 1; return ret;   }
+
     inline operator uint64_t() const
     {   auto ret = *this; ret.from(); return ret.val;   }
 
     inline void to()    { reduce(); }
     inline void from()  {}
 
+    // conditionally select. return a if sel_a != 0, else b
+    static inline gl64_t csel(const gl64_t& a, const gl64_t& b, int sel_a)
+    {
+        gl64_t ret;
+        asm("{ .reg.pred %sel_a;");
+        asm("setp.ne.s32 %sel_a, %0, 0;" : : "r"(sel_a));
+        asm("selp.u64 %0, %1, %2, %sel_a;" : "=l"(ret.val) : "l"(a.val), "l"(b.val));
+        asm("}");
+        return ret;
+    }
+
+
+    // addition
     inline gl64_t& operator+=(const gl64_t& b)
     {
         from();
@@ -67,6 +83,7 @@ public:
         return a += b;   
     }
 
+    // subtraction
     inline gl64_t& operator-=(const gl64_t& b)
     {
         uint64_t tmp;
@@ -83,15 +100,53 @@ public:
 
         return *this;
     }
-
     friend inline gl64_t operator-(gl64_t a, const gl64_t& b)
     {   return a -= b;   }
 
-
+    // multiplication
     inline gl64_t& operator*=(const gl64_t& a)
     {   mul(a);           return *this;   }
     friend inline gl64_t operator*(gl64_t a, const gl64_t& b)
     {   a.mul(b); a.to(); return a;   }
+
+    // right shift
+    inline gl64_t& operator>>=(unsigned r)
+    {
+        uint64_t tmp;
+        uint32_t carry;
+
+        while (r--) {
+            tmp = val&1 ? MOD : 0;
+            asm("add.cc.u64 %0, %0, %2; addc.u32 %1, 0, 0;"
+                : "+l"(tmp) "=r"(carry)
+                : "l"(val));   // if val is even, it could be divided by 2 (rshift 1); if it is odd, add by MOD first, make it even, 
+                               // and then divide by 2 (rshift 1), if there is carry out in addition, it means 1 << 64 is not considerred, add 1 << 63
+                               // to the result ( 1<<63 is half of 1<<64);
+            val = (tmp >> 1) + ((uint64_t)carry << 63);
+        }
+
+        return *this;
+    }
+    friend inline gl64_t operator>>(gl64_t a, unsigned r)
+    {   return a >>= r;   }
+
+    // raise to a variable power, variable in respect to threadIdx,
+    // but mind the ^ operator's precedence!
+    inline gl64_t& operator^=(uint32_t p)
+    {
+        gl64_t sqr = *this;
+        *this = csel(*this, one(), p&1);
+
+        #pragma unroll 1
+        while (p >>= 1) {
+            sqr.mul(sqr);
+            if (p&1)
+                mul(sqr);
+        }
+        to();
+
+        return *this;
+    }
 
 private:
     inline uint32_t lo() const  { return (uint32_t)(val); }

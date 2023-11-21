@@ -11,6 +11,8 @@ extern "C" {
 
     fn goldilocks_mul(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
+    fn goldilocks_rshift(result: *mut u64, val: *mut u64, r: *mut u32) -> ();
+
     fn cuda_available() -> bool;
 }
 
@@ -34,6 +36,14 @@ pub fn goldilocks_sub_rust(a: &mut u64, b: &mut u64) -> u64 {
 pub fn goldilocks_mul_rust(a: &mut u64, b: &mut u64) -> u64 {
     let mut result: u64 = 0;
     unsafe { goldilocks_mul(&mut result, a, b) };
+
+    result
+}
+
+#[allow(non_snake_case)]
+pub fn goldilocks_rshift_rust(a: &mut u64, r: &mut u32) -> u64 {
+    let mut result: u64 = 0;
+    unsafe { goldilocks_rshift(&mut result, a, r) };
 
     result
 }

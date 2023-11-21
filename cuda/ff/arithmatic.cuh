@@ -26,4 +26,9 @@ __global__ void goldilocks_mul_kernel(fr_t *d_result, fr_t *d_a, fr_t *d_b)
     *d_result = *d_a * *d_b;
 }
 
+
+__global__ void goldilocks_rshift_kernel(fr_t *d_result, fr_t *d_a, uint32_t *r)
+{
+    *d_result = *d_a>>(*r);
+}
 #endif
