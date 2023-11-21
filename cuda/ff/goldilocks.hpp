@@ -20,9 +20,9 @@ public:
     inline gl64_t(uint64_t a) : val(a)  {}
     inline operator uint64_t() const    { return val;   }
     static inline const gl64_t one()    { return 1;     }
-    // inline gl64_t& operator+=(gl64_t b) { return *this; }
-    // inline gl64_t& operator-=(gl64_t b) { return *this; }
-    // inline gl64_t& operator*=(gl64_t b) { return *this; }
+    inline gl64_t& operator+=(gl64_t b) { return *this; }
+    inline gl64_t& operator-=(gl64_t b) { return *this; }
+    inline gl64_t& operator*=(gl64_t b) { return *this; }
     // inline gl64_t& operator^=(int p)    { return *this; }
     // inline gl64_t& sqr()                { return *this; }
     inline void zero()                  { val = 0;      }
