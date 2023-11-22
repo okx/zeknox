@@ -1,5 +1,5 @@
 use cryptography_cuda::{
-    check_cuda_available, goldilocks_add_rust, goldilocks_mul_rust, goldilocks_sub_rust, goldilocks_rshift_rust,
+    check_cuda_available, goldilocks_add_rust, goldilocks_mul_rust, goldilocks_sub_rust, goldilocks_inverse_rust, goldilocks_rshift_rust,
 };
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::types::{Field, PrimeField64};
@@ -71,6 +71,17 @@ fn test_goldilocks_mul_rust() {
     let a_cpu = GoldilocksField::from_canonical_u64(a);
     let b_cpu = GoldilocksField::from_canonical_u64(b);
     let cpu_ret = a_cpu.mul(b_cpu).to_canonical_u64();
+    assert_eq!(gpu_ret, cpu_ret);
+}
+
+#[test]
+fn test_goldilocks_inverse_rust() {
+    let mut a: u64 = 0x0000000011ffffff;
+    let gpu_ret = goldilocks_inverse_rust(&mut a);
+
+    let a_cpu = GoldilocksField::from_canonical_u64(a);
+    let cpu_ret = a_cpu.inverse().to_canonical_u64();
+    // TODO: not passed
     assert_eq!(gpu_ret, cpu_ret);
 }
 

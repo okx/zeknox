@@ -135,7 +135,7 @@ public:
     inline gl64_t& operator^=(uint32_t p)
     {
         gl64_t sqr = *this;
-        *this = csel(*this, one(), p&1);
+        *this = csel(*this, one(), p&1);  // if p is odd, return *this, else return one
 
         #pragma unroll 1
         while (p >>= 1) {
@@ -147,6 +147,36 @@ public:
 
         return *this;
     }
+    friend inline gl64_t operator^(gl64_t a, uint32_t p)
+    {   return a ^= p;   }
+    inline gl64_t operator()(uint32_t p)
+    {   return *this^p;   }
+
+public:
+    inline gl64_t reciprocal() const
+    {
+        gl64_t t0, t1;
+
+        t1 = sqr_n_mul<1>(*this, 1, *this); // 0b11
+        t0 = sqr_n_mul<2>(t1, 2,  t1);      // 0b1111
+        t0 = sqr_n_mul<2>(t0, 2,  t1);      // 0b111111
+        t1 = sqr_n_mul<2>(t0, 6,  t0);      // 0b111111111111
+        t1 = sqr_n_mul<2>(t1, 12, t1);      // 0b111111111111111111111111
+        t1 = sqr_n_mul<2>(t1, 6,  t0);      // 0b111111111111111111111111111111
+        t1 = sqr_n_mul<1>(t1, 1,  *this);   // 0b1111111111111111111111111111111
+        t1 = sqr_n_mul<2>(t1, 32, t1);      // 0b111111111111111111111111111111101111111111111111111111111111111
+        t1 = sqr_n_mul<1>(t1, 1,  *this);   // 0b1111111111111111111111111111111011111111111111111111111111111111; which is P-2; a^{p-2} is the inverse
+        t1.to();
+
+        return t1;
+    }
+
+    friend inline gl64_t operator/(int one, const gl64_t& a)
+    {   if (one != 1) asm("trap;"); return a.reciprocal();   }
+    friend inline gl64_t operator/(const gl64_t& a, const gl64_t& b)
+    {   return a * b.reciprocal();   }
+    inline gl64_t& operator/=(const gl64_t& a)
+    {   return *this *= a.reciprocal();   }
 
 private:
     inline uint32_t lo() const  { return (uint32_t)(val); }
@@ -173,6 +203,25 @@ private:
             : "+r"(temp[1]), "+r"(temp[2]), "+r"(temp[3])
             : "r"(a1), "r"(b0), "r"(carry));
         reduce(temp);
+    }
+private:
+    template<int unroll> // 1, 2 or 3
+    static __device__ __noinline__ gl64_t sqr_n_mul(gl64_t s, uint32_t n, gl64_t m)
+    {
+        if (unroll&1) {
+            s.mul(s);
+            n--;
+        }
+        if (unroll > 1) {
+            #pragma unroll 1
+            do {
+                s.mul(s);
+                s.mul(s);
+            } while (n -= 2);
+        }
+        s.mul(m);
+
+        return s;
     }
 
     // reduce u128 to u64, put the result in val

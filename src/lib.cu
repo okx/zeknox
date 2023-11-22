@@ -82,4 +82,18 @@ extern "C" void goldilocks_rshift(fr_t *result, fr_t *a, uint32_t *r)
     cudaMemcpy(result, d_result, sizeof(fr_t), cudaMemcpyDeviceToHost);
 }
 
+
+extern "C" void goldilocks_inverse(fr_t *result, fr_t *a)
+{
+       fr_t *d_result, *d_a;
+    cudaMalloc((fr_t**)&d_result, sizeof(fr_t));
+    cudaMalloc((fr_t**)&d_a, sizeof(fr_t));
+
+    cudaMemcpy(d_a, a, sizeof(fr_t), cudaMemcpyHostToDevice);
+    goldilocks_inverse_kernel<<<1,1>>>(
+        d_result, d_a
+        );
+
+    cudaMemcpy(result, d_result, sizeof(fr_t), cudaMemcpyDeviceToHost);
+}
 #endif
