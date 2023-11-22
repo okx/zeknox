@@ -10,6 +10,7 @@
 #error "no FEATURE"
 #endif
 #include <util/cuda_available.hpp>
+#include <ntt/ntt.cuh>
 
 #ifndef __CUDA_ARCH__   // below is cpu code; __CUDA_ARCH__ should not be defined
 

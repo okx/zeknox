@@ -80,7 +80,7 @@ fn main() {
         }
         nvcc.include(base_dir);
         nvcc.file("src/lib.cu")
-            // .file(util_dir.join("cuda_available.cu"))
+            // .file(util_dir.join("all_gpus.cpp"))
             .compile("cryptography_cuda");
         println!("cargo:rerun-if-changed=src/lib.cu");
         println!("cargo:rerun-if-changed=cuda");
