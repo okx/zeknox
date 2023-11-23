@@ -1,4 +1,4 @@
-#include <cuda_runtime.h>
+#include <cuda.h>
 #ifndef __DEBUG__PRINT__
 #define __DEBUG__PRINT__
 #include <cstdio>

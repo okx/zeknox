@@ -108,6 +108,10 @@ public:
     {   mul(a);           return *this;   }
     friend inline gl64_t operator*(gl64_t a, const gl64_t& b)
     {   a.mul(b); a.to(); return a;   }
+    friend inline gl64_t sqr(gl64_t a)
+    {   return a.sqr();   }
+    inline gl64_t& sqr()
+    {   mul(*this); to(); return *this;   }
 
     // right shift
     inline gl64_t& operator>>=(unsigned r)

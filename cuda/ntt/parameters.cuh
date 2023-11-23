@@ -87,6 +87,52 @@ public:
                                                : group_gen);
         CUDA_OK(cudaGetLastError());
     }
+
+    NTTParameters(const NTTParameters&) = delete;
+
+    ~NTTParameters()
+    {
+        gpu.Dfree(partial_twiddles);
+
+        gpu.Dfree(radix7_twiddles);
+    }
+
+    inline void sync() const    { gpu.sync(); }
+
+private:
+    class all_params 
+    {   friend class NTTParameters;
+        std::vector<const NTTParameters*> forward;
+        std::vector<const NTTParameters*> inverse;
+
+        all_params()
+        {
+            int current_id;
+            cudaGetDevice(&current_id);
+
+            size_t nids = ngpus();
+            for (size_t id = 0; id < nids; id++)
+                forward.push_back(new NTTParameters(false, id));
+            for (size_t id = 0; id < nids; id++)
+                inverse.push_back(new NTTParameters(true, id));
+            for (size_t id = 0; id < nids; id++)
+                inverse[id]->sync();
+
+            cudaSetDevice(current_id);
+        }
+        ~all_params()
+        {
+            for (auto* ptr: forward) delete ptr;
+            for (auto* ptr: inverse) delete ptr;
+        }
+    };
+
+public:
+    static const auto& all(bool inverse = false)
+    {
+        static all_params params;
+        return inverse ? params.inverse : params.forward;
+    }
 };
 
 #endif

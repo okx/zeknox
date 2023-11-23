@@ -3,7 +3,7 @@ void generate_partial_twiddles(fr_t (*roots)[WINDOW_SIZE],
                                const fr_t root_of_unity)
 {
     const unsigned int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    assert(tid < WINDOW_SIZE);
+    // assert(tid < WINDOW_SIZE);
     fr_t root;
 
     root = root_of_unity^tid;
@@ -57,7 +57,7 @@ void generate_all_twiddles(fr_t* d_radixX_twiddles, const fr_t root6,
         pow = tid - 64 - 128 - 256 - 512;
         root_of_unity = root6;
     } else {
-        assert(false);
+        // assert(false);
     }
 
     d_radixX_twiddles[tid] = root_of_unity^pow;
