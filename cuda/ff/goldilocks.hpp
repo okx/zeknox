@@ -23,8 +23,8 @@ public:
     inline gl64_t& operator+=(gl64_t b) { return *this; }
     inline gl64_t& operator-=(gl64_t b) { return *this; }
     inline gl64_t& operator*=(gl64_t b) { return *this; }
-    // inline gl64_t& operator^=(int p)    { return *this; }
-    // inline gl64_t& sqr()                { return *this; }
+    inline gl64_t& operator^=(int p)    { return *this; }
+    inline gl64_t& sqr()                { return *this; }
     inline void zero()                  { val = 0;      }
 };
 #  if defined(__GNUC__) || defined(__clang__)
