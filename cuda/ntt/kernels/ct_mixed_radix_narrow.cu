@@ -1,3 +1,6 @@
+// Copyright Supranational LLC
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
 
 template<unsigned int z_count, bool coalesced = false>
 __launch_bounds__(768, 1) __global__
