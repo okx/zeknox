@@ -18,5 +18,5 @@ cargo test --test ntt -- test_ntt_gl64_consistency_with_plonky2 --exact --nocapt
 ```
 ## run benchmarks
 ```
-
+cargo bench --bench gpu_fft
 ```
