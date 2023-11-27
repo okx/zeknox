@@ -77,6 +77,18 @@ protected:
             default:
                 assert(false);
         }
+
+        switch (algorithm) {
+            case Algorithm::GS:
+                // TODO:
+                // GS_NTT(d_inout, lg_domain_size, intt, ntt_parameters, stream);
+                break;
+            case Algorithm::CT:
+                CT_NTT(d_inout, lg_domain_size, intt, ntt_parameters, stream);
+                break;
+        }
+        if (order == InputOutputOrder::RR)
+            bit_rev(d_inout, d_inout, lg_domain_size, stream);
     }
 
 public:
@@ -94,10 +106,20 @@ public:
             size_t domain_size = (size_t)1 << lg_domain_size;
             dev_ptr_t<fr_t> d_inout{domain_size, gpu};
             gpu.HtoD(&d_inout[0], inout, domain_size);
+            NTT_internal(&d_inout[0], lg_domain_size, order, direction, type, gpu,
+                         coset_ext_pow);
+            gpu.DtoH(inout, &d_inout[0], domain_size);
+            gpu.sync();
 
         } catch (const cuda_error& e) {
-
+#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+            return RustError{e.code(), e.what()};
+#else
+            return RustError{e.code()};
+#endif
         }
+
+        return RustError{cudaSuccess};
 
     }
 

@@ -16,6 +16,22 @@ index_t bit_rev(index_t i, unsigned int nbits)
         return __brevll(i) >> (8*sizeof(unsigned long long) - nbits);
 }
 
+#ifdef __CUDA_ARCH__
+__device__ __forceinline__
+void shfl_bfly(fr_t& r, int laneMask)
+{
+    #pragma unroll
+    for (int iter = 0; iter < r.len(); iter++)
+        r[iter] = __shfl_xor_sync(0xFFFFFFFF, r[iter], laneMask);
+}
+#endif
+
+__device__ __forceinline__
+void shfl_bfly(index_t& index, int laneMask)
+{
+    index = __shfl_xor_sync(0xFFFFFFFF, index, laneMask);
+}
+
 // Permutes the data in an array such that data[i] = data[bit_reverse(i)]
 // and data[bit_reverse(i)] = data[i]
 __launch_bounds__(1024) __global__
@@ -77,5 +93,89 @@ void bit_rev_permutation_aux(fr_t* out, const fr_t* in, uint32_t lg_domain_size)
     }
 }
 
+__device__ __forceinline__
+fr_t get_intermediate_root(index_t pow, const fr_t (*roots)[WINDOW_SIZE],
+                           unsigned int nbits = MAX_LG_DOMAIN_SIZE)
+{
+    unsigned int off = 0;
 
-#endif
+    fr_t t, root = roots[off][pow % WINDOW_SIZE];
+    #pragma unroll 1
+    while (pow >>= LG_WINDOW_SIZE)
+        root *= (t = roots[++off][pow % WINDOW_SIZE]);
+
+    return root;
+}
+
+__device__ __forceinline__
+void get_intermediate_roots(fr_t& root0, fr_t& root1,
+                            index_t idx0, index_t idx1,
+                            const fr_t (*roots)[WINDOW_SIZE])
+{
+    int win = (WINDOW_NUM - 1) * LG_WINDOW_SIZE;
+    int off = (WINDOW_NUM - 1);
+
+    root0 = roots[off][idx0 >> win];
+    root1 = roots[off][idx1 >> win];
+    #pragma unroll 1
+    while (off--) {
+        fr_t t;
+        win -= LG_WINDOW_SIZE;
+        root0 *= (t = roots[off][(idx0 >> win) % WINDOW_SIZE]);
+        root1 *= (t = roots[off][(idx1 >> win) % WINDOW_SIZE]);
+    }
+}
+
+template<unsigned int z_count>
+__device__ __forceinline__
+void coalesced_load(fr_t r[z_count], const fr_t* inout, index_t idx,
+                    const unsigned int stage)
+{
+    const unsigned int x = threadIdx.x & (z_count - 1);
+    idx &= ~((index_t)(z_count - 1) << stage);
+    idx += x;
+
+    #pragma unroll
+    for (int z = 0; z < z_count; z++, idx += (index_t)1 << stage)
+        r[z] = inout[idx];
+}
+
+template<unsigned int z_count>
+__device__ __forceinline__
+void transpose(fr_t r[z_count])
+{
+    extern __shared__ fr_t shared_exchange[];
+    fr_t (*xchg)[z_count] = reinterpret_cast<decltype(xchg)>(shared_exchange);
+
+    const unsigned int x = threadIdx.x & (z_count - 1);
+    const unsigned int y = threadIdx.x & ~(z_count - 1);
+
+    #pragma unroll
+    for (int z = 0; z < z_count; z++)
+        xchg[y + z][x] = r[z];
+
+    __syncwarp();
+
+    #pragma unroll
+    for (int z = 0; z < z_count; z++)
+        r[z] = xchg[y + x][z];
+}
+
+template<unsigned int z_count>
+__device__ __forceinline__
+void coalesced_store(fr_t* inout, index_t idx, const fr_t r[z_count],
+                     const unsigned int stage)
+{
+    const unsigned int x = threadIdx.x & (z_count - 1);
+    idx &= ~((index_t)(z_count - 1) << stage);
+    idx += x;
+
+    #pragma unroll
+    for (int z = 0; z < z_count; z++, idx += (index_t)1 << stage)
+        inout[idx] = r[z];
+}
+
+const static int Z_COUNT = 256/8/sizeof(fr_t); // 4 for Goldilocks Field
+# include "kernels/ct_mixed_radix_narrow.cu"
+
+#endif /**__CRYPTO_KERNELS_CU__ */
