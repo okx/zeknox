@@ -14,6 +14,9 @@ include = [
     "/cryptography_cuda/cuda/**",
 ]
 
+[[bench]]
+name = "gpu_fft"
+harness = false
 
 [dependencies] 
 
