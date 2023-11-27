@@ -40,9 +40,9 @@ public:
     NTTParameters(const bool _inverse, int id): gpu(select_gpu(id)), inverse(_inverse)
     {
 
+        // printf("construct NTTParameters _inverse: %d, WINDOW_NUM: %d, WINDOW_SIZE: %d\n", _inverse, WINDOW_NUM, WINDOW_SIZE);
         const fr_t* roots = inverse ? inverse_roots_of_unity
                                     : forward_roots_of_unity;
-
 
         /**
          * 64 is 1<<6, 128 is 1<<7, etc, corresponding to root7, root8, root9, root10, root6 

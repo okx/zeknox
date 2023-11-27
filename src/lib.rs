@@ -1,21 +1,30 @@
-#[repr(C)]
-pub struct Error {
-    pub code: i32,
-    str: Option<core::ptr::NonNull<i8>>, // just strdup("string") from C/C++
-}
+pub mod error;
+pub mod types;
+
 
 extern "C" {
+    fn cuda_available() -> bool;
+
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
     fn goldilocks_sub(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
     fn goldilocks_mul(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
+    fn goldilocks_exp(result: *mut u64, base: *mut u64, pow: *mut u32) -> ();
+
     fn goldilocks_inverse(result: *mut u64, alloc: *mut u64) -> ();
 
     fn goldilocks_rshift(result: *mut u64, val: *mut u64, r: *mut u32) -> ();
 
-    fn cuda_available() -> bool;
+    fn compute_ntt(
+        device_id: usize,
+        inout: *mut core::ffi::c_void,
+        lg_domain_size: u32,
+        ntt_order: types::NTTInputOutputOrder,
+        ntt_direction: types::NTTDirection,
+        ntt_type: types::NTTType,
+    ) -> error::Error;
 }
 
 #[allow(non_snake_case)]
@@ -59,19 +68,60 @@ pub fn goldilocks_rshift_rust(a: &mut u64, r: &mut u32) -> u64 {
     result
 }
 
+#[allow(non_snake_case)]
+pub fn goldilocks_exp_rust(a: &mut u64, r: &mut u32) -> u64 {
+    let mut result: u64 = 0;
+    unsafe { goldilocks_exp(&mut result, a, r) };
+
+    result
+}
+
 pub fn check_cuda_available() -> bool {
     unsafe { cuda_available() }
 }
 
+#[allow(non_snake_case)]
+pub fn NTT<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
+    let len = inout.len();
+    if (len & (len - 1)) != 0 {
+        panic!("inout.len() is not power of 2");
+    }
 
-#[cfg(test)]
-mod tests {
-    
-    #[test]
-    fn test_sub() {
-        let x: u8 = 1;
-        let y: u8 = 24;
-        let (ret, borrow) = x.overflowing_sub(y);
-        println!("ret: {:?}, borrow: {:?}", ret, borrow);
+    let err = unsafe {
+        compute_ntt(
+            device_id,
+            inout.as_mut_ptr() as *mut core::ffi::c_void,
+            len.trailing_zeros(),
+            order,
+            types::NTTDirection::Forward,
+            types::NTTType::Standard,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn iNTT<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
+    let len = inout.len();
+    if (len & (len - 1)) != 0 {
+        panic!("inout.len() is not power of 2");
+    }
+
+    let err = unsafe {
+        compute_ntt(
+            device_id,
+            inout.as_mut_ptr() as *mut core::ffi::c_void,
+            len.trailing_zeros(),
+            order,
+            types::NTTDirection::Inverse,
+            types::NTTType::Standard,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
     }
 }

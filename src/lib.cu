@@ -97,4 +97,30 @@ extern "C" void goldilocks_inverse(fr_t *result, fr_t *a)
 
     cudaMemcpy(result, d_result, sizeof(fr_t), cudaMemcpyDeviceToHost);
 }
+
+extern "C" void goldilocks_exp(fr_t *result, fr_t *base, uint32_t *pow)
+{
+    fr_t *d_result, *d_base;
+    uint32_t *d_pow;
+    cudaMalloc((fr_t **)&d_result, sizeof(fr_t));
+    cudaMalloc((fr_t **)&d_base, sizeof(fr_t));
+    cudaMalloc((uint32_t **)&d_pow, sizeof(uint32_t));
+
+    cudaMemcpy(d_base, base, sizeof(fr_t), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_pow, pow, sizeof(uint32_t), cudaMemcpyHostToDevice);
+    goldilocks_exp_kernel<<<1, 1>>>(
+        d_result, d_base, d_pow);
+
+    cudaMemcpy(result, d_result, sizeof(fr_t), cudaMemcpyDeviceToHost);
+}
+extern "C" RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
+                                 NTT::InputOutputOrder ntt_order,
+                                 NTT::Direction ntt_direction,
+                                 NTT::Type ntt_type)
+{
+    auto &gpu = select_gpu(device_id);
+
+    return NTT::Base(gpu, inout, lg_domain_size,
+                     ntt_order, ntt_direction, ntt_type);
+}
 #endif

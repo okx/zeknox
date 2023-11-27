@@ -1,6 +1,6 @@
 #ifndef __CRYPTO_KERNELS_CU__
 #define __CRYPTO_KERNELS_CU__
-
+#include <cooperative_groups.h>
 
 /**
  * \param  i, the integer to be bit reversed, i is in range [0, 1<<nbits)
@@ -37,14 +37,17 @@ void shfl_bfly(index_t& index, int laneMask)
 __launch_bounds__(1024) __global__
 void bit_rev_permutation(fr_t* d_out, const fr_t *d_in, uint32_t lg_domain_size)
 {
+    
     index_t i = threadIdx.x + blockDim.x * (index_t)blockIdx.x;
     index_t r = bit_rev(i, lg_domain_size);
-
-    if (i < r || (d_out != d_in && i == r)) {
-        fr_t t0 = d_in[i];
+    // printf("invoking bit_rev_permutation i: %d, r: %d, lg_domain_size: %d\n", i, r, lg_domain_size);
+    if (i < r || (d_out != d_in && i == r)) { // if r=i, no need to swap; if i<r, swap data at i and r; 
+        fr_t t0 = d_in[i]; 
         fr_t t1 = d_in[r];
         d_out[r] = t0;
         d_out[i] = t1;
+        // printf("invoking bit_rev_permutation r: %d, t0: %lu \n", r, t0);
+        // printf("invoking bit_rev_permutation i: %d, t1: %lu \n", i, t1);
     }
 }
 

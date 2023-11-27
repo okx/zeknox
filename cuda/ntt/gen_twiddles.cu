@@ -59,6 +59,5 @@ void generate_all_twiddles(fr_t* d_radixX_twiddles, const fr_t root6,
     } else {
         // assert(false);
     }
-
     d_radixX_twiddles[tid] = root_of_unity^pow;
 }

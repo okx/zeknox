@@ -13,10 +13,12 @@ void _CT_NTT(const unsigned int radix, const unsigned int lg_domain_size,
     __builtin_assume(iterations <= radix);
     __builtin_assume(stage <= lg_domain_size - iterations);
 #endif
+    
     extern __shared__ fr_t shared_exchange[];
 
     index_t tid = threadIdx.x + blockDim.x * (index_t)blockIdx.x;
-
+    // printf("invoking _CT_NTT, radix: %d, lg_domain_size: %d, stage: %d, iterations: %d, tid: %d, blk_dim :%d, coalesced: %d, z_count:%d \n", radix, lg_domain_size, stage, iterations, tid, blockDim.x, coalesced, z_count);
+    // printf("d_inout, %llu, %llu,%llu, %llu \n", *(d_inout+0), *(d_inout+1), *(d_inout+2), *(d_inout+3));
     const index_t diff_mask = (1 << (iterations - 1)) - 1;
     const index_t inp_mask = ((index_t)1 << stage) - 1;
     const index_t out_mask = ((index_t)1 << (stage + iterations - 1)) - 1;
@@ -28,6 +30,7 @@ void _CT_NTT(const unsigned int radix, const unsigned int lg_domain_size,
     index_t idx0 = (tiz & ~out_mask) | ((tiz << stage) & out_mask);
     idx0 = idx0 * 2 + thread_ntt_pos;
     index_t idx1 = idx0 + ((index_t)1 << stage);
+    // printf("idx0: %d, idx1: %d \n", idx0, idx1);
 
     fr_t r[2][z_count];
 
@@ -89,8 +92,9 @@ void _CT_NTT(const unsigned int radix, const unsigned int lg_domain_size,
         unsigned int thrdMask = (1 << s) - 1;
         unsigned int rank = threadIdx.x & thrdMask;
         bool pos = rank < laneMask;
-
+        
         fr_t root = d_radix6_twiddles[rank << (6 - (s + 1))];
+        // printf("d_radix6_twiddles: index:%d, root: %llu \n ", rank << (6 - (s + 1)), root);
 
 #ifdef __CUDA_ARCH__
         #pragma unroll
@@ -263,6 +267,7 @@ public:
 void CT_NTT(fr_t* d_inout, const int lg_domain_size, bool intt,
             const NTTParameters& ntt_parameters, const cudaStream_t& stream)
 {
+    // printf("invoking ct mixed narrow CT_NTT \n");
     CT_launcher params{d_inout, lg_domain_size, intt, ntt_parameters, stream};
 
     if (lg_domain_size <= std::min(10, MAX_LG_DOMAIN_SIZE)) {

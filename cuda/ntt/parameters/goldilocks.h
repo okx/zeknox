@@ -5,6 +5,8 @@ const fr_t group_gen_inverse = fr_t(0x249249246db6db6e);
 
 const int S = 32;
 
+
+
 const fr_t forward_roots_of_unity[S + 1] = {
     fr_t(0x0000000000000001),
     fr_t(0xffffffff00000000),

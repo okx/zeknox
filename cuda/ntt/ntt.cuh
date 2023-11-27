@@ -92,6 +92,15 @@ protected:
     }
 
 public:
+    /**
+     * \param gpu, which gpu to use, default is 0
+     * \param inout, input and output fr array
+     * \param lg_domain_size 2^{lg_domain_size} = N, where N is size of input array
+     * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
+     * \param direction, direction of NTT, farward, or inverse, default is farward
+     * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
+     * \param coset_ext_pow coset_ext_pow
+    */
     static RustError Base(const gpu_t& gpu, fr_t* inout, uint32_t lg_domain_size,
                           InputOutputOrder order, Direction direction,
                           Type type, bool coset_ext_pow = false)
