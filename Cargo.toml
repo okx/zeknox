@@ -32,6 +32,9 @@ libc = "*" #TODO: move libc dependencies to build
 rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
 plonky2_field = {git="https://github.com/0xPolygonZero/plonky2.git"}
 "criterion" = "*"
+rustacuda = "0.1"
+rustacuda_core = "0.1"
+rustacuda_derive = "0.1"
 
 [features]
 default = ["gl64"]
