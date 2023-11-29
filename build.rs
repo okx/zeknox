@@ -1,6 +1,22 @@
 
 use std::env;
 use std::path::PathBuf;
+#[macro_use]
+extern crate rustacuda;
+
+use rustacuda::device::DeviceAttribute;
+use rustacuda::prelude::*;
+
+fn get_device_arch() -> String {
+    rustacuda::init(CudaFlags::empty()).expect("unable to init");
+
+    let device = Device::get_device(0).expect("error in get device");
+    let compute_major = device.get_attribute(DeviceAttribute::ComputeCapabilityMajor).unwrap();
+    let compute_minor = device.get_attribute(DeviceAttribute::ComputeCapabilityMinor).unwrap();
+    let cuda_arch = format!("sm_{}{}", compute_major, compute_minor);
+    println!("cuda arch is: {:?}", cuda_arch);
+    cuda_arch
+}
 
 fn feature_check() -> String {
     let fr_s = [
@@ -69,8 +85,9 @@ fn main() {
 
         let util_dir = base_dir.join("util");
         let mut nvcc = cc::Build::new();
+        let cuda_arch = get_device_arch();
         nvcc.cuda(true);
-        nvcc.flag("-arch=sm_86");  // check [Virtual Architectures](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#virtual-architectures)
+        nvcc.flag(&format!("-arch={}", cuda_arch));  // check [Virtual Architectures](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#virtual-architectures)
         #[cfg(not(target_env = "msvc"))]
         // nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
