@@ -27,6 +27,9 @@ which = "^4.0"
 cmake = "*"
 bindgen = "*"
 libc = "*" #TODO: move libc dependencies to build 
+rustacuda = "0.1"
+rustacuda_core = "0.1"
+rustacuda_derive = "0.1"
 
 [dev-dependencies]
 rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"

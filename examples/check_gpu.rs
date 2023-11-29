@@ -3,9 +3,8 @@ extern crate rustacuda;
 
 use rustacuda::device::DeviceAttribute;
 use rustacuda::prelude::*;
-use rustacuda::memory::DeviceBox;
 use std::error::Error;
-use std::ffi::CString;
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Initialize the CUDA API
