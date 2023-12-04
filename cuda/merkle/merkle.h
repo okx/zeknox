@@ -1,6 +1,8 @@
 #ifndef __MERKLE_H__
 #define __MERKLE_H__
 
+#include <stdint.h>
+
 #define HASH_SIZE   32
 
 #define HASH_SIZE_U64   4
