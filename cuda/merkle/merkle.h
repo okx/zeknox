@@ -1,10 +1,6 @@
 #ifndef __MERKLE_H__
 #define __MERKLE_H__
 
-#include "types.h"
-
-#include "poseidon.h"
-
 #define HASH_SIZE   32
 
 #define HASH_SIZE_U64   4
@@ -16,41 +12,50 @@
 #endif
 
 EXTERNC void fill_digests_buf_in_c(
-    u64 digests_buf_size,
-    u64 cap_buf_size,
-    u64 leaves_buf_size,
-    u64 leaf_size,
-    u64 cap_height
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height
 );
 
 EXTERNC void fill_digests_buf_in_rounds_in_c(
-    u64 digests_buf_size,
-    u64 cap_buf_size,
-    u64 leaves_buf_size,
-    u64 leaf_size,
-    u64 cap_height
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height
 );
 
 EXTERNC void fill_digests_buf_in_rounds_in_c_on_gpu(
-    u64 digests_buf_size,
-    u64 cap_buf_size,
-    u64 leaves_buf_size,
-    u64 leaf_size,
-    u64 cap_height
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height
 );
 
-EXTERNC void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_size, u64 hash_size);
+EXTERNC void fill_init(
+    uint64_t digests_count, 
+    uint64_t leaves_count, 
+    uint64_t caps_count, 
+    uint64_t leaf_size, 
+    uint64_t hash_size
+);
 
-EXTERNC void fill_init_rounds(u64 leaves_count, u64 rounds);
+EXTERNC void fill_init_rounds(
+    uint64_t leaves_count, 
+    uint64_t rounds
+);
 
 EXTERNC void fill_delete();
 
 EXTERNC void fill_delete_rounds();
 
-EXTERNC u64* get_digests_ptr();
+EXTERNC uint64_t* get_digests_ptr();
 
-EXTERNC u64* get_cap_ptr();
+EXTERNC uint64_t* get_cap_ptr();
 
-EXTERNC u64* get_leaves_ptr();
+EXTERNC uint64_t* get_leaves_ptr();
 
 #endif // __MERKEL_H__

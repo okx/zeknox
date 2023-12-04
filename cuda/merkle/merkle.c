@@ -2,8 +2,10 @@
 #include <string.h>
 #include <omp.h>
 
+#include "types.h"
 #include "merkle.h"
 #include "merkle_private.h"
+#include "poseidon.h"
 
 // Global vars
 u64* global_digests_buf = NULL;

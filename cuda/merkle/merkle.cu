@@ -1,9 +1,12 @@
+#include "types.h"
+
 #include "merkle.h"
 #include "merkle_private.h"
 
 #include "cuda_utils.cuh"
 #include "poseidon.hpp"
 #include "poseidon.cuh"
+#include "poseidon.h"
 
 #include "goldilocks.hpp"
 
@@ -388,10 +391,10 @@ void run_gpu_cpu_verify()
         printf("After fill...\n");
         for (int i = 0; i < n_digests; i++)
             print_hash(global_digests_buf + i * 4);
-    */
     printf("Cap...\n");
     for (int i = 0; i < n_caps; i++)
         print_hash(global_cap_buf + i * 4);
+    */
 
     u64 *digests_buf2 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
     memcpy(digests_buf2, global_digests_buf, n_digests * HASH_SIZE_U64 * sizeof(u64));
@@ -406,10 +409,10 @@ void run_gpu_cpu_verify()
         printf("After fill...\n");
         for (int i = 0; i < n_digests; i++)
             print_hash(global_digests_buf + i * 4);
-    */
     printf("Cap...\n");
     for (int i = 0; i < n_caps; i++)
         print_hash(global_cap_buf + i * 4);
+    */
 
     fill_delete_rounds();
 

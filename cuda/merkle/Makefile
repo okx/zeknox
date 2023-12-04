@@ -4,8 +4,8 @@ NVCC := /usr/local/cuda/bin/nvcc
 CUDA_ARCH = sm_86
 
 CFLAGS := -I../poseidon -Wall -Werror -O3
-CXXFLAGS := -I../poseidon -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
-NVCCFLAGS := -I../poseidon
+CXXFLAGS := -I../poseidon -I. -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
+NVCCFLAGS := -I../poseidon -I.
 
 all: libcmerkle.so
 
