@@ -7,32 +7,25 @@ CFLAGS := -I../poseidon -Wall -Werror -O3
 CXXFLAGS := -I../poseidon -I. -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
 NVCCFLAGS := -I../poseidon -I.
 
-all: libcmerkle.so
+all: libmerkle.so
 
-lib: libcmerkle.so
+lib: libmerkle.so
 
-libgpu: libcmerkle-gpu.so
+libgpu: libmerkle-gpu.so
 
 clean:
 	rm -f *.o *.so
 
-libcmerkle.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.h
+libmerkle.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.h
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
-	$(CXX) -shared -o $@ poseidon.o merkle.o -fopenmp
-	cp $@ ../
+	$(CXX) -shared -o $@ poseidon.o merkle.o -fopenmp	
 
-libcmerkle-poseidon-rust.so: merkle.h merkle.c ../poseidon/poseidon.h ../poseidon/libposeidon.a
-	$(CC) $(CFLAGS) -DRUST_POSEIDON -c -fPIC merkle.c -fopenmp
-	$(CXX) -shared -fPIC -o $@ merkle.o ../poseidon/libposeidon.a -fopenmp
-	cp $@ ../
-
-libcmerkle-gpu.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp merkle.cu
+libmerkle-gpu.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp merkle.cu
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC merkle.cu -arch=$(CUDA_ARCH) -dc --output-file merkle_gpu.o
 	$(NVCC) -Xcompiler -fopenmp -shared -arch=$(CUDA_ARCH) -o $@ merkle_gpu.o merkle.o poseidon.o
-	cp $@ ../
 
 test-rust: merkle.c ../poseidon/libposeidon.a
 	$(CC) $(CFLAGS) -g -DRUST_POSEIDON -DDEBUG $^ -o $@ -fopenmp

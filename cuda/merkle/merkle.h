@@ -37,6 +37,14 @@ EXTERNC void fill_digests_buf_in_rounds_in_c_on_gpu(
     uint64_t cap_height
 );
 
+EXTERNC void fill_digests_buf_linear_gpu(
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height
+);
+
 EXTERNC void fill_init(
     uint64_t digests_count, 
     uint64_t leaves_count, 
