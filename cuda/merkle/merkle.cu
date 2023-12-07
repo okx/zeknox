@@ -82,15 +82,15 @@ __global__ void compute_internal_hashes_per_round(u64 *digests_buf, u32 round_si
 /*
  * Compute internal Merkle tree hashes in linear structure. Only one round.
  */
-__global__ void compute_internal_hashes_linear(u64 *digests_buf, u32 round_size)
+__global__ void compute_internal_hashes_linear(u64 *digests_buf, u32 round_size, u32 last_idx)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= round_size)
         return;
 
     u64 *dptr = digests_buf + tid * HASH_SIZE_U64;
-    u64 *sptr1 = digests_buf + 2 * (tid + 1) * HASH_SIZE_U64;
-    u64 *sptr2 = digests_buf + (2 * (tid + 1) + 1) * HASH_SIZE_U64;
+    u64 *sptr1 = digests_buf + (2 * (tid + 1) + last_idx) * HASH_SIZE_U64;
+    u64 *sptr2 = digests_buf + (2 * (tid + 1) + 1 + last_idx) * HASH_SIZE_U64;
     hash_two((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
 }
 
@@ -279,7 +279,7 @@ void fill_digests_buf_linear_gpu(
             last_index -= (1 << r);
             // printf("GPU round %d\n", r);
             gpu_digests_curr_ptr = gpu_digests_chunk_ptr + last_index * HASH_SIZE_U64;
-            compute_internal_hashes_linear<<<(1 << r) / TPB, TPB>>>(gpu_digests_curr_ptr, (1 << r));            
+            compute_internal_hashes_linear<<<(1 << r) / TPB + 1, TPB>>>(gpu_digests_curr_ptr, (1 << r), last_index);            
         }
 
         // 4. copy data from GPU to CPU
