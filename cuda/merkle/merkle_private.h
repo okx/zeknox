@@ -18,6 +18,10 @@ extern u64* global_digests_buf_end;
 extern u64* global_leaves_buf_end;
 extern u64* global_cap_buf_end;
 
+// pointers to the actual hash functions (could be Poseidon or Keccak)
+extern void (*cpu_hash_one_ptr)(u64* digest, u64* data, u32 data_size);
+extern void (*cpu_hash_two_ptr)(u64* digest, u64* digest_left, u64* digest_right);
+
 extern int* leaf_index;
 extern HashTask* internal_index;
 extern int* round_size;
@@ -33,6 +37,7 @@ EXTERNC void fill_subtree_get_index(
     int leaf_size, 
     int round);
 
+EXTERNC void init_gpu_functions(u64 hash_type);
 
 #ifdef DEBUG
 

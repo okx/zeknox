@@ -9,8 +9,8 @@
 #define EXTERNC
 #endif
 
-EXTERNC void compute_hash_leaf(u64* digest, u64* data, u32 data_size);
-EXTERNC void compute_hash_of_two(u64* digest, u64* digest_left, u64* digest_right);
+EXTERNC void poseidon_hash_leaf(u64* digest, u64* data, u32 data_size);
+EXTERNC void poseidon_hash_of_two(u64* digest, u64* digest_left, u64* digest_right);
 
 #ifdef RUST_POSEIDON
 /*

@@ -58,7 +58,8 @@ EXTERNC void fill_init(
     uint64_t leaves_count, 
     uint64_t caps_count, 
     uint64_t leaf_size, 
-    uint64_t hash_size
+    uint64_t hash_size,
+    uint64_t hash_type
 );
 
 EXTERNC void fill_init_rounds(

@@ -60,6 +60,11 @@ public:
     inline void store(uint64_t *p) const
     {   *p = *this;   }
 
+    inline gl64_t& operator&=(const uint64_t& b)
+    {
+        this->val &= b;
+    }
+
     inline gl64_t& operator+=(const gl64_t& b)
     {
         from();

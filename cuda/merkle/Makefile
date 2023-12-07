@@ -4,9 +4,9 @@ NVCC := /usr/local/cuda/bin/nvcc
 CUDA_ARCH = sm_86
 
 # for release
-CFLAGS := -I../poseidon -Wall -Werror -O3 -march=native
-CXXFLAGS := -I../poseidon -I. -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
-NVCCFLAGS := -I../poseidon -I.
+CFLAGS := -I../poseidon -I../keccak -Wall -Werror -O3 -march=native
+CXXFLAGS := -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
+NVCCFLAGS := -I../poseidon -I../keccak -I../util -I../types -I.
 
 # for debug
 #CFLAGS := -I../poseidon -Wall -Werror -g

@@ -19,6 +19,9 @@ u64* global_digests_buf_end = NULL;
 u64* global_leaves_buf_end = NULL;
 u64* global_cap_buf_end = NULL;
 
+void (*cpu_hash_one_ptr)(u64* digest, u64* data, u32 data_size);
+void (*cpu_hash_two_ptr)(u64* digest, u64* digest_left, u64* digest_right);
+
 int* leaf_index = NULL;
 HashTask* internal_index = NULL;
 int* round_size = NULL;
@@ -44,7 +47,7 @@ void fill_subtree(u64* target_hash, u64* digests, u64 digests_count, u64* leaves
 #ifdef RUST_POSEIDON
         ext_hash_or_noop(target_hash, leaves, leaf_size);
 #else
-        compute_hash_leaf(target_hash, leaves, leaf_size);
+        cpu_hash_one_ptr(target_hash, leaves, leaf_size);
 #endif
     } else {
         u64 mid = digests_count / 2;
@@ -62,7 +65,7 @@ void fill_subtree(u64* target_hash, u64* digests, u64 digests_count, u64* leaves
 #ifdef RUST_POSEIDON
         ext_hash_of_two(target_hash, left_digest, right_digest);
 #else
-        compute_hash_of_two(target_hash, left_digest, right_digest);
+        cpu_hash_two_ptr(target_hash, left_digest, right_digest);
 #endif
     }    
 }
@@ -84,7 +87,7 @@ void fill_digests_buf_in_c(
 #ifdef RUST_POSEIDON
             ext_hash_or_noop(cptr, lptr, leaf_size);
 #else
-            compute_hash_leaf(cptr, lptr, leaf_size);
+            cpu_hash_one_ptr(cptr, lptr, leaf_size);
 #endif
             cptr += HASH_SIZE_U64;
             lptr += leaf_size;            
@@ -157,7 +160,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size) {
 #ifdef RUST_POSEIDON
         ext_hash_or_noop(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
 #else
-        compute_hash_leaf(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
+        cpu_hash_one_ptr(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
 #endif
     }
     // internal rounds on digest buffer
@@ -168,7 +171,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size) {
 #ifdef RUST_POSEIDON
             ext_hash_of_two(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
-            compute_hash_of_two(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
+            cpu_hash_two_ptr(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #endif
         }
     }
@@ -179,7 +182,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size) {
 #ifdef RUST_POSEIDON
         ext_hash_of_two(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
-        compute_hash_of_two(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
+        cpu_hash_two_ptr(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #endif
 
     }
@@ -202,7 +205,7 @@ void fill_digests_buf_in_rounds_in_c(
 #ifdef RUST_POSEIDON
             ext_hash_or_noop(cptr, lptr, leaf_size);
 #else
-            compute_hash_leaf(cptr, lptr, leaf_size);
+            cpu_hash_one_ptr(cptr, lptr, leaf_size);
 #endif
         }        
         return;	
@@ -235,7 +238,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
             ext_hash_or_noop(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
 #else
-            compute_hash_leaf(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
+            cpu_hash_one_ptr(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
 #endif
         }
         return;
@@ -258,16 +261,16 @@ void fill_digests_buf_linear_cpu(
         // if one leaf => return it hash
         if (subtree_leaves_len == 1)
         {
-            compute_hash_leaf(digests_buf_ptr, leaves_buf_ptr, leaf_size);
+            cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
             memcpy(cap_buf_ptr, digests_buf_ptr, HASH_SIZE);
             continue;
         }
         // if two leaves => return their concat hash
         if (subtree_leaves_len == 2)
         {
-            compute_hash_leaf(digests_buf_ptr, leaves_buf_ptr, leaf_size);
-            compute_hash_leaf(digests_buf_ptr + HASH_SIZE_U64, leaves_buf_ptr + leaf_size, leaf_size);
-            compute_hash_of_two(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+            cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
+            cpu_hash_one_ptr(digests_buf_ptr + HASH_SIZE_U64, leaves_buf_ptr + leaf_size, leaf_size);
+            cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
             continue;
         }
 
@@ -278,7 +281,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
             ext_hash_or_noop(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
 #else
-            compute_hash_leaf(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
+            cpu_hash_one_ptr(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
 #endif
         }    
 
@@ -303,7 +306,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
                 ext_hash_of_two(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
 #else
-                compute_hash_of_two(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
+                cpu_hash_two_ptr(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
 #endif
             }            
         }
@@ -312,7 +315,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
         ext_hash_of_two(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
 #else        
-        compute_hash_of_two(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+        cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
 #endif
 
     } // end for k    
@@ -321,7 +324,7 @@ void fill_digests_buf_linear_cpu(
 /**
  * Common auxiliary functions.
  */
-void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_size, u64 hash_size) {   
+void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_size, u64 hash_size, u64 hash_type) {   
     u64 mem_size_digests_buf = ((((digests_count + 1) * HASH_SIZE_U64 * sizeof(u64)) >> 12) + 1) << 12;
     u64 mem_size_leaves_buf = ((((leaves_count + 1) * leaf_size * sizeof(u64)) >> 12) + 1) << 12;
     u64 mem_size_cap_buf = ((((caps_count + 1) * HASH_SIZE_U64 * sizeof(u64)) >> 12) + 1) << 12;
@@ -334,7 +337,13 @@ void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_siz
     assert(global_cap_buf != NULL);
     global_digests_buf_end = global_digests_buf + ((digests_count + 1) * HASH_SIZE_U64);
     global_leaves_buf_end = global_leaves_buf + ((leaves_count + 1) * leaf_size);
-    global_cap_buf_end = global_cap_buf + ((caps_count + 1) * HASH_SIZE_U64);    
+    global_cap_buf_end = global_cap_buf + ((caps_count + 1) * HASH_SIZE_U64);
+
+    if (hash_type == 0) {
+        cpu_hash_one_ptr = &poseidon_hash_leaf;
+        cpu_hash_two_ptr = &poseidon_hash_of_two;
+    }    
+    init_gpu_functions(hash_type);
 }
 
 void fill_delete() {

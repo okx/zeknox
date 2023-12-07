@@ -599,7 +599,7 @@ public:
     }
 };
 
-__device__ void hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+__device__ void poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {    
     PoseidonPermutationGPU perm = PoseidonPermutationGPU();
 
@@ -619,7 +619,7 @@ __device__ void hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
     }
 }
 
-__device__ void hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+__device__ void poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
     PoseidonPermutationGPU perm = PoseidonPermutationGPU();
     perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
