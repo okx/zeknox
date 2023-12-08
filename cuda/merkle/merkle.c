@@ -45,7 +45,7 @@ void fill_subtree(u64* target_hash, u64* digests, u64 digests_count, u64* leaves
 
     if (digests_count == 0) {
 #ifdef RUST_POSEIDON
-        ext_hash_or_noop(target_hash, leaves, leaf_size);
+        ext_poseidon_hash_or_noop(target_hash, leaves, leaf_size);
 #else
         cpu_hash_one_ptr(target_hash, leaves, leaf_size);
 #endif
@@ -63,7 +63,7 @@ void fill_subtree(u64* target_hash, u64* digests, u64 digests_count, u64* leaves
         fill_subtree(left_digest, left_digests, new_digests_count, left_leaves, new_leaves_count, leaf_size, 1);
         fill_subtree(right_digest, right_digests, new_digests_count, right_leaves, new_leaves_count, leaf_size, 1);
 #ifdef RUST_POSEIDON
-        ext_hash_of_two(target_hash, left_digest, right_digest);
+        ext_poseidon_hash_of_two(target_hash, left_digest, right_digest);
 #else
         cpu_hash_two_ptr(target_hash, left_digest, right_digest);
 #endif
@@ -85,7 +85,7 @@ void fill_digests_buf_in_c(
             assert(cptr < global_cap_buf_end);
             assert(lptr < global_leaves_buf_end);
 #ifdef RUST_POSEIDON
-            ext_hash_or_noop(cptr, lptr, leaf_size);
+            ext_poseidon_hash_or_noop(cptr, lptr, leaf_size);
 #else
             cpu_hash_one_ptr(cptr, lptr, leaf_size);
 #endif
@@ -158,7 +158,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size) {
 #pragma omp parallel for
     for (int i = 0; i < leaves_count; i++) {
 #ifdef RUST_POSEIDON
-        ext_hash_or_noop(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
+        ext_poseidon_hash_or_noop(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
 #else
         cpu_hash_one_ptr(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
 #endif
@@ -169,7 +169,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size) {
         for (int i = 0; i < round_size[r]; i++) {
             HashTask* ht = &internal_index[r * max_round_size + i];
 #ifdef RUST_POSEIDON
-            ext_hash_of_two(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
+            ext_poseidon_hash_of_two(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
             cpu_hash_two_ptr(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #endif
@@ -180,7 +180,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size) {
     for (int i = 0; i < round_size[0]; i++) {
         HashTask* ht = &internal_index[i];
 #ifdef RUST_POSEIDON
-        ext_hash_of_two(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
+        ext_poseidon_hash_of_two(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
         cpu_hash_two_ptr(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #endif
@@ -203,7 +203,7 @@ void fill_digests_buf_in_rounds_in_c(
             assert(cptr < global_cap_buf_end);
             assert(lptr < global_leaves_buf_end);
 #ifdef RUST_POSEIDON
-            ext_hash_or_noop(cptr, lptr, leaf_size);
+            ext_poseidon_hash_or_noop(cptr, lptr, leaf_size);
 #else
             cpu_hash_one_ptr(cptr, lptr, leaf_size);
 #endif
@@ -236,7 +236,7 @@ void fill_digests_buf_linear_cpu(
 #pragma omp parallel for
         for (int i = 0; i < leaves_buf_size; i++) {
 #ifdef RUST_POSEIDON
-            ext_hash_or_noop(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
+            ext_poseidon_hash_or_noop(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
 #else
             cpu_hash_one_ptr(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
 #endif
@@ -279,7 +279,7 @@ void fill_digests_buf_linear_cpu(
 #pragma omp parallel for        
         for (u32 i = 0; i < subtree_leaves_len; i++) {
 #ifdef RUST_POSEIDON
-            ext_hash_or_noop(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
+            ext_poseidon_hash_or_noop(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
 #else
             cpu_hash_one_ptr(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
 #endif
@@ -304,7 +304,7 @@ void fill_digests_buf_linear_cpu(
                 u64 *right_ptr = digests_buf_ptr2 + (right_idx * HASH_SIZE_U64);
                 // printf("%lu %lu\n", *left_ptr, *right_ptr);
 #ifdef RUST_POSEIDON
-                ext_hash_of_two(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
+                ext_poseidon_hash_of_two(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
 #else
                 cpu_hash_two_ptr(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
 #endif
@@ -313,7 +313,7 @@ void fill_digests_buf_linear_cpu(
 
         // 4. compute cap hashes
 #ifdef RUST_POSEIDON
-        ext_hash_of_two(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+        ext_poseidon_hash_of_two(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
 #else        
         cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
 #endif

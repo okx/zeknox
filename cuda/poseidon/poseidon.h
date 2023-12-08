@@ -18,8 +18,8 @@ EXTERNC void poseidon_hash_of_two(u64* digest, u64* digest_left, u64* digest_rig
  *
  * These functions are implemented in Rust and imported as libposeidon.a 
 */
-EXTERNC void ext_hash_or_noop(uint64_t *digest, uint64_t *data, uint64_t data_count);
-EXTERNC void ext_hash_of_two(uint64_t *digest, uint64_t *digest_left, uint64_t *digest_right);
+EXTERNC void ext_poseidon_hash_or_noop(uint64_t *digest, uint64_t *data, uint64_t data_count);
+EXTERNC void ext_poseidon_hash_of_two(uint64_t *digest, uint64_t *digest_left, uint64_t *digest_right);
 #endif // RUST_POSEIDON
 
 #endif // _POSEIDON_H_

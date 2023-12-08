@@ -7,7 +7,6 @@
 #include "poseidon.hpp"
 #include "poseidon.cuh"
 #include "poseidon.h"
-
 #include "keccak_sha3.cuh"
 
 #include "goldilocks.hpp"

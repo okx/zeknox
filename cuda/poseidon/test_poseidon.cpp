@@ -1,10 +1,12 @@
-#include "poseidon.h"
+#include "types.h"
 
-#include "hash.h"
+#define RUST_POSEIDON
+
+#include "poseidon.h"
 
 #include <stdio.h>
 
-void printh(u64* h) {
+void printhash(u64* h) {
     for (int i = 0; i < 4; i++) {
         printf("%lu ", h[i]);
     }
@@ -17,20 +19,20 @@ int main() {
     u64 h1[4] = {0u};
     u64 h2[4] = {0u};
 
-    ext_hash_or_noop(h1, leaf, 1);
-    compute_hash_leaf(h2, leaf, 1);
-    printh(h1);
-    printh(h2);
+    ext_poseidon_hash_or_noop(h1, leaf, 1);
+    poseidon_hash_leaf(h2, leaf, 1);
+    printhash(h1);
+    printhash(h2);
 
-    ext_hash_or_noop(h1, leaf, 4);
-    compute_hash_leaf(h2, leaf, 4);
-    printh(h1);
-    printh(h2);
+    ext_poseidon_hash_or_noop(h1, leaf, 4);
+    poseidon_hash_leaf(h2, leaf, 4);
+    printhash(h1);
+    printhash(h2);
 
-    ext_hash_or_noop(h1, leaf, 6);
-    compute_hash_leaf(h2, leaf, 6);
-    printh(h1);
-    printh(h2);    
+    ext_poseidon_hash_or_noop(h1, leaf, 6);
+    poseidon_hash_leaf(h2, leaf, 6);
+    printhash(h1);
+    printhash(h2);    
 
     return 0;
 }

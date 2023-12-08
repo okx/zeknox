@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 #include <stdint.h>
+
+#include "types.h"
 #include "cuda_utils.cuh"
 
 #define TPB 128
@@ -110,7 +112,7 @@ __host__ __device__ void sha3_keccakf(uint64_t st[25])
             j = gpu_keccakf_piln[i];
             int r = gpu_keccakf_rotc[i];
         #else
-            j = hash_keccakf_piln[i];
+            j = host_keccakf_piln[i];
             int r = host_keccakf_rotc[i];
         #endif
             bc[0] = st[j];
@@ -237,7 +239,7 @@ __device__ void gpu_keccak_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
     hash[3] &= 0xFF;
 }
 
-__host__ void cpu_keccak_hash_one(u64* digest, u64* data, u32 data_size) {
+void cpu_keccak_hash_one(u64* digest, u64* data, u32 data_size) {
     sha3_ctx_t context;
     sha3_init(&context, 32);
     sha3_update(&context, (void*)data, data_size * 8);
@@ -245,7 +247,7 @@ __host__ void cpu_keccak_hash_one(u64* digest, u64* data, u32 data_size) {
     digest[3] &= 0xFF;
 }
 
-__host__ void cpu_keccak_hash_two(u64* digest, u64* digest_left, u64* digest_right) {
+void cpu_keccak_hash_two(u64* digest, u64* digest_left, u64* digest_right) {
     sha3_ctx_t context;
 
     u64 input[8];
@@ -263,3 +265,16 @@ __host__ void cpu_keccak_hash_two(u64* digest, u64* digest_left, u64* digest_rig
     sha3_final((void*)digest, &context);
     digest[3] &= 0xFF;
 }
+
+// #define TESTING
+#ifdef TESTING
+
+#define RUST_POSEIDON
+
+#include "keccak.h"
+
+int main() {
+
+}
+
+#endif  // TESTING
