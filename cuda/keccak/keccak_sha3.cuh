@@ -265,16 +265,3 @@ void cpu_keccak_hash_two(u64* digest, u64* digest_left, u64* digest_right) {
     sha3_final((void*)digest, &context);
     digest[3] &= 0xFF;
 }
-
-// #define TESTING
-#ifdef TESTING
-
-#define RUST_POSEIDON
-
-#include "keccak.h"
-
-int main() {
-
-}
-
-#endif  // TESTING
