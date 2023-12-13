@@ -10,9 +10,9 @@
 #endif
 
 // EXTERNC 
-void cpu_keccak_hash_one(u64* digest, u64* data, u32 data_size);
+void cpu_keccak_hash_one(uint64_t* digest, uint64_t* data, uint32_t data_size);
 // EXTERNC 
-void cpu_keccak_hash_two(u64* digest, u64* digest_left, u64* digest_right);
+void cpu_keccak_hash_two(uint64_t* digest, uint64_t* digest_left, uint64_t* digest_right);
 
 #ifdef RUST_POSEIDON
 /*
