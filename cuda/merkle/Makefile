@@ -9,9 +9,9 @@ CXXFLAGS := -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++
 NVCCFLAGS := -I../poseidon -I../keccak -I../util -I../types -I.
 
 # for debug
-#CFLAGS := -I../poseidon -Wall -Werror -g
-#CXXFLAGS := -I../poseidon -I. -Wall -Wno-error=sign-compare -std=c++11 -g
-#NVCCFLAGS := -I../poseidon -I. -g
+#CFLAGS := -I../poseidon -I../keccak -Wall -Werror -g
+#CXXFLAGS := -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -g
+#NVCCFLAGS := -I../poseidon -I../keccak -I../util -I../types -I. -g
 
 all: libmerkle.so
 
@@ -22,16 +22,19 @@ libgpu: libmerkle-gpu.so
 clean:
 	rm -f *.o *.so
 
-libmerkle.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.h
+libmerkle.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.h ../keccak/keccak.c
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
-	$(CXX) -shared -o $@ poseidon.o merkle.o -fopenmp	
+	$(CC) $(CFLAGS) -c -fPIC ../keccak/keccak.c
+	$(CXX) -shared -o $@ poseidon.o keccak.o merkle.o -fopenmp	
 
 libmerkle-gpu.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp merkle.cu
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
+	$(CC) $(CFLAGS) -c -fPIC ../keccak/keccak.c
+	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak_gpu.o
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC merkle.cu -arch=$(CUDA_ARCH) -dc --output-file merkle_gpu.o
-	$(NVCC) -Xcompiler -fopenmp -shared -arch=$(CUDA_ARCH) -o $@ merkle_gpu.o merkle.o poseidon.o
+	$(NVCC) -Xcompiler -fopenmp -shared -arch=$(CUDA_ARCH) -o $@ merkle_gpu.o merkle.o poseidon.o keccak.o keccak_gpu.o
 
 test-rust: merkle.c ../poseidon/libposeidon.a
 	$(CC) $(CFLAGS) -g -DRUST_POSEIDON -DDEBUG $^ -o $@ -fopenmp

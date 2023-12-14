@@ -55,6 +55,8 @@ public:
     inline gl64_t(const uint64_t a)                     { val = a;  to(); }
     inline gl64_t(const uint64_t *p)                    { val = *p; to(); }
 
+    inline uint64_t get_val() const { return val; }
+
     inline operator uint64_t() const
     {   auto ret = *this; ret.from(); return ret.val;   }
     inline void store(uint64_t *p) const

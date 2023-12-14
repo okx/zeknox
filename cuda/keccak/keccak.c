@@ -1,4 +1,4 @@
-// keccak.c
+// Adapted from: keccak.c
 // 19-Nov-11  Markku-Juhani O. Saarinen <mjos@iki.fi>
 // A baseline Keccak (3rd round) implementation.
 
@@ -119,16 +119,11 @@ void cpu_keccak_hash_one(uint64_t* digest, uint64_t* data, uint32_t data_size) {
 }
 
 void cpu_keccak_hash_two(uint64_t* digest, uint64_t* digest_left, uint64_t* digest_right) {
-    uint64_t input[8];
-    input[0] = digest_left[0];
-    input[1] = digest_left[1];
-    input[2] = digest_left[2];
-    input[3] = digest_left[3];
-    input[4] = digest_right[0];
-    input[5] = digest_right[1];
-    input[6] = digest_right[2];
-    input[7] = digest_right[3];
-
-    keccak((uint8_t*)input, 64, (uint8_t*)digest, 32);
+    uint8_t input[50];
+    uint8_t* ileft = (uint8_t*)digest_left;
+    uint8_t* iright = (uint8_t*)digest_right;
+    memcpy(input, ileft, 25);
+    memcpy(input + 25, iright, 25);
+    keccak((uint8_t*)input, 50, (uint8_t*)digest, 32);
     digest[3] &= 0xFF;
 }

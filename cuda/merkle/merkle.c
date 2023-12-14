@@ -10,6 +10,7 @@
 #include "merkle.h"
 #include "merkle_private.h"
 #include "poseidon.h"
+#include "keccak.h"
 
 // Global vars
 u64* global_digests_buf = NULL;
@@ -342,6 +343,10 @@ void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_siz
     if (hash_type == 0) {
         cpu_hash_one_ptr = &poseidon_hash_leaf;
         cpu_hash_two_ptr = &poseidon_hash_of_two;
+    }
+    if (hash_type == 1) {
+        cpu_hash_one_ptr = &cpu_keccak_hash_one;
+        cpu_hash_two_ptr = &cpu_keccak_hash_two;
     }    
     init_gpu_functions(hash_type);
 }

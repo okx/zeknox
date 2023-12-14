@@ -7,7 +7,8 @@
 #include "poseidon.hpp"
 #include "poseidon.cuh"
 #include "poseidon.h"
-#include "keccak_sha3.cuh"
+#include "keccak.h"
+#include "keccak.cuh"
 
 #include "goldilocks.hpp"
 
@@ -148,15 +149,15 @@ __global__ void compute_internal_hashes_linear_all(u64 *digests_buf, u32 round_s
     if (tid >= round_size * subtree_count)
         return;
 
+    // compute indexes and pointers
     u32 subtree_idx = tid / round_size;
     u32 idx = tid % round_size;
     u64* dptrs = digests_buf + (subtree_idx * subtree_digests_len + last_idx) * HASH_SIZE_U64;
-
-    // printf("Tid %d, Offset %d\n", tid, subtree_idx * subtree_digests_len + last_idx);
-    
     u64 *dptr = dptrs + idx * HASH_SIZE_U64;
     u64 *sptr1 = dptrs + (2 * (idx + 1) + last_idx) * HASH_SIZE_U64;
     u64 *sptr2 = dptrs + (2 * (idx + 1) + 1 + last_idx) * HASH_SIZE_U64;
+
+    // compute hash
     gpu_hash_two_ptr((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
 }
 
@@ -358,7 +359,7 @@ void fill_digests_buf_linear_gpu(
     }
 
     // 2.3. (general case) compute leaf hashes on GPU
-    compute_leaves_hashes_linear_all<<<subtree_leaves_len / TPB + 1, TPB>>>(gpu_leaves, leaves_buf_size, leaf_size, gpu_digests, subtree_leaves_len, subtree_digests_len);
+    compute_leaves_hashes_linear_all<<<leaves_buf_size / TPB + 1, TPB>>>(gpu_leaves, leaves_buf_size, leaf_size, gpu_digests, subtree_leaves_len, subtree_digests_len);
 
     // 3. compute internal hashes on GPU
     u32 r = (u32)log2(subtree_leaves_len) - 1;
@@ -366,7 +367,7 @@ void fill_digests_buf_linear_gpu(
 
     for (; (1 << r) > TPB; r--)
     {
-        printf("GPU Round %u\n", r);
+        // printf("GPU Round %u\n", r);
         last_index -= (1 << r);
         compute_internal_hashes_linear_all<<<((1 << r) * cap_buf_size) / TPB + 1, TPB>>>(gpu_digests, (1 << r), last_index, cap_buf_size, subtree_digests_len);
     }
@@ -726,22 +727,41 @@ int compare_results(u64 *digests_buf1, u64 *digests_buf2, u32 n_digests, u64 *ca
  */
 void run_gpu_cpu_verify()
 {
+    struct timeval t0, t1;
+
     u64 n_caps = 2;
-    u64 n_leaves = 1024;
+    u64 n_leaves = (1 << 14);
     u64 n_digests = 2 * (n_leaves - n_caps);
     u64 rounds = log2(n_digests) + 1;
     u64 cap_h = log2(n_caps);
 
     global_digests_buf = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
     global_cap_buf = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-    global_leaves_buf = (u64 *)test_leaves_1024;
+    // global_leaves_buf = (u64 *)test_leaves_1024;
+    global_leaves_buf = (u64 *)malloc(n_leaves * LEAF_SIZE_U64 * sizeof(u64));
     global_cap_buf_end = global_cap_buf + n_caps * HASH_SIZE_U64 + 1;
     global_digests_buf_end = global_digests_buf + n_digests * HASH_SIZE_U64 + 1;
     global_leaves_buf_end = global_leaves_buf + n_leaves * 7 + 1;
 
+    // Generate random leaves
+    srand(time(NULL));
+    for (int i = 0; i < n_leaves; i++)
+    {
+        for (int j = 0; j < LEAF_SIZE_U64; j++)
+        {
+            u32 r = rand();
+            global_leaves_buf[i * LEAF_SIZE_U64 + j] = (u64)r << 32 + r * 88958514;
+        }
+    }
+    printf("Number of leaves: %ld\n", n_leaves);
+
     init_gpu_functions(0);
 
-    fill_digests_buf_linear_gpu(n_digests, n_caps, n_leaves, 7, cap_h);
+    gettimeofday(&t0, 0);
+    fill_digests_buf_linear_gpu_v1(n_digests, n_caps, n_leaves, 7, cap_h);
+    gettimeofday(&t1, 0);
+    long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
+    printf("Time on GPU: %ld us\n", elapsed);
 
     // fill_init_rounds(n_leaves, rounds);
     // fill_digests_buf_in_rounds_in_c_on_gpu(n_digests, n_caps, n_leaves, 7, cap_h);
@@ -750,10 +770,11 @@ void run_gpu_cpu_verify()
     printf("After fill...\n");
     for (int i = 0; i < n_digests; i++)
         print_hash(global_digests_buf + i * 4);
-*/
+
     printf("Cap...\n");
     for (int i = 0; i < n_caps; i++)
         print_hash(global_cap_buf + i * 4);
+*/
 
     u64 *digests_buf2 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
     memcpy(digests_buf2, global_digests_buf, n_digests * HASH_SIZE_U64 * sizeof(u64));
@@ -768,10 +789,11 @@ void run_gpu_cpu_verify()
     printf("After fill...\n");
     for (int i = 0; i < n_digests; i++)
         print_hash(global_digests_buf + i * 4);
-*/
+
     printf("Cap...\n");
     for (int i = 0; i < n_caps; i++)
         print_hash(global_cap_buf + i * 4);
+*/
 
     // fill_delete_rounds();
 
@@ -822,9 +844,9 @@ void run_gpu_cpu_comparison(u32 log_size)
     global_cap_buf = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
     global_leaves_buf = (u64 *)malloc(n_leaves * LEAF_SIZE_U64 * sizeof(u64));
     assert(global_digests_buf != NULL && global_cap_buf != NULL && global_leaves_buf != NULL);
-    global_cap_buf_end = global_cap_buf + n_caps * HASH_SIZE_U64;
-    global_digests_buf_end = global_digests_buf + n_digests * HASH_SIZE_U64;
-    global_leaves_buf_end = global_leaves_buf + n_leaves * LEAF_SIZE_U64;
+    global_cap_buf_end = global_cap_buf + (n_caps + 1) * HASH_SIZE_U64;
+    global_digests_buf_end = global_digests_buf + (n_digests + 1) * HASH_SIZE_U64;
+    global_leaves_buf_end = global_leaves_buf + (n_leaves + 1) * LEAF_SIZE_U64;
 
     // Generate random leaves
     srand(time(NULL));
@@ -839,9 +861,11 @@ void run_gpu_cpu_comparison(u32 log_size)
     printf("Number of leaves: %ld\n", n_leaves);
 
     // 1. Run on GPU
+    init_gpu_functions(0);
     fill_init_rounds(n_leaves, rounds);
     gettimeofday(&t0, 0);
-    fill_digests_buf_in_rounds_in_c_on_gpu(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
+    // fill_digests_buf_in_rounds_in_c_on_gpu(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
+    fill_digests_buf_linear_gpu_v1(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
     gettimeofday(&t1, 0);
     long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
     printf("Time on GPU: %ld us\n", elapsed);
@@ -890,9 +914,9 @@ int main(int argc, char **argv)
     }
     assert(3 <= size);
 
-    run_gpu_cpu_verify();
+    // run_gpu_cpu_verify();
 
-    // run_gpu_cpu_comparison(size);
+    run_gpu_cpu_comparison(size);
 
     return 0;
 }
