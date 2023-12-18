@@ -330,9 +330,12 @@ void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_siz
     u64 mem_size_leaves_buf = ((((leaves_count + 1) * leaf_size * sizeof(u64)) >> 12) + 1) << 12;
     u64 mem_size_cap_buf = ((((caps_count + 1) * HASH_SIZE_U64 * sizeof(u64)) >> 12) + 1) << 12;
 
-    global_digests_buf = (u64*)malloc(mem_size_digests_buf);
-    global_leaves_buf = (u64*)malloc(mem_size_leaves_buf);
-    global_cap_buf = (u64*)malloc(mem_size_cap_buf);
+    // global_digests_buf = (u64*)malloc(mem_size_digests_buf);
+    // global_leaves_buf = (u64*)malloc(mem_size_leaves_buf);
+    // global_cap_buf = (u64*)malloc(mem_size_cap_buf);
+    global_digests_buf = (u64*)aligned_alloc(32, mem_size_digests_buf);
+    global_leaves_buf = (u64*)aligned_alloc(32, mem_size_leaves_buf);
+    global_cap_buf = (u64*)aligned_alloc(32, mem_size_cap_buf);
     assert(global_digests_buf != NULL);
     assert(global_leaves_buf != NULL);
     assert(global_cap_buf != NULL);
