@@ -102,6 +102,8 @@ fn main() {
         println!("cargo:rerun-if-changed=src/lib.cu");
         println!("cargo:rerun-if-changed=cuda");
         println!("cargo:rustc-cfg=feature=\"cuda\"");
+    } else {
+        panic!("no nvcc found");
     }
     println!("cargo:rerun-if-env-changed=NVCC");
 }
