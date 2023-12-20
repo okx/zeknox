@@ -20,3 +20,9 @@ cargo test --test ntt -- test_ntt_gl64_consistency_with_plonky2 --exact --nocapt
 ```
 cargo bench --bench gpu_fft
 ```
+
+## If got below issue
+- no nvcc found
+```
+export NVCC=/usr/local/cuda/bin/nvcc
+```

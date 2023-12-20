@@ -59,8 +59,14 @@ fn main() {
 
     // Detect if there is CUDA compiler and engage "cuda" feature accordingly
     let nvcc = match env::var("NVCC") {
-        Ok(var) => which::which(var),
-        Err(_) => which::which("nvcc"),
+        Ok(var) => {
+            println!("nvcc env var: {:?}", var);
+            which::which(var)
+        },
+        Err(_) => {
+            println!("no nvcc env var set use nvcc");
+            which::which("nvcc")
+        },
     };
     if nvcc.is_ok() {
         let cuda_version = std::process::Command::new(nvcc.unwrap())
