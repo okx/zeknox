@@ -37,6 +37,8 @@ fn feature_check() -> String {
             let mut fr = "";
             if cfg!(feature = "gl64") {
                 fr = "FEATURE_GOLDILOCKS";
+            } else if cfg!(feature = "bn128") {
+                fr = "FEATURE_BN128"
             }
             String::from(fr)
         },

@@ -6,6 +6,8 @@
 #if defined(FEATURE_GOLDILOCKS)
 #include <ff/goldilocks.hpp>
 #include <ff/arithmatic.cuh>
+#elif defined(FEATURE_BN128)
+# include <ff/alt_bn128.hpp>
 #else
 #error "no FEATURE"
 #endif
