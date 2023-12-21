@@ -156,6 +156,6 @@ public:
             asm("@%top mov.b32 %0, %1;" : "+r"(even[i]) : "r"(tmp[i]));
         asm("}");
     }
-}
+};
 
 #endif

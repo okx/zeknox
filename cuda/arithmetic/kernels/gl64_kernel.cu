@@ -1,5 +1,5 @@
-#ifndef __CRYPTO_ARITHMATIC_KERNELS_CUH__
-#define __CRYPTO_ARITHMATIC_KERNELS_CUH__
+#ifndef __CRYPTO_ARITHMATIC_KERNELS_GL64_CU__
+#define __CRYPTO_ARITHMATIC_KERNELS_GL64_CU__
 
 #include <ff/goldilocks.hpp>
 __global__ void goldilocks_add_kernel(

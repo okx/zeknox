@@ -76,7 +76,14 @@ struct fp_t : public fp_mont {
     __device__ __forceinline__ fp_t(const fp_mont& a) : fp_mont(a) {}
 };
 
-
+typedef mont_t<254, device::ALT_BN128_r, device::ALT_BN128_m0,
+                    device::ALT_BN128_rRR, device::ALT_BN128_rone,
+                    device::ALT_BN128_rx4> fr_mont;
+struct fr_t : public fr_mont {
+    using mem_t = fr_t;
+    __device__ __forceinline__ fr_t() {}
+    __device__ __forceinline__ fr_t(const fr_mont& a) : fr_mont(a) {}
+};
 #endif
 
 #endif
