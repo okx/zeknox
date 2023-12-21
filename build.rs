@@ -21,6 +21,7 @@ fn get_device_arch() -> String {
 fn feature_check() -> String {
     let fr_s = [
         "gl64",
+        "bn128"
     ];
     let fr_s_as_features: Vec<String> = (0..fr_s.len())
         .map(|i| format!("CARGO_FEATURE_{}", fr_s[i].to_uppercase()))
@@ -52,6 +53,7 @@ fn main() {
     }
 
     let fr = feature_check();
+    println!("feature: {:?}", fr);
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let mut base_dir = manifest_dir.join("cuda");

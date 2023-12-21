@@ -11,6 +11,16 @@
 #  define asm asm volatile
 # endif
 
+
+/**
+ * @brief montgomery reduction template
+ * @param[in] N, pnumber of bits
+ * @param[in] MOD, modulus, field modulus
+ * @param[in] M0, 
+ * @param[in] RR, 
+ * @param[in] ONE,
+ * @param[in] MODx,  
+*/
 template<const size_t N, const uint32_t MOD[(N+31)/32], const uint32_t& M0,
          const uint32_t RR[(N+31)/32], const uint32_t ONE[(N+31)/32],
          const uint32_t MODx[(N+31)/32] = MOD>
@@ -71,8 +81,64 @@ public:
         final_subc();
         return *this;
     }
+    friend inline mont_t operator+(mont_t a, const mont_t& b)
+    {   return a += b;   }
 
+   /**
+     * @brief leftshift, leftshift is equivalent to multiplication *2, or addition of self
+     * @param[in] l, left shifted bits
+    */
+    inline mont_t& operator<<=(unsigned l)
+    {
+        while (l--) {
+            asm("add.cc.u32 %0, %0, %0;" : "+r"(even[0]));
+            for (size_t i = 1; i < n; i++)
+                asm("addc.cc.u32 %0, %0, %0;" : "+r"(even[i]));
+            final_subc();
+        }
 
+        return *this;
+    }
+    friend inline mont_t operator<<(mont_t a, unsigned l)
+    {   return a <<= l;   }
+
+    /**
+     * @brief rightshift, 
+     * @param[in] r, right shifted bits
+    */
+   inline mont_t& operator>>=(unsigned r)
+    {
+        size_t i;
+        uint32_t tmp[n+1];
+
+        while (r--) {
+            tmp[n] = 0 - (even[0]&1);  // tmp[n] is assigned the value 0x00000000 if the least significant bit of even[0] is even; set to 0xffffffff if it is odd
+            for (i = 0; i < n; i++)  // if the value is even, tmp is set to 0; else, tmp is set to MOD
+                tmp[i] = MOD[i] & tmp[n];
+
+            cadd_n(&tmp[0], &even[0]);
+            if (N%32 == 0)
+                asm("addc.u32 %0, 0, 0;" : "=r"(tmp[n]));
+
+            for (i = 0; i < n-1; i++)
+                asm("shf.r.wrap.b32 %0, %1, %2, 1;"
+                    : "=r"(even[i]) : "r"(tmp[i]), "r"(tmp[i+1]));
+            if (N%32 == 0)
+                asm("shf.r.wrap.b32 %0, %1, %2, 1;"
+                    : "=r"(even[i]) : "r"(tmp[i]), "r"(tmp[i+1]));
+            else
+                even[i] = tmp[i] >> 1;
+        }
+
+        return *this;
+    }
+
+    friend inline mont_t operator>>(mont_t a, unsigned r)
+    {   return a >>= r;   }
+
+    /**
+     * @brief reduction by MOD
+     **/
     inline void final_subc()
     {
         uint32_t carry, tmp[n];

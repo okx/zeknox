@@ -1,14 +1,5 @@
-// Copyright Supranational LLC
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
-
-#ifndef __CRYPTO_ARITHMATIC_CUH__
-#define __CRYPTO_ARITHMATIC_CUH__
-
-#ifndef __DEBUG__PRINT__
-#define __DEBUG__PRINT__
-#include <cstdio>
-#endif
+#ifndef __CRYPTO_ARITHMATIC_KERNELS_CUH__
+#define __CRYPTO_ARITHMATIC_KERNELS_CUH__
 
 #include <ff/goldilocks.hpp>
 __global__ void goldilocks_add_kernel(
