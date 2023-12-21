@@ -19,7 +19,7 @@ name = "gpu_fft"
 harness = false
 
 [dependencies] 
-
+blst = "~0.3.11"
 
 [build-dependencies]
 cc = "^1.0.70"

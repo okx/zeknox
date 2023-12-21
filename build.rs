@@ -105,7 +105,15 @@ fn main() {
         if cfg!(feature = "gl64") {
             nvcc.define("GL64_NO_REDUCTION_KLUDGE", None);
         }
+
         nvcc.include(base_dir);
+        // required for parling curve, such as bls12_381, bn128, etc. 
+        // cargo dependency blst will set DEP_BLST_C_SRC
+        if let Some(include) = env::var_os("DEP_BLST_C_SRC") {
+            println!("blst_c_src directory: {:?}", include); // ~/.cargo/registry/src/index.crates.io-6f17d22bba15001f/blst-0.3.11/blst/src
+            nvcc.include(include);
+        }
+
         nvcc.file("src/lib.cu")
             .file(util_dir.join("all_gpus.cpp"))
             .compile("cryptography_cuda");
