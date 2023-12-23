@@ -102,6 +102,7 @@ struct fr_t : public fr_mont {
 # endif
 // TO_LIMB_T is defined in blst_t.hpp, # define TO_LIMB_T(limb64)     (limb_t)limb64,(limb_t)(limb64>>32)
 // vec256, blst_256_t is a type defined in blst_t.hpp also
+// the int value of P is 21888242871839275222246405745257275088696311157297823662689037894645226208583
 static const vec256 ALT_BN128_P = {
     TO_LIMB_T(0x3c208c16d87cfd47), TO_LIMB_T(0x97816a916871ca8d),
     TO_LIMB_T(0xb85045b68181585d), TO_LIMB_T(0x30644e72e131a029)

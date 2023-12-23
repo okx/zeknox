@@ -36,7 +36,7 @@ private:
     uint32_t even[n];
 
     /**
-     * @brief add a into acc, with 
+     * @brief add `a` into `acc`, with 
      * @param[in] acc, pointer to a u32
      * @param[in] a,   pointer to a const u32
      * @param[in] n, number of u32 to add (carry is carried to next if there is carry); default to the number of u32 as stored in monot_t instance
@@ -116,9 +116,13 @@ public:
             for (i = 0; i < n; i++)  // if the value is even, tmp is set to 0; else, tmp is set to MOD
                 tmp[i] = MOD[i] & tmp[n];
 
-            cadd_n(&tmp[0], &even[0]);
-            if (N%32 == 0)
-                asm("addc.u32 %0, 0, 0;" : "=r"(tmp[n]));
+            cadd_n(&tmp[0], &even[0]);  // add MOD if the value is odd, and store in tmp; ADD by MOD makes the least significant bit to be 0; hence shift right can be represendted as divide by 2.
+            printf("tmp[0]: %x \n", tmp[0]);
+            if (N%32 == 0)  // ignore for bn128, as it is 254
+             {
+                printf("N is divided by 32 \n");
+                 asm("addc.u32 %0, 0, 0;" : "=r"(tmp[n]));
+             }  
 
             for (i = 0; i < n-1; i++)
                 asm("shf.r.wrap.b32 %0, %1, %2, 1;"
@@ -126,8 +130,12 @@ public:
             if (N%32 == 0)
                 asm("shf.r.wrap.b32 %0, %1, %2, 1;"
                     : "=r"(even[i]) : "r"(tmp[i]), "r"(tmp[i+1]));
-            else
+            else {
+                printf("i: %lu \n", i);
+                printf("tmp[i]: %x \n", tmp[i]);
                 even[i] = tmp[i] >> 1;
+            }
+                
         }
 
         return *this;
@@ -136,24 +144,72 @@ public:
     friend inline mont_t operator>>(mont_t a, unsigned r)
     {   return a >>= r;   }
 
+     /**
+     * @brief subtraction, 
+     * @param[in] b, value to be subtracted
+    */
+    inline mont_t& operator-=(const mont_t& b)
+    {
+        size_t i;
+        uint32_t tmp[n], borrow;
+
+        asm("sub.cc.u32 %0, %0, %1;" : "+r"(even[0]) : "r"(b[0]));
+        for (i = 1; i < n; i++)
+            asm("subc.cc.u32 %0, %0, %1;" : "+r"(even[i]) : "r"(b[i]));
+        asm("subc.u32 %0, 0, 0;" : "=r"(borrow));
+        printf("borrow: %x \n", borrow);
+        asm("add.cc.u32 %0, %1, %2;" : "=r"(tmp[0]) : "r"(even[0]), "r"(MOD[0]));
+        for (i = 1; i < n-1; i++)
+            asm("addc.cc.u32 %0, %1, %2;" : "=r"(tmp[i]) : "r"(even[i]), "r"(MOD[i]));
+        asm("addc.u32 %0, %1, %2;" : "=r"(tmp[i]) : "r"(even[i]), "r"(MOD[i]));
+
+        // if there is borrow, i.e borrow=0xffffffff, the effect is add MOD first (which makes sub in bits no borrow), and then subtract in bits.
+        // the result would be in 256bits and there is no borrow.
+        asm("{ .reg.pred %top; setp.ne.u32 %top, %0, 0;" :: "r"(borrow));  
+        for (i = 0; i < n; i++)
+            asm("@%top mov.b32 %0, %1;" : "+r"(even[i]) : "r"(tmp[i]));
+        asm("}");
+
+        return *this;
+    }
+    friend inline mont_t operator-(mont_t a, const mont_t& b)
+    {   return a -= b;   }
+
     /**
      * @brief reduction by MOD
      **/
     inline void final_subc()
     {
         uint32_t carry, tmp[n];
-
-        asm("addc.u32 %0, 0, 0;" : "=r"(carry));
-
+        uint32_t tmp_carry;
+        // printf("carry0: %d, tmp[n]: %d \n", carry, tmp[n]);
+        // printf("even[0]: %x, tmp[0]: %x \n", even[0], tmp[0]);
+        // printf("carry1: %d \n", carry);
+        asm("addc.u32 %0, 0, 0;" : "=r"(carry));  // capture the carry flag of the previous operation
+        printf("carry2: %d \n", carry);
         asm("sub.cc.u32 %0, %1, %2;" : "=r"(tmp[0]) : "r"(even[0]), "r"(MOD[0]));
-        for (size_t i = 1; i < n; i++)
+        for (size_t i = 1; i < n; i++) {
+            printf("even[i]: %x, MOD[i]: %x \n", even[i], MOD[i]);
             asm("subc.cc.u32 %0, %1, %2;" : "=r"(tmp[i]) : "r"(even[i]), "r"(MOD[i]));
+        }
+            
+        // asm("addc.u32 %0, 0, 0;" : "=r"(tmp_carry));  // capture the carry flag of the previous operation
+        //  printf("tmp_carry: %d \n", tmp_carry);
         asm("subc.u32 %0, %0, 0;" : "+r"(carry));
+        printf("carry3: %d \n", carry);
 
         asm("{ .reg.pred %top;");
-        asm("setp.eq.u32 %top, %0, 0;" :: "r"(carry));
+        /**
+         * if carry is 1, means the result will be 255bits (since the number used is 254 bits); will keep this non_canical format (no reduction)
+         * if carry is ffffffff, means there is borrow in subtraction, which means value is less than MOD, therefore, keep the original value
+         * if carry is 00000000, means value is larger than MOD, therefore, use the value - MOD (which is tmp) as the final value
+        */
+        asm("setp.eq.u32 %top, %0, 0;" :: "r"(carry));  
+        // printf("carry4: %d \n", carry);
+        // printf("even[7]: %x, tmp[7]: %x \n", even[7], tmp[7]);
         for (size_t i = 0; i < n; i++)
             asm("@%top mov.b32 %0, %1;" : "+r"(even[i]) : "r"(tmp[i]));
+        // printf("even[7]: %x, tmp[7]: %x \n", even[7], tmp[7]);
         asm("}");
     }
 };

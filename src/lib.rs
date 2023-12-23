@@ -1,9 +1,18 @@
 pub mod error;
 pub mod types;
 
-
 extern "C" {
+
     fn cuda_available() -> bool;
+
+    fn compute_ntt(
+        device_id: usize,
+        inout: *mut core::ffi::c_void,
+        lg_domain_size: u32,
+        ntt_order: types::NTTInputOutputOrder,
+        ntt_direction: types::NTTDirection,
+        ntt_type: types::NTTType,
+    ) -> error::Error;
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -17,14 +26,42 @@ extern "C" {
 
     fn goldilocks_rshift(result: *mut u64, val: *mut u64, r: *mut u32) -> ();
 
-    fn compute_ntt(
-        device_id: usize,
-        inout: *mut core::ffi::c_void,
-        lg_domain_size: u32,
-        ntt_order: types::NTTInputOutputOrder,
-        ntt_direction: types::NTTDirection,
-        ntt_type: types::NTTType,
-    ) -> error::Error;
+    fn bn128_add(result: *mut [u32; 8], val: *mut [u32; 8], r: *mut [u32; 8]) -> ();
+    fn bn128_sub(result: *mut [u32; 8], val: *mut [u32; 8], r: *mut [u32; 8]) -> ();
+    fn bn128_lshift(result: *mut [u32; 8], val: *mut [u32; 8], l: *mut u32) -> ();
+    fn bn128_rshift(result: *mut [u32; 8], val: *mut [u32; 8], r: *mut u32) -> ();
+}
+
+#[allow(non_snake_case)]
+pub fn bn128_add_rust(a: &mut [u32; 8], b: &mut [u32; 8]) -> [u32; 8] {
+    let mut result: [u32; 8] = [0; 8];
+    unsafe { bn128_add(&mut result, a, b) };
+
+    result
+}
+
+#[allow(non_snake_case)]
+pub fn bn128_sub_rust(a: &mut [u32; 8], b: &mut [u32; 8]) -> [u32; 8] {
+    let mut result: [u32; 8] = [0; 8];
+    unsafe { bn128_sub(&mut result, a, b) };
+
+    result
+}
+
+#[allow(non_snake_case)]
+pub fn bn128_lshift_rust(a: &mut [u32; 8], l: &mut u32) -> [u32; 8] {
+    let mut result: [u32; 8] = [0; 8];
+    unsafe { bn128_lshift(&mut result, a, l) };
+
+    result
+}
+
+#[allow(non_snake_case)]
+pub fn bn128_rshift_rust(a: &mut [u32; 8], l: &mut u32) -> [u32; 8] {
+    let mut result: [u32; 8] = [0; 8];
+    unsafe { bn128_rshift(&mut result, a, l) };
+
+    result
 }
 
 #[allow(non_snake_case)]
@@ -58,7 +95,6 @@ pub fn goldilocks_inverse_rust(a: &mut u64) -> u64 {
 
     result
 }
-
 
 #[allow(non_snake_case)]
 pub fn goldilocks_rshift_rust(a: &mut u64, r: &mut u32) -> u64 {
