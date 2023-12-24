@@ -182,7 +182,11 @@ void coalesced_store(fr_t* inout, index_t idx, const fr_t r[z_count],
         inout[idx] = r[z];
 }
 
-const static int Z_COUNT = 256/8/sizeof(fr_t); // 4 for Goldilocks Field
+#if defined(FEATURE_GOLDILOCKS)
+const static int Z_COUNT = 256/8/sizeof(fr_t);
 # include "kernels/ct_mixed_radix_narrow.cu"
+#else // 256-bit fields
+# include "kernels/ct_mixed_radix_wide.cu"
+#endif
 
 #endif /**__CRYPTO_KERNELS_CU__ */

@@ -14,19 +14,19 @@
 #endif
 
 #include <util/cuda_available.hpp>
-// #include <ntt/ntt.cuh>
+#include <ntt/ntt.cuh>
 #include <arithmetic/arithmetic.hpp>
-// #ifndef __CUDA_ARCH__   // below is cpu code; __CUDA_ARCH__ should not be defined
+#ifndef __CUDA_ARCH__   // below is cpu code; __CUDA_ARCH__ should not be defined
 
 
-// extern "C" RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
-//                                  NTT::InputOutputOrder ntt_order,
-//                                  NTT::Direction ntt_direction,
-//                                  NTT::Type ntt_type)
-// {
-//     auto &gpu = select_gpu(device_id);
+extern "C" RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
+                                 NTT::InputOutputOrder ntt_order,
+                                 NTT::Direction ntt_direction,
+                                 NTT::Type ntt_type)
+{
+    auto &gpu = select_gpu(device_id);
 
-//     return NTT::Base(gpu, inout, lg_domain_size,
-//                      ntt_order, ntt_direction, ntt_type);
-// }
-// #endif
+    return NTT::Base(gpu, inout, lg_domain_size,
+                     ntt_order, ntt_direction, ntt_type);
+}
+#endif
