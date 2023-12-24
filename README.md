@@ -14,7 +14,7 @@ much of the code has been taken from https://github.com/supranational/sppark. on
 ## run integration test
 ```
 cargo test --test goldilocks_arithmetic -- test_goldilocks_exp_rust --exact --nocapture
-cargo test --test bn128_arithmetic -- test_bn128_sub_rust --exact --nocapture
+cargo test --test bn128_arithmetic -- test_bn128_mul_rust --exact --nocapture
 cargo test --test ntt -- test_ntt_gl64_consistency_with_plonky2 --exact --nocapture
 ```
 ## run benchmarks

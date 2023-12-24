@@ -28,6 +28,7 @@ extern "C" {
 
     fn bn128_add(result: *mut [u32; 8], val: *mut [u32; 8], r: *mut [u32; 8]) -> ();
     fn bn128_sub(result: *mut [u32; 8], val: *mut [u32; 8], r: *mut [u32; 8]) -> ();
+    fn bn128_mul(result: *mut [u32; 8], val: *mut [u32; 8], r: *mut [u32; 8]) -> ();
     fn bn128_lshift(result: *mut [u32; 8], val: *mut [u32; 8], l: *mut u32) -> ();
     fn bn128_rshift(result: *mut [u32; 8], val: *mut [u32; 8], r: *mut u32) -> ();
 }
@@ -44,6 +45,14 @@ pub fn bn128_add_rust(a: &mut [u32; 8], b: &mut [u32; 8]) -> [u32; 8] {
 pub fn bn128_sub_rust(a: &mut [u32; 8], b: &mut [u32; 8]) -> [u32; 8] {
     let mut result: [u32; 8] = [0; 8];
     unsafe { bn128_sub(&mut result, a, b) };
+
+    result
+}
+
+#[allow(non_snake_case)]
+pub fn bn128_mul_rust(a: &mut [u32; 8], b: &mut [u32; 8]) -> [u32; 8] {
+    let mut result: [u32; 8] = [0; 8];
+    unsafe { bn128_mul(&mut result, a, b) };
 
     result
 }

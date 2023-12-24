@@ -14,6 +14,12 @@ __global__ void bn128_sub_kernel(
     *d_result = *d_a - *d_b;
 }
 
+__global__ void bn128_mul_kernel(
+    fp_t *d_result, fp_t *d_a, fp_t *d_b)
+{
+    *d_result = *d_a * (*d_b);
+}
+
 __global__ void bn128_lshift_kernel(fp_t *d_result, fp_t *d_a, uint32_t *l)
 {
     *d_result = *d_a << (*l);

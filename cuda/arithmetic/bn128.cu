@@ -39,6 +39,24 @@ extern "C" void bn128_sub(fp_t *result, fp_t *a, fp_t *b)
 
 }
 
+extern "C" void bn128_mul(fp_t *result, fp_t *a, fp_t *b)
+{
+
+    fp_t *d_result, *d_a, *d_b;
+    cudaMalloc((fp_t**)&d_result, sizeof(fp_t));
+    cudaMalloc((fp_t**)&d_a, sizeof(fp_t));
+    cudaMalloc((fp_t**)&d_b, sizeof(fp_t));
+
+    cudaMemcpy(d_a, a, sizeof(fp_t), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, b, sizeof(fp_t), cudaMemcpyHostToDevice);
+    bn128_mul_kernel<<<1,1>>>(
+        d_result, d_a, d_b
+        );
+
+    cudaMemcpy(result, d_result, sizeof(fp_t), cudaMemcpyDeviceToHost);
+
+}
+
 extern "C" void bn128_lshift(fp_t *result, fp_t *a, uint32_t *r)
 {
        fp_t *d_result, *d_a;

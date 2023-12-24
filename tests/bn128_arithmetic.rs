@@ -1,5 +1,5 @@
 use cryptography_cuda::{
-    bn128_add_rust, bn128_sub_rust, bn128_lshift_rust, bn128_rshift_rust
+    bn128_add_rust, bn128_sub_rust, bn128_mul_rust, bn128_lshift_rust, bn128_rshift_rust
 };
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::types::{Field, PrimeField64};
@@ -41,6 +41,17 @@ fn test_bn128_sub_rust() {
     println!("ret: {:?}", gpu_ret);
     assert_eq!(gpu_ret[0],0xd87cfd47 );
     assert_eq!(gpu_ret[7],0x30644e71 );
+}
+
+#[test]
+fn test_bn128_mul_rust() {
+    // without borrow
+    let mut a:[u32;8] = [0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,0x00000000,0x00000000];
+    let mut b:[u32;8] = [0x00000011, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,0x00000000,0x00000000];
+    let gpu_ret = bn128_mul_rust(&mut a, &mut b);
+    println!("result: {:?}", gpu_ret);
+    // assert_eq!(gpu_ret[0],0x00000000 );
+    // assert_eq!(gpu_ret[7],0x00000010 );
 }
 
 #[test]
