@@ -27,3 +27,11 @@ cargo bench --bench gpu_fft
 ```
 export NVCC=/usr/local/cuda/bin/nvcc
 ```
+
+
+
+# cpp build
+```
+cd build
+cmake -S .. -B .
+```
