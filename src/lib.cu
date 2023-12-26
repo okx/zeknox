@@ -13,6 +13,18 @@
 #error "no FEATURE"
 #endif
 
+void __global__ print()
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    std::printf("%d\n", idx);
+}
+
+void print_function()
+{
+    print<<<1, 10>>>();
+    cudaDeviceSynchronize();
+}
+
 #include <util/cuda_available.hpp>
 #include <ntt/ntt.cuh>
 #include <arithmetic/arithmetic.hpp>
@@ -30,3 +42,4 @@ extern "C" RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_doma
                      ntt_order, ntt_direction, ntt_type);
 }
 #endif
+

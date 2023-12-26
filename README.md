@@ -34,4 +34,5 @@ export NVCC=/usr/local/cuda/bin/nvcc
 ```
 cd build
 cmake -S .. -B .
+make
 ```
