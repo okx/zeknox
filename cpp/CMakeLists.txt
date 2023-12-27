@@ -81,21 +81,22 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 
-set(MULTIEXP_G1_SOURCES
-    multiexp_g1.cpp
-    ../depends/ffiasm/c/misc.cpp
-    ../depends/ffiasm/c/naf.cpp
-    ../depends/ffiasm/c/splitparstr.cpp
-    ../depends/ffiasm/c/alt_bn128.cpp
-    )
+set(BN128_BENCH_SOURCES
+  bn128_bench.cpp
+  ../depends/ffiasm/c/misc.cpp
+  ../depends/ffiasm/c/naf.cpp
+  ../depends/ffiasm/c/splitparstr.cpp
+  ../depends/ffiasm/c/alt_bn128.cpp
+)
 include_directories(
   field/
   ../depends/ffiasm/c
 )
-add_executable(multiexp_g1_benchmark ${MULTIEXP_G1_SOURCES})
 
+add_executable(bn128_bench ${BN128_BENCH_SOURCES})
+target_link_libraries(bn128_bench cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-        target_link_libraries(multiexp_g1_benchmark OpenMP::OpenMP_CXX)
+        target_link_libraries(bn128_bench OpenMP::OpenMP_CXX)
     endif()
 endif()

@@ -318,6 +318,19 @@ int RawFr::fromRprBE(Element &element, const uint8_t *data, int bytes)
     return Fr_N64 * 8;
 }
 
+int RawFr::fromRprLE(Element &element, const uint8_t *data, int bytes)
+{
+    if (bytes < Fr_N64 * 8) {
+      return -(Fr_N64* 8);
+    }
+    mpz_t r;
+    mpz_init(r);
+
+    mpz_import(r, Fr_N64 * 8, -1, 1, -1, 0, data);
+    fromMpz(element, r);
+    return Fr_N64 * 8;
+}
+
 static bool init = Fr_init();
 
 RawFr RawFr::field;

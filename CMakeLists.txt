@@ -68,7 +68,7 @@ target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN128)
 
 add_subdirectory(cpp)
 
-install(TARGETS example cryptography_cuda multiexp_g1_benchmark
+install(TARGETS example  bn128_bench cryptography_cuda
     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
