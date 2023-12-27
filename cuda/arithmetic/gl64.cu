@@ -3,7 +3,10 @@
 #include <arithmetic/kernels/gl64_kernel.cu>
 #ifndef __CUDA_ARCH__   // below is cpu code; __CUDA_ARCH__ should not be defined
 
-extern "C" void goldilocks_add(fr_t *result, fr_t *a, fr_t *b)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void goldilocks_add(fr_t *result, fr_t *a, fr_t *b)
 {
 
     fr_t *d_result, *d_a, *d_b;
@@ -21,7 +24,10 @@ extern "C" void goldilocks_add(fr_t *result, fr_t *a, fr_t *b)
 
 }
 
-extern "C" void goldilocks_sub(fr_t *result, fr_t *a, fr_t *b)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void goldilocks_sub(fr_t *result, fr_t *a, fr_t *b)
 {
 
     fr_t *d_result, *d_a, *d_b;
@@ -39,7 +45,10 @@ extern "C" void goldilocks_sub(fr_t *result, fr_t *a, fr_t *b)
 
 }
 
-extern "C" void goldilocks_mul(fr_t *result, fr_t *a, fr_t *b)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void goldilocks_mul(fr_t *result, fr_t *a, fr_t *b)
 {
        fr_t *d_result, *d_a, *d_b;
     cudaMalloc((fr_t**)&d_result, sizeof(fr_t));
@@ -55,7 +64,10 @@ extern "C" void goldilocks_mul(fr_t *result, fr_t *a, fr_t *b)
     cudaMemcpy(result, d_result, sizeof(fr_t), cudaMemcpyDeviceToHost);
 }
 
-extern "C" void goldilocks_rshift(fr_t *result, fr_t *a, uint32_t *r)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void goldilocks_rshift(fr_t *result, fr_t *a, uint32_t *r)
 {
        fr_t *d_result, *d_a;
        uint32_t *d_r;
@@ -73,7 +85,10 @@ extern "C" void goldilocks_rshift(fr_t *result, fr_t *a, uint32_t *r)
 }
 
 
-extern "C" void goldilocks_inverse(fr_t *result, fr_t *a)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void goldilocks_inverse(fr_t *result, fr_t *a)
 {
        fr_t *d_result, *d_a;
     cudaMalloc((fr_t**)&d_result, sizeof(fr_t));
@@ -87,7 +102,10 @@ extern "C" void goldilocks_inverse(fr_t *result, fr_t *a)
     cudaMemcpy(result, d_result, sizeof(fr_t), cudaMemcpyDeviceToHost);
 }
 
-extern "C" void goldilocks_exp(fr_t *result, fr_t *base, uint32_t *pow)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void goldilocks_exp(fr_t *result, fr_t *base, uint32_t *pow)
 {
     fr_t *d_result, *d_base;
     uint32_t *d_pow;

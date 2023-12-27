@@ -102,6 +102,7 @@ fn main() {
         // nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
         nvcc.define(&fr, None);
+        nvcc.define("EXPOSE_C_INTERFACE", None);
         if cfg!(feature = "gl64") {
             nvcc.define("GL64_NO_REDUCTION_KLUDGE", None);
         }

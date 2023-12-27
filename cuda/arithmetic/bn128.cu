@@ -3,9 +3,11 @@
 #include <arithmetic/kernels/bn128_kernel.cu>
 #ifndef __CUDA_ARCH__   // below is cpu code; __CUDA_ARCH__ should not be defined
 
-extern "C" void bn128_add(fp_t *result, fp_t *a, fp_t *b)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif
+void bn128_add(fp_t *result, fp_t *a, fp_t *b)
 {
-
     fp_t *d_result, *d_a, *d_b;
     cudaMalloc((fp_t**)&d_result, sizeof(fp_t));
     cudaMalloc((fp_t**)&d_a, sizeof(fp_t));
@@ -20,8 +22,10 @@ extern "C" void bn128_add(fp_t *result, fp_t *a, fp_t *b)
     cudaMemcpy(result, d_result, sizeof(fp_t), cudaMemcpyDeviceToHost);
 
 }
-
-extern "C" void bn128_sub(fp_t *result, fp_t *a, fp_t *b)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif
+void bn128_sub(fp_t *result, fp_t *a, fp_t *b)
 {
 
     fp_t *d_result, *d_a, *d_b;
@@ -39,7 +43,10 @@ extern "C" void bn128_sub(fp_t *result, fp_t *a, fp_t *b)
 
 }
 
-extern "C" void bn128_mul(fp_t *result, fp_t *a, fp_t *b)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void bn128_mul(fp_t *result, fp_t *a, fp_t *b)
 {
 
     fp_t *d_result, *d_a, *d_b;
@@ -57,7 +64,10 @@ extern "C" void bn128_mul(fp_t *result, fp_t *a, fp_t *b)
 
 }
 
-extern "C" void bn128_lshift(fp_t *result, fp_t *a, uint32_t *r)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void bn128_lshift(fp_t *result, fp_t *a, uint32_t *r)
 {
        fp_t *d_result, *d_a;
        uint32_t *d_r;
@@ -75,7 +85,10 @@ extern "C" void bn128_lshift(fp_t *result, fp_t *a, uint32_t *r)
 }
 
 
-extern "C" void bn128_rshift(fp_t *result, fp_t *a, uint32_t *r)
+#if defined(EXPOSE_C_INTERFACE)
+extern "C" 
+#endif 
+void bn128_rshift(fp_t *result, fp_t *a, uint32_t *r)
 {
        fp_t *d_result, *d_a;
        uint32_t *d_r;
