@@ -1,5 +1,5 @@
-#ifndef __ELEMENT_HPP__
-#define __ELEMENT_HPP__
+#ifndef __ELEMENT_CUH__
+#define __ELEMENT_CUH__
 
 #include "int_types.h"
 
@@ -15,7 +15,7 @@
 
 #define INLINE __host__ inline
 #define CONST const
-#define DEVICE __host__ 
+#define DEVICE __host__
 
 #endif // USE_CUDA
 
@@ -49,7 +49,7 @@ private:
     DEVICE void sub64(u64 a, u64 b, u64 bin, u64 *r, u64 *bout);
 
     DEVICE void madd0(u64 a, u64 b, u64 c, u64 *hi);
-    
+
     DEVICE void madd1(u64 a, u64 b, u64 c, u64 *hi, u64 *lo);
 
     DEVICE void madd2(u64 a, u64 b, u64 c, u64 d, u64 *hi, u64 *lo);
@@ -108,7 +108,7 @@ public:
         z[3] = 0;
         // z.ToMont()
         u64 r[4];
-#ifdef USE_CUDA        
+#ifdef USE_CUDA
         _mulGeneric(r, z, (u64 *)rSquareGPU);
 #else
         _mulGeneric(r, z, (u64 *)rSquare);
@@ -119,7 +119,7 @@ public:
     INLINE void ToMont()
     {
         u64 r[4];
-#ifdef USE_CUDA        
+#ifdef USE_CUDA
         _mulGeneric(r, z, (u64 *)rSquareGPU);
 #else
         _mulGeneric(r, z, (u64 *)rSquare);
@@ -152,44 +152,29 @@ public:
 
     // Exp z = x^exponent mod q
     // Note: since only Exp(x,5) is used, we implement a custom version of Exp
-    // TOOD: rename to Exp5() ?
-    DEVICE void Exp(const FFE x, u32 exponent)
+    DEVICE void Exp5(const FFE x)
     {
-        assert(exponent == 5);
         this->Set(x);
         this->Square(z);
         this->Square(z);
         u64 r[4];
         _mulGeneric(r, z, (u64 *)x.z);
         this->set_vals(r);
+    }
 
-        /*
-        if (exponent == 0)
-        {
-            this->SetOne();
-            return;
-        }
-
-        this->Set(x);
-
-        int i = 31;
-        while ((exponent & (1 << i)) == 0 && i > 0)
-            i--;
-
-        printf("%d\n", i);
-
-        for (i = i - 1; i >= 0; i--)
-        {
-            this->Square(z);
-            if ((exponent & (1 << i)) == 1)
-            {
-                u64 r[4];
-                _mulGeneric(r, z, (u64 *)x.z);
-                this->set_vals(r);
-            }
-        }
-        */
+    DEVICE void Exp5()
+    {
+        u64 x[4];
+        x[0] = z[0];
+        x[1] = z[1];
+        x[2] = z[2];
+        x[3] = z[3];
+        this->Square(z);
+        this->Square(z);
+        u64 r[4];
+        _mulGeneric(r, z, x);
+        this->set_vals(r);
     }
 };
 
-#endif // __ELEMENT_HPP__
+#endif // __ELEMENT_CUH__

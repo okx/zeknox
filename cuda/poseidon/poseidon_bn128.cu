@@ -1,12 +1,6 @@
-#ifndef __POSEIDON_BN128_CUH__
-#define __POSEIDON_BN128_CUH__
-
 #include "int_types.h"
 #include "element.cuh"
 #include "poseidon_bn128.h"
-
-// TODO remove
-#include <stdio.h>
 
 #ifdef USE_CUDA
 #include "cuda_utils.cuh"
@@ -41,10 +35,9 @@ private:
 
 	// exp5 performs x^5 mod p
 	// https://eprint.iacr.org/2019/458.pdf page 8
-	INLINE static FFE exp5(FFE a)
+	INLINE static void exp5(FFE *a)
 	{
-		a.Exp(a, 5);
-		return a;
+		a->Exp5();
 	}
 
 	// exp5state perform exp5 for whole state
@@ -52,7 +45,7 @@ private:
 	{
 		for (u32 i = 0; i < size; i++)
 		{
-			state[i] = exp5(state[i]);
+			exp5(&state[i]);
 		}
 	}
 
@@ -83,6 +76,7 @@ private:
 		}
 	}
 
+#ifdef DEBUG
 	static void print_elem(FFE elem)
 	{
 		printf("%lu %lu %lu %lu\n", elem.z[0], elem.z[1], elem.z[2], elem.z[3]);
@@ -100,6 +94,7 @@ private:
 		}
 		printf("\n");
 	}
+	#endif	// DEBUG
 
 public:
 	// input and output of size 12
@@ -124,12 +119,7 @@ public:
 		state[2] = inp[1];
 		state[3] = inp[2];
 		state[4] = inp[3];
-
-		// print_state(state, 5);
-
 		ark(state, t, C, 0);
-
-		// print_state(state, 5);
 
 		FFE newState[5];
 		for (u32 i = 0; i < nRoundsF / 2 - 1; i++)
@@ -139,19 +129,16 @@ public:
 			mix(state, t, t, M, newState);
 			memcpy(state, newState, t * sizeof(FFE));
 		}
-		// print_state(state, 5);
 
 		exp5state(state, t);
 		ark(state, t, C, (nRoundsF / 2) * t);
 		mix(state, t, t, P, newState);
 		memcpy(state, newState, t * sizeof(FFE));
-		// print_state(state, 5);
 
 		for (u32 i = 0; i < nRoundsP; i++)
 		{
-			state[0] = exp5(state[0]);
+			exp5(&state[0]);
 			state[0].Add(state[0], C[(nRoundsF / 2 + 1) * t + i]);
-			// print_elem(state[0]);
 
 			FFE mul;
 			FFE newState0;
@@ -162,7 +149,6 @@ public:
 				mul.Mul(S[(t * 2 - 1) * i + j], state[j]);
 				newState0.Add(newState0, mul);
 			}
-			// print_elem(newState0);
 
 			for (u32 k = 1; k < t; k++)
 			{
@@ -172,7 +158,6 @@ public:
 			}
 			state[0] = newState0;
 		}
-		// print_state(state, 5);
 
 		for (u32 i = 0; i < nRoundsF / 2 - 1; i++)
 		{
@@ -202,7 +187,7 @@ public:
 		get_state_as_canonical_u64(inp);
 		permute_fn(inp, out);
 		for (u32 i = 0; i < SPONGE_WIDTH; i++)
-		{		
+		{
 			u64 val = (out[i] >= 0xFFFFFFFF00000001ul) ? out[i] - 0xFFFFFFFF00000001ul : out[i];
 			set_state(i, val);
 		}
@@ -240,7 +225,7 @@ DEVICE void poseidon_bn128_hash_leaf(u64 *digest, u64 *data, u32 data_size)
 		in[i] = GoldilocksField(data[i]);
 	}
 
-	
+
 		PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
 
 		u64 idx = 0;
@@ -276,7 +261,7 @@ DEVICE void gpu_poseidon_bn128_hash_two(gl64_t *digest_left, gl64_t *digest_righ
 }
 #else
 DEVICE void poseidon_bn128_hash_of_two(u64 *digest, u64 *digest_left, u64 *digest_right)
-{	
+{
 	HashOut in_l = HashOut(digest_left, NUM_HASH_OUT_ELTS);
 	HashOut in_r = HashOut(digest_right, NUM_HASH_OUT_ELTS);
 
@@ -310,7 +295,7 @@ __global__
 	#endif
 	u64 inp[12] = {8917524657281059100u,
 				   13029010200779371910u,
-				   16138660518493481604u, 
+				   16138660518493481604u,
 				   17277322750214136960u,
 				   1441151880423231822u,
 				   0, 0, 0, 0, 0, 0, 0};
@@ -369,6 +354,4 @@ int main()
 	return 0;
 }
 
-#endif
-
-#endif // __POSEIDON_BN128_CUH__
+#endif	// TESTING
