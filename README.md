@@ -9,7 +9,7 @@ much of the code has been taken from https://github.com/supranational/sppark. on
 # field support
 - Goldilocks
 
-# run
+# rust usage
 **note** a gpu is required to run below tests
 ## run integration test
 ```
@@ -29,10 +29,21 @@ export NVCC=/usr/local/cuda/bin/nvcc
 ```
 
 
-
-# cpp build
+# cpp usage
+## build
 ```
-cd build
-cmake -S .. -B .
-make
+git submodule init
+git submodule update
+./build_gmp.sh host
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../package
+make -j4
+make install
+```
+
+## run
+- run example
+```
+export LD_LIBRARY_PATH=package/lib/
+./package/bin/example
 ```

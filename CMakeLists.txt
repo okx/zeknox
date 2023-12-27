@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 
+include(cmake/platform.cmake)
+
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES 70 86)
 endif()
@@ -32,9 +34,18 @@ add_library(cryptography_cuda SHARED ${LIB_SOURCES} )
 ## todo: pass feature as environment variable, or as option
 target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN128)
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(example cpp/example.cpp)
 target_link_libraries(
-  ${PROJECT_NAME} 
+  example 
   cryptography_cuda 
 )
 
+# add_subdirectory(cpp)
+
+install(TARGETS example cryptography_cuda
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+    BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+
+install(FILES src/lib.h
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include)

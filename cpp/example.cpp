@@ -3,7 +3,7 @@
 #include <vect.h>
 #include <ntt/ntt.h>
 #include "iostream"
-#include "src/lib.h"
+#include "../src/lib.h"
 #include <vector>
 
 void print_vector(void *p, uint32_t size)

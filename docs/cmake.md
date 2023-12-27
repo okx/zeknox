@@ -1,3 +1,7 @@
+```sh
+cmake .. -DTARGET_PLATFORM=macos_arm64 
+```
+
 ```cpp
 set_source_files_properties(cuda/ntt/parameters.cuh PROPERTIES LANGUAGE CUDA)
  set_target_properties(cryptography_cuda

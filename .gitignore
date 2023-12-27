@@ -1,3 +1,6 @@
 .vscode
 target/
 build/
+package/
+depends/gmp/
+depends/*.tar*
