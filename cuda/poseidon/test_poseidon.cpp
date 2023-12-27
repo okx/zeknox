@@ -1,4 +1,4 @@
-#include "types.h"
+#include "int_types.h"
 
 #define RUST_POSEIDON
 

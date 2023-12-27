@@ -1,7 +1,7 @@
 #ifndef __TEST_LEAVES_H__
 #define __TEST_LEAVES_H__
 
-#include "types.h"
+#include "int_types.h"
 
 u64 test_no[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 

@@ -1,10 +1,9 @@
 #ifndef __KECCAK_CUH__
 #define __KECCAK_CUH__
 
-#include "types.h"
+#include "int_types.h"
 #include "gl64_t.cuh"
 #include "cuda_utils.cuh"
-#include "cuda_uint128.cuh"
 
 __device__ void gpu_keccak_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash);
 

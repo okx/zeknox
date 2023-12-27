@@ -1468,6 +1468,8 @@ public:
     GoldilocksField elements[NUM_HASH_OUT_ELTS];
     u64 n_elements;
 
+    HashOut() {}
+
     HashOut(GoldilocksField *src, u64 size)
     {
         size = MIN(size, NUM_HASH_OUT_ELTS);
@@ -1751,6 +1753,18 @@ public:
         {
             this->state[start_idx + i] = elts[i];
         }
+    }
+
+    void get_state_as_canonical_u64(u64* out) {
+        assert(out != 0);
+        for (u32 i = 0; i < SPONGE_WIDTH; i++) {
+            out[i] = state[i].to_noncanonical_u64();
+        }        
+    }
+
+    void set_state(u32 idx, GoldilocksField val) {
+        assert(idx < SPONGE_WIDTH);
+        state[idx] = val;
     }
 
     void permute()

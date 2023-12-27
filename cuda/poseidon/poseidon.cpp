@@ -5,13 +5,6 @@
 /// A one-way compression function which takes two ~256 bit inputs and returns a ~256 bit output.
 HashOut compress(HashOut x, HashOut y)
 {
-    // TODO: With some refactoring, this function could be implemented as
-    // hash_n_to_m_no_pad(chain(x.elements, y.elements), NUM_HASH_OUT_ELTS).
-
-    assert(x.n_elements == NUM_HASH_OUT_ELTS);
-    assert(y.n_elements == NUM_HASH_OUT_ELTS);
-    assert(PoseidonPermutation::RATE >= NUM_HASH_OUT_ELTS);
-
     PoseidonPermutation perm = PoseidonPermutation();
     perm.set_from_slice(x.elements, x.n_elements, 0);
     perm.set_from_slice(y.elements, y.n_elements, NUM_HASH_OUT_ELTS);
@@ -23,7 +16,7 @@ HashOut compress(HashOut x, HashOut y)
 
 /// Hash a message without any padding step. Note that this can enable length-extension attacks.
 /// However, it is still collision-resistant in cases where the input has a fixed length.
-HashOut hash_n_to_m_no_pad(GoldilocksField *inputs, u64 num_inputs, u64 num_outputs)
+inline HashOut hash_n_to_m_no_pad(GoldilocksField *inputs, u64 num_inputs, u64 num_outputs)
 {
     PoseidonPermutation perm = PoseidonPermutation();
 
@@ -41,7 +34,7 @@ HashOut hash_n_to_m_no_pad(GoldilocksField *inputs, u64 num_inputs, u64 num_outp
     return perm.squeeze(NUM_HASH_OUT_ELTS);
 }
 
-HashOut hash_no_pad(GoldilocksField *inputs, u64 n_inputs)
+inline HashOut hash_no_pad(GoldilocksField *inputs, u64 n_inputs)
 {
     if (n_inputs <= NUM_HASH_OUT_ELTS) {
         return HashOut(inputs, n_inputs);
@@ -50,7 +43,7 @@ HashOut hash_no_pad(GoldilocksField *inputs, u64 n_inputs)
     return hash_n_to_m_no_pad(inputs, n_inputs, NUM_HASH_OUT_ELTS);
 }
 
-HashOut two_to_one(HashOut left, HashOut right)
+inline HashOut two_to_one(HashOut left, HashOut right)
 {
     return compress(left, right);
 }
