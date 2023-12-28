@@ -1,2 +1,7 @@
 .vscode
+node_modules/
 target/
+build/
+package/
+depends/gmp/
+depends/*.tar*

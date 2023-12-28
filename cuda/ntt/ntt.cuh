@@ -8,17 +8,13 @@
 #include <cassert>
 #include <util/gpu_t.cuh>
 #include <util/rusterror.h>
-
+#include <ntt/ntt.h>
 #include "parameters.cuh"
 #include "kernels.cu"
 #ifndef __CUDA_ARCH__
-class NTT {
+using namespace Ntt_Types;
 
-public:
-    enum class InputOutputOrder {NN, NR, RN, RR};
-    enum class Direction {forward, inverse};
-    enum class Type {standard, coset};
-    enum class Algorithm {GS, CT};
+class NTT {
 
 protected:
     static void bit_rev(fr_t* d_out, const fr_t* d_inp, uint32_t lg_domain_size, stream_t& stream) 
@@ -81,7 +77,7 @@ protected:
             default:
                 assert(false);
         }
-
+        // printf("inside NTT_internal \n");
         switch (algorithm) {
             case Algorithm::GS:
                 // TODO:

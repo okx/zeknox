@@ -21,6 +21,7 @@ fn get_device_arch() -> String {
 fn feature_check() -> String {
     let fr_s = [
         "gl64",
+        "bn128"
     ];
     let fr_s_as_features: Vec<String> = (0..fr_s.len())
         .map(|i| format!("CARGO_FEATURE_{}", fr_s[i].to_uppercase()))
@@ -37,6 +38,8 @@ fn feature_check() -> String {
             let mut fr = "";
             if cfg!(feature = "gl64") {
                 fr = "FEATURE_GOLDILOCKS";
+            } else if cfg!(feature = "bn128") {
+                fr = "FEATURE_BN128"
             }
             String::from(fr)
         },
@@ -50,6 +53,7 @@ fn main() {
     }
 
     let fr = feature_check();
+    println!("feature: {:?}", fr);
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let mut base_dir = manifest_dir.join("cuda");
@@ -59,8 +63,14 @@ fn main() {
 
     // Detect if there is CUDA compiler and engage "cuda" feature accordingly
     let nvcc = match env::var("NVCC") {
-        Ok(var) => which::which(var),
-        Err(_) => which::which("nvcc"),
+        Ok(var) => {
+            println!("nvcc env var: {:?}", var);
+            which::which(var)
+        },
+        Err(_) => {
+            println!("no nvcc env var set use nvcc");
+            which::which("nvcc")
+        },
     };
     if nvcc.is_ok() {
         let cuda_version = std::process::Command::new(nvcc.unwrap())
@@ -92,16 +102,27 @@ fn main() {
         // nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
         nvcc.define(&fr, None);
+        nvcc.define("EXPOSE_C_INTERFACE", None);
         if cfg!(feature = "gl64") {
             nvcc.define("GL64_NO_REDUCTION_KLUDGE", None);
         }
+
         nvcc.include(base_dir);
+        // required for parling curve, such as bls12_381, bn128, etc. 
+        // cargo dependency blst will set DEP_BLST_C_SRC
+        if let Some(include) = env::var_os("DEP_BLST_C_SRC") {
+            println!("blst_c_src directory: {:?}", include); // ~/.cargo/registry/src/index.crates.io-6f17d22bba15001f/blst-0.3.11/blst/src
+            nvcc.include(include);
+        }
+
         nvcc.file("src/lib.cu")
             .file(util_dir.join("all_gpus.cpp"))
             .compile("cryptography_cuda");
         println!("cargo:rerun-if-changed=src/lib.cu");
         println!("cargo:rerun-if-changed=cuda");
         println!("cargo:rustc-cfg=feature=\"cuda\"");
+    } else {
+        panic!("no nvcc found");
     }
     println!("cargo:rerun-if-env-changed=NVCC");
 }

@@ -65,3 +65,44 @@ void generate_all_twiddles(fr_t* d_radixX_twiddles, const fr_t root6,
     }
     d_radixX_twiddles[tid] = root_of_unity^pow;
 }
+
+#if !defined(FEATURE_GOLDILOCKS)
+__launch_bounds__(512) __global__
+void generate_radixX_twiddles_X(fr_t* d_radixX_twiddles_X, int n,
+                                const fr_t root_of_unity)
+{
+    if (gridDim.x == 1) {
+        d_radixX_twiddles_X[threadIdx.x] = fr_t::one();
+        d_radixX_twiddles_X += blockDim.x;
+
+        fr_t root0 = root_of_unity^threadIdx.x;
+
+        d_radixX_twiddles_X[threadIdx.x] = root0;
+        d_radixX_twiddles_X += blockDim.x;
+
+        fr_t root1 = root0;
+
+        for (int i = 2; i < n; i++) {
+            root1 *= root0;
+            d_radixX_twiddles_X[threadIdx.x] = root1;
+            d_radixX_twiddles_X += blockDim.x;
+        }
+    } else {
+        fr_t root0 = root_of_unity^(threadIdx.x * gridDim.x);
+
+        unsigned int pow = blockIdx.x * threadIdx.x;
+        unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+        fr_t root1 = root_of_unity^pow;
+
+        d_radixX_twiddles_X[tid] = root1;
+        d_radixX_twiddles_X += gridDim.x * blockDim.x;
+
+        for (int i = gridDim.x; i < n; i += gridDim.x) {
+            root1 *= root0;
+            d_radixX_twiddles_X[tid] = root1;
+            d_radixX_twiddles_X += gridDim.x * blockDim.x;
+        }
+    }
+}
+#endif

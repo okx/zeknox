@@ -19,7 +19,7 @@ name = "gpu_fft"
 harness = false
 
 [dependencies] 
-
+blst = "~0.3.11"
 
 [build-dependencies]
 cc = "^1.0.70"
@@ -40,5 +40,6 @@ rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
 
 [features]
-default = ["gl64"]
+default = []
 gl64 = []
+bn128 = []
