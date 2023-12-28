@@ -305,6 +305,22 @@ int RawFr::toRprBE(const Element &element, uint8_t *data, int bytes)
     return Fr_N64 * 8;
 }
 
+int RawFr::toRprLE(const Element &element, uint8_t *data, int bytes)
+{
+    if (bytes < Fr_N64 * 8) {
+      return -(Fr_N64 * 8);
+    }
+
+    mpz_t r;
+    mpz_init(r);
+
+    toMpz(r, element);
+
+    mpz_export(data, NULL, -1, 8, -1, 0, r);
+
+    return Fr_N64 * 8;
+}
+
 int RawFr::fromRprBE(Element &element, const uint8_t *data, int bytes)
 {
     if (bytes < Fr_N64 * 8) {

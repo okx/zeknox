@@ -3,6 +3,7 @@ target_link_libraries(
   example 
   cryptography_cuda 
 )
+enable_testing()
 
 link_libraries(${GMP_LIB})
 add_definitions(${GMP_DEFINIONS})
@@ -82,7 +83,7 @@ endif()
 
 
 set(BN128_BENCH_SOURCES
-  bn128_bench.cpp
+  test_bn128.cpp
   ../depends/ffiasm/c/misc.cpp
   ../depends/ffiasm/c/naf.cpp
   ../depends/ffiasm/c/splitparstr.cpp
@@ -93,10 +94,16 @@ include_directories(
   ../depends/ffiasm/c
 )
 
-add_executable(bn128_bench ${BN128_BENCH_SOURCES})
-target_link_libraries(bn128_bench cryptography_cuda)
+add_executable(test_bn128 ${BN128_BENCH_SOURCES})
+target_link_libraries(test_bn128 cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-        target_link_libraries(bn128_bench OpenMP::OpenMP_CXX)
+        target_link_libraries(test_bn128 OpenMP::OpenMP_CXX)
     endif()
 endif()
+target_link_libraries(
+    test_bn128
+  GTest::gtest_main
+)
+include(GoogleTest)
+gtest_discover_tests(test_bn128)

@@ -270,6 +270,7 @@ public:
     void fromMpz(Element &a, const mpz_t r);
 
     int toRprBE(const Element &element, uint8_t *data, int bytes);
+    int toRprLE(const Element &element, uint8_t *data, int bytes);
     int fromRprBE(Element &element, const uint8_t *data, int bytes);
     int fromRprLE(Element &element, const uint8_t *data, int bytes);
 

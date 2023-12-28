@@ -77,7 +77,7 @@ protected:
             default:
                 assert(false);
         }
-        printf("inside NTT_internal \n");
+        // printf("inside NTT_internal \n");
         switch (algorithm) {
             case Algorithm::GS:
                 // TODO:

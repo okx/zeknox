@@ -312,7 +312,7 @@ public:
         for (i = 1; i < n; i++)
             asm("subc.cc.u32 %0, %0, %1;" : "+r"(even[i]) : "r"(b[i]));
         asm("subc.u32 %0, 0, 0;" : "=r"(borrow));
-        printf("borrow: %x \n", borrow);
+        // printf("borrow: %x \n", borrow);
         asm("add.cc.u32 %0, %1, %2;" : "=r"(tmp[0]) : "r"(even[0]), "r"(MOD[0]));
         for (i = 1; i < n-1; i++)
             asm("addc.cc.u32 %0, %1, %2;" : "=r"(tmp[i]) : "r"(even[i]), "r"(MOD[i]));

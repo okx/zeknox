@@ -66,9 +66,16 @@ add_library(cryptography_cuda SHARED ${LIB_SOURCES} )
 target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN128)
 
 
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+FetchContent_MakeAvailable(googletest)
+
 add_subdirectory(cpp)
 
-install(TARGETS example  bn128_bench cryptography_cuda
+install(TARGETS example  test_bn128 cryptography_cuda
     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

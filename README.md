@@ -46,4 +46,5 @@ make install
 ```
 export LD_LIBRARY_PATH=package/lib/
 ./package/bin/example
+./package/bin/test_bn128 --gtest_filter=*xxx*
 ```
