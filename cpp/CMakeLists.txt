@@ -82,7 +82,7 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 
-set(BN128_BENCH_SOURCES
+set(BN128_TEST_SOURCES
   test_bn128.cpp
   ../depends/ffiasm/c/misc.cpp
   ../depends/ffiasm/c/naf.cpp
@@ -94,7 +94,7 @@ include_directories(
   ../depends/ffiasm/c
 )
 
-add_executable(test_bn128 ${BN128_BENCH_SOURCES})
+add_executable(test_bn128 ${BN128_TEST_SOURCES})
 target_link_libraries(test_bn128 cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
@@ -107,3 +107,23 @@ target_link_libraries(
 )
 include(GoogleTest)
 gtest_discover_tests(test_bn128)
+
+set(BN128_BENCH_SOURCES
+  bench_bn128.cpp
+  ../depends/ffiasm/c/misc.cpp
+  ../depends/ffiasm/c/naf.cpp
+  ../depends/ffiasm/c/splitparstr.cpp
+  ../depends/ffiasm/c/alt_bn128.cpp
+)
+include_directories(
+  field/
+  ../depends/ffiasm/c
+)
+
+add_executable(bench_bn128 ${BN128_BENCH_SOURCES})
+target_link_libraries(bench_bn128 cryptography_cuda)
+if(OpenMP_CXX_FOUND)
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(bench_bn128 OpenMP::OpenMP_CXX)
+    endif()
+endif()
