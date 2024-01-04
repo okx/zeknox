@@ -305,6 +305,22 @@ int RawFq::toRprBE(const Element &element, uint8_t *data, int bytes)
     return Fq_N64 * 8;
 }
 
+int RawFq::toRprLE(const Element &element, uint8_t *data, int bytes)
+{
+    if (bytes < Fq_N64 * 8) {
+      return -(Fq_N64 * 8);
+    }
+
+    mpz_t r;
+    mpz_init(r);
+
+    toMpz(r, element);
+
+    mpz_export(data, NULL, -1, 8, -1, 0, r);
+
+    return Fq_N64 * 8;
+}
+
 int RawFq::fromRprBE(Element &element, const uint8_t *data, int bytes)
 {
     if (bytes < Fq_N64 * 8) {
@@ -314,6 +330,19 @@ int RawFq::fromRprBE(Element &element, const uint8_t *data, int bytes)
     mpz_init(r);
 
     mpz_import(r, Fq_N64 * 8, 0, 1, 0, 0, data);
+    fromMpz(element, r);
+    return Fq_N64 * 8;
+}
+
+int RawFq::fromRprLE(Element &element, const uint8_t *data, int bytes)
+{
+    if (bytes < Fq_N64 * 8) {
+      return -(Fq_N64* 8);
+    }
+    mpz_t r;
+    mpz_init(r);
+
+    mpz_import(r, Fq_N64 * 8, -1, 1, -1, 0, data);
     fromMpz(element, r);
     return Fq_N64 * 8;
 }
