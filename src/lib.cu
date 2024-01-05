@@ -49,7 +49,7 @@ typedef fr_t scalar_t;
 // #if defined(EXPOSE_C_INTERFACE)
 // extern "C"
 // #endif
-RustError::by_value mult_pippenger_inf(point_t* out, const affine_t points[],
+RustError::by_value mult_pippenger(point_t* out, const affine_t points[],
                                        size_t npoints, const scalar_t scalars[],
                                        size_t ffi_affine_sz)
 {
