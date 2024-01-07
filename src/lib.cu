@@ -45,7 +45,8 @@ typedef fr_t scalar_t;
 
 // #define SPPARK_DONT_INSTANTIATE_TEMPLATES
 #include <msm/pippenger.cuh>
-
+#include <cstdio>
+# include <blst_t.hpp>
 // #if defined(EXPOSE_C_INTERFACE)
 // extern "C"
 // #endif
@@ -53,6 +54,24 @@ RustError::by_value mult_pippenger(point_t* out, const affine_t points[],
                                        size_t npoints, const scalar_t scalars[],
                                        size_t ffi_affine_sz)
 {
-    return mult_pippenger<bucket_t>(out, points, npoints, scalars, false, ffi_affine_sz);
+    // return mult_pippenger<bucket_t>(out, points, npoints, scalars, false, ffi_affine_sz);
+    printf("npoints: %d \n", npoints);
+    uint8_t* p1 = (uint8_t*)(uint64_t*)(&scalars[1]);
+    printf("first scalar x \n");
+    for(int i=0;i<32;i++) {
+        printf("%x", p1[i]);
+    }
+    printf("\n");
+     RustError r= mult_pippenger<bucket_t>(out, points, npoints, scalars, false, ffi_affine_sz);
+   
+
+    fp_t* x = &out->X;
+   uint8_t* p = (uint8_t*)(uint64_t*)(limb_t*)x;
+    printf("result point x \n");
+    for(int i=0;i<32;i++) {
+        printf("%x", p[i]);
+    }
+    printf("\n");
+    return r;
 }
 // #endif
