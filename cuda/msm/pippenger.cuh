@@ -711,7 +711,7 @@ RustError mult_pippenger(point_t *out, const affine_t points[], size_t npoints,
                                        const scalar_t scalars[], bool mont = true,
                                        size_t ffi_affine_sz = sizeof(affine_t))
 {
-    printf("invoke mult_pippenger mont: %d, ffi_affine_sz:%d \n", mont, ffi_affine_sz);
+    // printf("invoke mult_pippenger mont: %d, ffi_affine_sz:%d \n", mont, ffi_affine_sz);
     try {
         msm_t<bucket_t, point_t, affine_t, scalar_t> msm{nullptr, npoints};
         return msm.invoke(*out, slice_t<affine_t>{points, npoints},
