@@ -21,7 +21,7 @@ namespace device {
         TO_CUDA_T(0x47ab1eff0a417ff6), TO_CUDA_T(0x06d89f71cab8351f),
     };
 
-    /* (1<<256)%P */
+    /* (1<<256)%P, which is R for Montgomery */
     static __device__ __constant__ __align__(16) const uint32_t ALT_BN128_one[8] = { 
         TO_CUDA_T(0xd35d438dc58f0d9d), TO_CUDA_T(0x0a78eb28f5c70b3d),
         TO_CUDA_T(0x666ea36f7879462c), TO_CUDA_T(0x0e0a77c19a07df2f)

@@ -37,8 +37,7 @@ git submodule update
 ./build_gmp.sh host
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package
-make -j4
-make install
+make -j4 & make install
 ```
 
 ## run

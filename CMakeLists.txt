@@ -6,12 +6,12 @@ set(USE_ASM    ON CACHE BOOL "Use asm implementation for Fr and Fq")
 set(USE_OPENMP ON CACHE BOOL "Use OpenMP")
 
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 70 86)
+  set(CMAKE_CUDA_ARCHITECTURES 70)
 endif()
 
 project(cryptography_cuda_cpp LANGUAGES CXX CUDA ASM)
 set(CMAKE_CXX_STANDARD 17)
-
+# set(CUDA_SEPARABLE_COMPILATION ON)
 
 if (NOT EXISTS ${GMP_INCLUDE_FILE_FULLPATH})
     message("WARNING: ${GMP_INCLUDE_FILE_FULLPATH} is not found and so system ${GMP_INCLUDE_FILE} is used.")
@@ -61,11 +61,16 @@ set(LIB_SOURCES
     src/lib.cu
     cuda/util/all_gpus.cpp
 )
-add_library(cryptography_cuda SHARED ${LIB_SOURCES} )
+add_library(cryptography_cuda STATIC ${LIB_SOURCES} )
 ## todo: pass feature as environment variable, or as option
-target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN128)
-
-
+target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN128 -D__ADX__)
+# target_compile_options(cryptography_cuda PRIVATE
+#    "-Xcompiler=-ffunction-sections"
+# )
+target_link_libraries(cryptography_cuda ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
+# set_target_properties(cryptography_cuda PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# set_target_properties(cryptography_cuda PROPERTIES
+#                             CUDA_SEPARABLE_COMPILATION ON)
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -75,10 +80,10 @@ FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(cpp)
 
-install(TARGETS example  test_bn128 bench_bn128 cryptography_cuda
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-    BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
-    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+# install(TARGETS example  test_bn128 bench_bn128 cryptography_cuda
+#     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+#     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
 install(FILES src/lib.h
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include)

@@ -1,8 +1,18 @@
+# target_include_directories(cryptography_cuda PRIVATE "./depends/blst/src") 
 add_executable(example example.cpp)
+# target_include_directories(example PRIVATE "../cuda/ec/")  # the cuda library is dependent on blst
+# target_include_directories(example PRIVATE "../cuda/util/")  # the cuda library is dependent on blst
+# target_include_directories(example PRIVATE "/data/workspace/cliff/cryptography_cuda/depends/blst/src") 
+target_include_directories(example PUBLIC "/data/workspace/cliff/cryptography_cuda/depends/blst/src") 
+target_compile_definitions(example PUBLIC -DFEATURE_BN128 -D__ADX__)
 target_link_libraries(
   example 
   cryptography_cuda 
 )
+
+# target_link_libraries(cryptography_cuda ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
+# target_link_libraries(example ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
+
 enable_testing()
 
 link_libraries(${GMP_LIB})
