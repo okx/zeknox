@@ -318,24 +318,11 @@ TEST(altBn128, msm_cpu_gpu_consistency) {
 
     ASSERT_TRUE(G1.eq(p1, p2));
 
-    affine_t gpu_base_points_affine[NMExp] ={}; 
-    for(int i=0; i < NMExp; i++) {
-        fp_t x = *(fp_t *)bases[i].x.v;
-        fp_t y = *(fp_t *)bases[i].y.v;
-        affine_t p_affine = affine_t(x, y);
-        gpu_base_points_affine[i]=p_affine;
-    }
-
-
-    fr_t gpu_scalars[NMExp] ={};
-    for(int i=0; i < NMExp; i++) {
-      gpu_scalars[i]= *((fr_t *)scalars+i);
-    }
 
     point_t *gpu_result = new point_t{};
     size_t sz = sizeof(affine_t);
 
-    mult_pippenger(gpu_result, gpu_base_points_affine, NMExp, gpu_scalars, sz);
+    mult_pippenger(gpu_result, (affine_t*)bases, NMExp, (fr_t *)scalars, sz);
 
 
 
