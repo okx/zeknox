@@ -1,7 +1,9 @@
+$(shell ./configure.sh)
+include CudaArch.mk
+
 CC := gcc
 CXX := g++
 NVCC := /usr/local/cuda/bin/nvcc
-CUDA_ARCH = sm_86
 
 # for release
 #CFLAGS := -I../types -I../poseidon -I../keccak -Wall -Werror -O3 -march=native
