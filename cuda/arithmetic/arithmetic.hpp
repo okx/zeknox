@@ -8,7 +8,7 @@
 
 #if defined(FEATURE_GOLDILOCKS)
 #include <arithmetic/gl64.cu>
-#elif defined(FEATURE_BN128)
+#elif defined(FEATURE_BN254)
 #include <arithmetic/bn254.cu>
 #endif
 #endif

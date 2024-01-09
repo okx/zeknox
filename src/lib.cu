@@ -7,7 +7,7 @@
 #if defined(FEATURE_GOLDILOCKS)
 
 #include <ff/goldilocks.hpp>
-#elif defined(FEATURE_BN128)
+#elif defined(FEATURE_BN254)
 #include <ff/alt_bn254.hpp>
 #else
 #error "no FEATURE"

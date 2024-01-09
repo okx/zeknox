@@ -97,7 +97,7 @@ set(BN128_TEST_SOURCES
   ../depends/ffiasm/c/misc.cpp
   ../depends/ffiasm/c/naf.cpp
   ../depends/ffiasm/c/splitparstr.cpp
-  ../depends/ffiasm/c/alt_bn254.cpp
+  ../depends/ffiasm/c/alt_bn128.cpp
 )
 include_directories(
   field/
@@ -123,7 +123,7 @@ set(BN128_BENCH_SOURCES
   ../depends/ffiasm/c/misc.cpp
   ../depends/ffiasm/c/naf.cpp
   ../depends/ffiasm/c/splitparstr.cpp
-  ../depends/ffiasm/c/alt_bn254.cpp
+  ../depends/ffiasm/c/alt_bn128.cpp
 )
 include_directories(
   field/

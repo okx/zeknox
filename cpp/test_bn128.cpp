@@ -8,7 +8,7 @@
 #include <ntt/ntt.h>
 #include "../src/lib.h"
 #include <gmp.h>
-#include "alt_bn254.hpp"
+#include "alt_bn128.hpp"
 #include <time.h>
 #include "fft.hpp"
 #include <random>

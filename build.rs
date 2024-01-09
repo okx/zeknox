@@ -39,7 +39,7 @@ fn feature_check() -> String {
             if cfg!(feature = "gl64") {
                 fr = "FEATURE_GOLDILOCKS";
             } else if cfg!(feature = "bn254") {
-                fr = "FEATURE_BN128"
+                fr = "FEATURE_BN254"
             }
             String::from(fr)
         },

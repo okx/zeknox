@@ -6,7 +6,7 @@
 #define __CRYPTO_NTT_PARAMETERS_CUH__
 
 #ifndef MAX_LG_DOMAIN_SIZE
-# if defined(FEATURE_BN128)
+# if defined(FEATURE_BN254)
 #  define MAX_LG_DOMAIN_SIZE 28
 # elif defined(FEATURE_BABY_BEAR)
 #  define MAX_LG_DOMAIN_SIZE 27
@@ -27,7 +27,7 @@ __device__ __constant__ fr_t inverse_radix6_twiddles[32];
 #ifndef __CUDA_ARCH__
 # if defined(FEATURE_GOLDILOCKS)
 #  include "parameters/goldilocks.h"
-# elif defined(FEATURE_BN128)
+# elif defined(FEATURE_BN254)
 #  include "parameters/alt_bn254.h"
 # endif
 

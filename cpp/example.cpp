@@ -3,7 +3,7 @@
 #include <vector>
 #include "../src/lib.h"
 #include "iostream"
-#include "alt_bn254.hpp"
+#include "alt_bn128.hpp"
 
 using namespace AltBn128;
 
