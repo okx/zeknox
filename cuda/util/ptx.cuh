@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __CRYPTO_UTIL_PTX_CUH__
+#define __CRYPTO_UTIL_PTX_CUH__
 #include <cstdint>
 #include <cuda_runtime.h>
 
@@ -280,3 +281,4 @@ namespace ptx {
   }
 
 } // namespace ptx
+#endif

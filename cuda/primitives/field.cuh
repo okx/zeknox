@@ -11,11 +11,12 @@
  * Which is where `even` and `odd` arrays across the codebase come from.
  */
 
-#pragma once
+#ifndef __CRYPTO_PRIMITIVES_FIELD_CUH__
+#define __CRYPTO_PRIMITIVES_FIELD_CUH__
 
 #include "../util/host_math.cuh"
 #include "../util/ptx.cuh"
-#include "../uti/storage.cuh"
+#include "../util/storage.cuh"
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -920,3 +921,4 @@ public:
     return (u == one) ? b : c;
   }
 };
+#endif

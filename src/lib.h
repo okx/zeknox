@@ -1,5 +1,5 @@
 #pragma once
-# include <ff/alt_bn128.hpp>
+# include <ff/alt_bn254.hpp>
 # include <util/rusterror.h>
 # include <ntt/ntt.h>
 

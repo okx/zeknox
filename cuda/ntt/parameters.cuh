@@ -28,7 +28,7 @@ __device__ __constant__ fr_t inverse_radix6_twiddles[32];
 # if defined(FEATURE_GOLDILOCKS)
 #  include "parameters/goldilocks.h"
 # elif defined(FEATURE_BN128)
-#  include "parameters/alt_bn128.h"
+#  include "parameters/alt_bn254.h"
 # endif
 
 class NTTParameters {

@@ -2,7 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#pragma once
+#ifndef __CRYPTO__FF__GL64__HPP__
+#define __CRYPTO__FF__GL64__HPP__
 
 #ifdef __NVCC__
 # include "gl64_t.cuh"  // device-side field types
@@ -36,4 +37,5 @@ public:
 #  endif
 # endif
 typedef gl64_t fr_t;
+#endif
 #endif

@@ -1,5 +1,5 @@
 #ifndef __CRYOPTO_UTIL_GPU_T_CUH__
-#define __CRYPTO_UTIL_GPU_T_CUH__
+#define __CRYOPTO_UTIL_GPU_T_CUH__
 
 #include <cstdint>
 

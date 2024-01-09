@@ -8,7 +8,7 @@
 
 #include <ff/goldilocks.hpp>
 #elif defined(FEATURE_BN128)
-#include <ff/alt_bn128.hpp>
+#include <ff/alt_bn254.hpp>
 #else
 #error "no FEATURE"
 #endif
@@ -17,6 +17,7 @@
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
 #include <arithmetic/arithmetic.hpp>
+
 #ifndef __CUDA_ARCH__ // below is cpu code; __CUDA_ARCH__ should not be defined
 
 #if defined(EXPOSE_C_INTERFACE)
@@ -74,5 +75,15 @@ RustError::by_value mult_pippenger(point_t *out, const affine_t points[],
     return r;
 }
 
+
+#include <primitives/field.cuh>
+#include <ff/bn254_params.cuh>
+typedef Field<PARAMS_BN254::fp_config> g2_scalar_t;
+RustError::by_value mult_pippenger_g2(point_t *out, const affine_t points[],
+                                   size_t npoints, const scalar_t scalars[],
+                                   size_t ffi_affine_sz)
+{
+
+}
 
 // #endif
