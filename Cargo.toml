@@ -42,4 +42,4 @@ rustacuda_derive = "0.1"
 [features]
 default = []
 gl64 = []
-bn128 = []
+bn254 = []

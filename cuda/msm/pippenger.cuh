@@ -725,4 +725,18 @@ RustError mult_pippenger(point_t *out, const affine_t points[], size_t npoints,
 #endif
     }
 }
+
+// this function is used to compute msms of size larger than 256
+template <typename S, typename P, typename A>
+void mult_pippenger_g2(  
+  S* scalars,
+  A* points,
+  unsigned size,
+  P* result,
+  bool on_device,
+  bool big_triangle,
+  unsigned large_bucket_factor) {
+    unsigned c = 16;
+    unsigned bitsize = S::NBITS;
+}
 #endif

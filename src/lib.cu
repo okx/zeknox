@@ -73,4 +73,6 @@ RustError::by_value mult_pippenger(point_t *out, const affine_t points[],
     // printf("\n");
     return r;
 }
+
+
 // #endif

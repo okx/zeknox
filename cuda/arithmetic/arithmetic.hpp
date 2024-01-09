@@ -9,6 +9,6 @@
 #if defined(FEATURE_GOLDILOCKS)
 #include <arithmetic/gl64.cu>
 #elif defined(FEATURE_BN128)
-#include <arithmetic/bn128.cu>
+#include <arithmetic/bn254.cu>
 #endif
 #endif

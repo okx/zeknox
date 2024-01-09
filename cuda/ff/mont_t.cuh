@@ -273,7 +273,7 @@ public:
 
             cadd_n(&tmp[0], &even[0]);  // add MOD if the value is odd, and store in tmp; ADD by MOD makes the least significant bit to be 0; hence shift right can be represendted as divide by 2.
             printf("tmp[0]: %x \n", tmp[0]);
-            if (N%32 == 0)  // ignore for bn128, as it is 254
+            if (N%32 == 0)  // ignore for bn254, as it is 254
              {
                 printf("N is divided by 32 \n");
                  asm("addc.u32 %0, 0, 0;" : "=r"(tmp[n]));

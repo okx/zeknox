@@ -21,7 +21,7 @@ fn get_device_arch() -> String {
 fn feature_check() -> String {
     let fr_s = [
         "gl64",
-        "bn128"
+        "bn254"
     ];
     let fr_s_as_features: Vec<String> = (0..fr_s.len())
         .map(|i| format!("CARGO_FEATURE_{}", fr_s[i].to_uppercase()))
@@ -38,7 +38,7 @@ fn feature_check() -> String {
             let mut fr = "";
             if cfg!(feature = "gl64") {
                 fr = "FEATURE_GOLDILOCKS";
-            } else if cfg!(feature = "bn128") {
+            } else if cfg!(feature = "bn254") {
                 fr = "FEATURE_BN128"
             }
             String::from(fr)
@@ -108,7 +108,7 @@ fn main() {
         }
 
         nvcc.include(base_dir);
-        // required for parling curve, such as bls12_381, bn128, etc. 
+        // required for parling curve, such as bls12_381, bn254, etc. 
         // cargo dependency blst will set DEP_BLST_C_SRC
         if let Some(include) = env::var_os("DEP_BLST_C_SRC") {
             println!("blst_c_src directory: {:?}", include); // ~/.cargo/registry/src/index.crates.io-6f17d22bba15001f/blst-0.3.11/blst/src
