@@ -798,7 +798,7 @@ static RustError mult_pippenger(point_t *out, const affine_t points[], size_t np
     }
 }
 
-
+#if defined(FEATURE_BN254)
 // this function computes msm using the bucket method
 template <typename S, typename P, typename A>
 void pippenger_g2_internal(
@@ -1197,4 +1197,6 @@ void pippenger_g2(
     unsigned bitsize = S::NBITS;
     pippenger_g2_internal(bitsize, c, scalars, points, size, result, on_device, big_triangle, large_bucket_factor, stream);
 }
+#endif
+
 #endif

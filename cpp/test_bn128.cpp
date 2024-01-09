@@ -511,6 +511,98 @@ TEST(altBn128, msm_n)
 
 }
 
+#if defined(FEATURE_BN254)
+TEST(altBn128, msm_g2)
+{
+    unsigned batch_size = 1;
+    int lg_n_size = 2;
+
+    unsigned msm_size = 1 << lg_n_size;
+    unsigned N = batch_size * msm_size;
+
+    scalar_field_t* scalars = new scalar_field_t[N];
+    g2_affine_t* points = new g2_affine_t[N];
+
+    for (unsigned i = 0; i < N; i++) {
+        points[i] = (i % msm_size < 10) ? g2_projective_t:to_affine(g2_projective_t::rand_host()) : points[i - 10];
+        scalars[i] = scalar_field_t::rand_host();
+    }
+    printf("generating done \n");
+    size_t large_bucket_factor = 2;
+    g2_projective_t*  out = new g2_projective_t();
+    mult_pippenger_g2(out, points,msm_size, scalars,large_bucket_factor);
+    printf("msm g2 done \n");
+    uint32_t* out_x_real = out.x.real.export_limbs();
+
+    print_char_array((uint8_t*)out_x_real, 32);
+    // printf("result.x.real: ", out.x.real.export_limbs());
+    // for (int i = 0; i < N * 32; i++)
+    // {
+    //     scalars[i] = i % 32 == 0 ? 1 : 0; // TODO: this is to make the input less than MOD; otherwise, the test will fail       
+    // }     
+    // G1PointAffine cpu_base_points_affine[N] = {};
+    // affine_t gpu_base_points_affine[N] ={}; 
+
+    // for(int i=0; i < N; i++) {
+    //     G1PointAffine cpu_point_affine = G1.oneAffine();
+    //     cpu_base_points_affine[i]=cpu_point_affine;
+
+    //     G1Point p;
+    //     G1.copy(p, cpu_point_affine);
+    
+    //     fp_t x = *(fp_t *)cpu_point_affine.x.v;
+    //     fp_t y = *(fp_t *)cpu_point_affine.y.v;
+    //     affine_t p_affine = affine_t(x, y);
+    //     gpu_base_points_affine[i]=p_affine;
+    // }
+
+    //  for(int i=0; i < N; i++) {
+    //     affine_t p = gpu_base_points_affine[i];
+    //  }
+
+    // G1Point cpu_result;
+    // G1.multiMulByScalar(cpu_result, cpu_base_points_affine, scalars, 32, N);
+
+    // G1PointAffine cpu_expected_point_affine;
+    // G1.dbl(cpu_expected_point_affine,  G1.oneAffine());
+    // G1Point cpu_expected_point;
+    // G1.copy(cpu_expected_point, cpu_expected_point_affine);
+
+
+
+    // fr_t gpu_scalars[N] ={};
+    // for(int i=0; i < N; i++) {
+    //    gpu_scalars[i]= *((fr_t *)scalars+i);
+    // }
+
+    // size_t fr_size = sizeof(fr_t);
+
+    // point_t* gpu_result = new point_t{};
+    // size_t sz = sizeof(affine_t);
+    // mult_pippenger(gpu_result, gpu_base_points_affine, N, gpu_scalars, sz);
+
+    
+    // // remain in Montgmery Space
+    // F1Element* gpu_x = (F1Element*)(&gpu_result->X);
+    // F1Element* gpu_y= (F1Element*)(&gpu_result->Y);
+    // F1Element* gpu_z= (F1Element*)(&gpu_result->Z);
+
+    // G1Point gpu_point_result{
+    //     x : F1.zero(),
+    //     y : F1.zero(),
+    //     zz : F1.zero(),
+    //     zzz : F1.zero(),
+    // };
+    // F1.copy(gpu_point_result.x, *gpu_x);
+    // F1.copy(gpu_point_result.y, *gpu_y);
+    // F1.square(gpu_point_result.zz, *gpu_z);
+    // F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
+    // print_g1_point(gpu_point_result);
+    // ASSERT_TRUE(G1.eq(cpu_result, gpu_point_result));
+
+
+}
+#endif
 
 int main(int argc, char **argv)
 {

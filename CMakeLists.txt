@@ -63,7 +63,7 @@ set(LIB_SOURCES
 )
 add_library(cryptography_cuda STATIC ${LIB_SOURCES} )
 ## todo: pass feature as environment variable, or as option
-target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN128 -D__ADX__)
+target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN254 -D__ADX__)
 # target_compile_options(cryptography_cuda PRIVATE
 #    "-Xcompiler=-ffunction-sections"
 # )
