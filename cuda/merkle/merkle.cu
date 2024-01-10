@@ -557,7 +557,7 @@ void fill_digests_buf_linear_gpu_v1(
 //#define TESTING
 #ifdef TESTING
 
-#define LEAF_SIZE_U64 7
+#define LEAF_SIZE_U64 135
 
 #include <time.h>
 #include <sys/time.h>
@@ -577,7 +577,7 @@ for (u32 i = 0; i < n_leaves * leaf_size; i++) {
 fclose(f);
 }
 
-int main()
+int main0()
 {
     struct timeval t0, t1;
 
@@ -932,8 +932,8 @@ void run_gpu_cpu_comparison(u32 log_size)
     init_gpu_functions(0);
     fill_init_rounds(n_leaves, rounds);
     gettimeofday(&t0, 0);
-    // fill_digests_buf_in_rounds_in_c_on_gpu(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
-    fill_digests_buf_linear_gpu_v1(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
+    fill_digests_buf_in_rounds_in_c_on_gpu(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
+    // fill_digests_buf_linear_gpu_v1(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
     gettimeofday(&t1, 0);
     long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
     printf("Time on GPU: %ld us\n", elapsed);
@@ -973,7 +973,7 @@ void run_gpu_cpu_comparison(u32 log_size)
     free(cap_buf2);
 }
 
-int main1(int argc, char **argv)
+int main(int argc, char **argv)
 {
     int size = 10;
     if (argc > 1)
