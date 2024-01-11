@@ -4,10 +4,7 @@
 
 #ifndef __CRYPTO_FF_GL64_T_CUH__
 #define __CRYPTO_FF_GL64_T_CUH__
-#ifndef __DEBUG__PRINT__
-#define __DEBUG__PRINT__
-#include <cstdio>
-#endif
+
 #include <cstdint>
 namespace gl64_device
 {

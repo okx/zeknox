@@ -54,9 +54,8 @@ void print_char_array(uint8_t *p, uint32_t size)
             printf("\n");
         }
         printf("%02x", p[i]);
-
     }
-            printf("\n");
+    printf("\n");
 }
 
 void print_u64_array(uint64_t *p, uint32_t size)
@@ -238,7 +237,8 @@ TEST(altBn128, fft_cpu_consistent_with_gpu)
     delete[] gpu_data_in;
 }
 
-TEST(altBn128, msm_self_consistency) {
+TEST(altBn128, msm_cpu_self_consistency)
+{
 
     int NMExp = 40000;
 
@@ -247,16 +247,21 @@ TEST(altBn128, msm_self_consistency) {
     Scalar *scalars = new Scalar[NMExp];
     G1PointAffine *bases = new G1PointAffine[NMExp];
 
-    uint64_t acc=0;
-    for (int i=0; i<NMExp; i++) {
-        if (i==0) {
+    uint64_t acc = 0;
+    for (int i = 0; i < NMExp; i++)
+    {
+        if (i == 0)
+        {
             G1.copy(bases[0], G1.one());
-        } else {
-            G1.add(bases[i], bases[i-1], G1.one());
         }
-        for (int j=0; j<32; j++) scalars[i][j] = 0;
-        *(int *)&scalars[i][0] = i+1;
-        acc += (i+1)*(i+1);
+        else
+        {
+            G1.add(bases[i], bases[i - 1], G1.one());
+        }
+        for (int j = 0; j < 32; j++)
+            scalars[i][j] = 0;
+        *(int *)&scalars[i][0] = i + 1;
+        acc += (i + 1) * (i + 1);
     }
 
     G1Point p1;
@@ -267,7 +272,8 @@ TEST(altBn128, msm_self_consistency) {
 
     Scalar sAcc;
 
-    for (int i=0;i<32;i++) sAcc[i] = 0;
+    for (int i = 0; i < 32; i++)
+        sAcc[i] = 0;
     mpz_export((void *)sAcc, NULL, -1, 8, -1, 0, e);
     mpz_clear(e);
 
@@ -280,25 +286,31 @@ TEST(altBn128, msm_self_consistency) {
     delete[] scalars;
 }
 
-TEST(altBn128, msm_cpu_gpu_consistency) {
+TEST(altBn128, msm_g1_curve_gpu_consistency_with_cpu)
+{
 
-    int NMExp = 1<<14;
+    int NMExp = 1 << 10;
 
     typedef uint8_t Scalar[32];
 
     Scalar *scalars = new Scalar[NMExp];
     G1PointAffine *bases = new G1PointAffine[NMExp];
 
-    uint64_t acc=0;
-    for (int i=0; i<NMExp; i++) {
-        if (i==0) {
+    uint64_t acc = 0;
+    for (int i = 0; i < NMExp; i++)
+    {
+        if (i == 0)
+        {
             G1.copy(bases[0], G1.one());
-        } else {
-            G1.add(bases[i], bases[i-1], G1.one());
         }
-        for (int j=0; j<32; j++) scalars[i][j] = 0;
-        *(int *)&scalars[i][0] = i+1;
-        acc += (i+1)*(i+1);
+        else
+        {
+            G1.add(bases[i], bases[i - 1], G1.one());
+        }
+        for (int j = 0; j < 32; j++)
+            scalars[i][j] = 0;
+        *(int *)&scalars[i][0] = i + 1;
+        acc += (i + 1) * (i + 1);
     }
 
     G1Point p1;
@@ -309,7 +321,8 @@ TEST(altBn128, msm_cpu_gpu_consistency) {
 
     Scalar sAcc;
 
-    for (int i=0;i<32;i++) sAcc[i] = 0;
+    for (int i = 0; i < 32; i++)
+        sAcc[i] = 0;
     mpz_export((void *)sAcc, NULL, -1, 8, -1, 0, e);
     mpz_clear(e);
 
@@ -318,18 +331,15 @@ TEST(altBn128, msm_cpu_gpu_consistency) {
 
     ASSERT_TRUE(G1.eq(p1, p2));
 
-
     point_t *gpu_result = new point_t{};
     size_t sz = sizeof(affine_t);
 
-    mult_pippenger(gpu_result, (affine_t*)bases, NMExp, (fr_t *)scalars, sz);
-
-
+    mult_pippenger(gpu_result, (affine_t *)bases, NMExp, (fr_t *)scalars, sz);
 
     // remain in Montgmery Space
-    F1Element* gpu_x = (F1Element*)(&gpu_result->X);
-    F1Element* gpu_y= (F1Element*)(&gpu_result->Y);
-    F1Element* gpu_z= (F1Element*)(&gpu_result->Z);
+    F1Element *gpu_x = (F1Element *)(&gpu_result->X);
+    F1Element *gpu_y = (F1Element *)(&gpu_result->Y);
+    F1Element *gpu_z = (F1Element *)(&gpu_result->Z);
 
     G1Point gpu_point_result{
         x : F1.zero(),
@@ -348,169 +358,67 @@ TEST(altBn128, msm_cpu_gpu_consistency) {
     delete[] scalars;
 }
 
-TEST(altBn128, msm2)
+#if defined(FEATURE_BN254)
+TEST(altBn128, msm_g2_curve_gpu_consistency_with_cpu)
 {
+    unsigned batch_size = 1;
+    int lg_n_size = 10;
 
-    int N = 1<<1;
+    unsigned msm_size = 1 << lg_n_size;
+    unsigned N = batch_size * msm_size;
 
-    // uint8_t scalars[N*32] = {};
-    typedef uint8_t Scalar[32];
+    scalar_field_t *scalars = new scalar_field_t[N];
+    g2_affine_t *points = new g2_affine_t[N];
 
-    Scalar *scalars = new Scalar[N];
-    uint8_t input_points_x[N*32] = {};
-    uint8_t input_points_y[N*32] = {};
-
-    for (int i = 0; i < N * 32; i++)
+    for (unsigned i = 0; i < N; i++)
     {
-        uint8_t random_scalar = random_byte();
-        // TODO: why scalar matters, range of fr_t. get real fr_t from rapidsnark
-        *(int *)&scalars[i][0] = i+1;
-  
-        uint8_t random_x = random_byte();
-        input_points_x[i] = i % 32 == 31 ? 0 : random_x; // TODO: this is to make the input less than MOD; otherwise, the test will fail
-
-        uint8_t random_y = random_byte();
-        input_points_y[i] = i % 32 == 31 ? 0 : random_y; // TODO: this is to make the input less than MOD; otherwise, the test will fail
-    }     
-    G1PointAffine cpu_base_points_affine[N] = {};
-    affine_t gpu_base_points_affine[N] ={}; 
-
-    for(int i=0; i < N; i++) {
-        G1PointAffine cpu_point_affine = G1.zeroAffine();
-        F1.fromRprLE(cpu_point_affine.x, ((const uint8_t *)input_points_x+i*32), 32);
-        F1.fromRprLE(cpu_point_affine.y, ((const uint8_t *)input_points_y+i*32), 32);
-        cpu_base_points_affine[i]=cpu_point_affine;
-    
-        fp_t x = *(fp_t *)cpu_point_affine.x.v;
-        fp_t y = *(fp_t *)cpu_point_affine.y.v;
-        affine_t p_affine = affine_t(x, y);
-        gpu_base_points_affine[i]=p_affine;
+        points[i] = (i % msm_size < 10) ? g2_projective_t::to_affine(g2_projective_t::rand_host()) : points[i - 10];
+        scalars[i] = scalar_field_t::rand_host();
     }
+    size_t large_bucket_factor = 2;
+    g2_projective_t *gpu_result_projective = new g2_projective_t();
+    std::cout << gpu_result_projective[0] << std::endl;
 
-    for(int i=0; i < N; i++){
-        printf("cpu input base point: %d \n", i);
-        print_char_array((uint8_t*)(uint64_t*)(&cpu_base_points_affine[i].x),32);
-        printf("cpu input scalar %d \n", i);
-        print_char_array((uint8_t*)scalars+i*32,32);
-    }
-    G1Point cpu_result;
-    G1.multiMulByScalar(cpu_result, cpu_base_points_affine, (uint8_t*)scalars, 32, N);
+    mult_pippenger_g2(gpu_result_projective, points, msm_size, scalars, large_bucket_factor, false, false);
 
-    // print_g1_point(cpu_result);
+    std::cout << *gpu_result_projective << std::endl;
+    g2_affine_t gpu_result_affine = g2_projective_t::to_affine(*gpu_result_projective);
+    std::cout << gpu_result_affine << std::endl;
 
-    fr_t gpu_scalars[N] ={};
-    for(int i=0; i < N; i++) {
-      gpu_scalars[i]= *((fr_t *)scalars+i);
-    }
+    G2Point cpu_result_projective;
+    G2PointAffine cpu_result_affine;
+    G2PointAffine cpu_base_points_affine[N] = {};
 
-    point_t *gpu_result = new point_t{};
-    size_t sz = sizeof(affine_t);
-    for(int i=0; i < N; i++){
-        printf("gpu input base point: %d \n", i);
-        print_char_array((uint8_t*)(uint64_t*)(&gpu_base_points_affine[i].X),32);
-
-         printf("gpu input scalar %d \n", i);
-        print_char_array((uint8_t*)(uint64_t*)(&gpu_scalars[i]),32);
-    }
-    mult_pippenger(gpu_result, gpu_base_points_affine, N, gpu_scalars, sz);
-
-
-
-    // remain in Montgmery Space
-    F1Element* gpu_x = (F1Element*)(&gpu_result->X);
-    F1Element* gpu_y= (F1Element*)(&gpu_result->Y);
-    F1Element* gpu_z= (F1Element*)(&gpu_result->Z);
-
-    G1Point gpu_point_result{
-        x : F1.zero(),
-        y : F1.zero(),
-        zz : F1.zero(),
-        zzz : F1.zero(),
-    };
-    F1.copy(gpu_point_result.x, *gpu_x);
-    F1.copy(gpu_point_result.y, *gpu_y);
-    F1.square(gpu_point_result.zz, *gpu_z);
-    F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
-    print_g1_point(gpu_point_result);
-    ASSERT_TRUE(G1.eq(cpu_result, gpu_point_result));
-
-
-}
-
-TEST(altBn128, msm_n)
-{
-
-    int N = 1<<1;
-
-    uint8_t scalars[N*32] = {};
-
-    for (int i = 0; i < N * 32; i++)
+    for (int i = 0; i < N; i++)
     {
-        scalars[i] = i % 32 == 0 ? 1 : 0; // TODO: this is to make the input less than MOD; otherwise, the test will fail       
-    }     
-    G1PointAffine cpu_base_points_affine[N] = {};
-    affine_t gpu_base_points_affine[N] ={}; 
+        g2_affine_t g2_affine = points[i];
 
-    for(int i=0; i < N; i++) {
-        G1PointAffine cpu_point_affine = G1.oneAffine();
-        cpu_base_points_affine[i]=cpu_point_affine;
-
-        G1Point p;
-        G1.copy(p, cpu_point_affine);
-    
-        fp_t x = *(fp_t *)cpu_point_affine.x.v;
-        fp_t y = *(fp_t *)cpu_point_affine.y.v;
-        affine_t p_affine = affine_t(x, y);
-        gpu_base_points_affine[i]=p_affine;
+        uint32_t *x_real = g2_affine.x.real.export_limbs();
+        uint32_t *x_imag = g2_affine.x.imaginary.export_limbs();
+        uint32_t *y_real = g2_affine.y.real.export_limbs();
+        uint32_t *y_imag = g2_affine.y.imaginary.export_limbs();
+        F1.fromRprLE(cpu_base_points_affine[i].x.a, (uint8_t *)(x_real), 32);
+        F1.fromRprLE(cpu_base_points_affine[i].x.b, (uint8_t *)(x_imag), 32);
+        F1.fromRprLE(cpu_base_points_affine[i].y.a, (uint8_t *)(y_real), 32);
+        F1.fromRprLE(cpu_base_points_affine[i].y.b, (uint8_t *)(y_imag), 32);
     }
 
-     for(int i=0; i < N; i++) {
-        affine_t p = gpu_base_points_affine[i];
-     }
+    G2.multiMulByScalar(cpu_result_projective, cpu_base_points_affine, (uint8_t *)scalars, 32, N);
+    G2.copy(cpu_result_affine, cpu_result_projective);
 
-    G1Point cpu_result;
-    G1.multiMulByScalar(cpu_result, cpu_base_points_affine, scalars, 32, N);
+    G2PointAffine gpu_result_affine_in_host_format;
+    uint32_t *x_real = gpu_result_affine.x.real.export_limbs();
+    uint32_t *x_imag = gpu_result_affine.x.imaginary.export_limbs();
+    uint32_t *y_real = gpu_result_affine.y.real.export_limbs();
+    uint32_t *y_imag = gpu_result_affine.y.imaginary.export_limbs();
+    F1.fromRprLE(gpu_result_affine_in_host_format.x.a, (uint8_t *)(x_real), 32);
+    F1.fromRprLE(gpu_result_affine_in_host_format.x.b, (uint8_t *)(x_imag), 32);
+    F1.fromRprLE(gpu_result_affine_in_host_format.y.a, (uint8_t *)(y_real), 32);
+    F1.fromRprLE(gpu_result_affine_in_host_format.y.b, (uint8_t *)(y_imag), 32);
 
-    G1PointAffine cpu_expected_point_affine;
-    G1.dbl(cpu_expected_point_affine,  G1.oneAffine());
-    G1Point cpu_expected_point;
-    G1.copy(cpu_expected_point, cpu_expected_point_affine);
-
-
-
-    fr_t gpu_scalars[N] ={};
-    for(int i=0; i < N; i++) {
-       gpu_scalars[i]= *((fr_t *)scalars+i);
-    }
-
-    size_t fr_size = sizeof(fr_t);
-
-    point_t* gpu_result = new point_t{};
-    size_t sz = sizeof(affine_t);
-    mult_pippenger(gpu_result, gpu_base_points_affine, N, gpu_scalars, sz);
-
-    
-    // remain in Montgmery Space
-    F1Element* gpu_x = (F1Element*)(&gpu_result->X);
-    F1Element* gpu_y= (F1Element*)(&gpu_result->Y);
-    F1Element* gpu_z= (F1Element*)(&gpu_result->Z);
-
-    G1Point gpu_point_result{
-        x : F1.zero(),
-        y : F1.zero(),
-        zz : F1.zero(),
-        zzz : F1.zero(),
-    };
-    F1.copy(gpu_point_result.x, *gpu_x);
-    F1.copy(gpu_point_result.y, *gpu_y);
-    F1.square(gpu_point_result.zz, *gpu_z);
-    F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
-    print_g1_point(gpu_point_result);
-    ASSERT_TRUE(G1.eq(cpu_result, gpu_point_result));
-
-
+    ASSERT_TRUE(G2.eq(cpu_result_affine, gpu_result_affine_in_host_format));
 }
-
+#endif
 
 int main(int argc, char **argv)
 {
