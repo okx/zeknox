@@ -4,9 +4,6 @@
 
 #include "keccak.cuh"
 
-#define TPB 128
-#define MAX_RECORD  2048    // max 2048 bytes
-
 #define KECCAK_ROUNDS 24
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
 

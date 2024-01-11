@@ -37,7 +37,7 @@ libmerkle-gpu.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/posei
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp	
 	$(CC) $(CFLAGS) -c -fPIC ../keccak/keccak.c
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak_gpu.o
+	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak_gpu.o
 	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_gpu.o
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element.cu -arch=$(CUDA_ARCH) -dc --output-file element.o
 	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element.cu -arch=$(CUDA_ARCH) -dc --output-file element_gpu.o
@@ -65,7 +65,7 @@ testgpu: merkle.cu merkle.c ../poseidon/poseidon.cuh
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
 	$(CC) $(CFLAGS) -c -fPIC ../keccak/keccak.c
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak_gpu.o
+	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak_gpu.o
 	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_gpu.o
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element.cu -arch=$(CUDA_ARCH) -dc --output-file element.o
 	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element.cu -arch=$(CUDA_ARCH) -dc --output-file element_gpu.o

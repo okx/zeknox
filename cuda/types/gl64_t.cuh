@@ -11,8 +11,7 @@ namespace gl64_device {
     static __device__ __constant__ /*const*/ uint32_t W = 0xffffffffU;
 }
 
-#define __CUDA_ARCH__ 860
-#ifdef __CUDA_ARCH__
+#ifdef USE_CUDA
 # define inline __device__ __forceinline__
 # ifdef __GNUC__
 #  define asm __asm__ __volatile__
