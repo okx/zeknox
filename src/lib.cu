@@ -85,10 +85,5 @@ RustError::by_value mult_pippenger_g2(g2_projective_t* result, g2_affine_t* poin
     large_msm<scalar_field_t, g2_projective_t, g2_affine_t>(
         scalars, points, msm_size, result, on_device, big_triangle, large_bucket_factor);
 
-    // std::cout << "after copy result" << std::endl;
-    // uint32_t* out_x_real = (*result).x.real.export_limbs();
-    // printf("output, x.real %d \n", *(out_x_real) );
-
-
 }
 #endif
