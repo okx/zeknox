@@ -105,6 +105,7 @@ include_directories(
 )
 
 add_executable(test_bn128 ${BN128_TEST_SOURCES})
+target_compile_definitions(test_bn128 PUBLIC -DFEATURE_BN254)
 target_link_libraries(test_bn128 cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")

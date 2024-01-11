@@ -2,9 +2,15 @@
 #define __CRYPTO_PRIMITIVES_EXTENSION_FIELD_CUH__
 #include "field.cuh"
 
+#ifndef CUDA_DEBUG
 #define HOST_INLINE        __host__ __forceinline__
 #define DEVICE_INLINE      __device__ __forceinline__
 #define HOST_DEVICE_INLINE __host__ __device__ __forceinline__
+#else
+#define HOST_INLINE        __host__
+#define DEVICE_INLINE      __device__
+#define HOST_DEVICE_INLINE __host__ __device__
+#endif
 
 template <typename CONFIG>
 class ExtensionField

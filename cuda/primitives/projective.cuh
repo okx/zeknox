@@ -134,7 +134,9 @@ public:
   {
     Projective res = zero();
 #ifdef __CUDA_ARCH__
+#ifndef CUDA_DEBUG
 #pragma unroll
+#endif
 #endif
     for (int i = 0; i < SCALAR_FF::NBITS; i++) {
       if (i > 0) { res = res + res; }

@@ -34,10 +34,10 @@ static constexpr g2_point_field_t g2_gen_y =
     g2_point_field_t{point_field_t{PARAMS_BN254::g2_gen_y_re}, point_field_t{PARAMS_BN254::g2_gen_y_im}};
 static constexpr g2_point_field_t g2_b = g2_point_field_t{
     point_field_t{PARAMS_BN254::weierstrass_b_g2_re}, point_field_t{PARAMS_BN254::weierstrass_b_g2_im}};
-typedef Projective<g2_point_field_t, scalar_t, g2_b, g2_gen_x, g2_gen_y> g2_projective_t;
+typedef Projective<g2_point_field_t, scalar_field_t, g2_b, g2_gen_x, g2_gen_y> g2_projective_t;
 typedef Affine<g2_point_field_t> g2_affine_t;
 
-RustError::by_value mult_pippenger_g2(g2_projective_t *out, g2_affine_t *points,
-                                      size_t msm_size, const scalar_field_t *scalars,
-                                      size_t large_bucket_factor)
+extern "C"
+RustError::by_value mult_pippenger_g2(g2_projective_t* out, g2_affine_t* points, size_t msm_size, scalar_field_t* scalars, size_t large_bucket_factor, bool on_device,
+  bool big_triangle);
 #endif
