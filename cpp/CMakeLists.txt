@@ -4,7 +4,7 @@ add_executable(example example.cpp)
 # target_include_directories(example PRIVATE "../cuda/util/")  # the cuda library is dependent on blst
 # target_include_directories(example PRIVATE "/data/workspace/cliff/cryptography_cuda/depends/blst/src") 
 target_include_directories(example PUBLIC "/data/workspace/cliff/cryptography_cuda/depends/blst/src") 
-target_compile_definitions(example PUBLIC -DFEATURE_BN128 -D__ADX__)
+target_compile_definitions(example PUBLIC -DFEATURE_BN254 -D__ADX__)
 target_link_libraries(
   example 
   cryptography_cuda 
@@ -105,6 +105,7 @@ include_directories(
 )
 
 add_executable(test_bn128 ${BN128_TEST_SOURCES})
+target_compile_definitions(test_bn128 PUBLIC -DFEATURE_BN254)
 target_link_libraries(test_bn128 cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")

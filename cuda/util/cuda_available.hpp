@@ -1,10 +1,6 @@
 #if defined(__NVCC__) && !defined(__CUDA_ARCH__)
 #include <atomic>
 
-#ifndef __DEBUG__PRINT__
-#define __DEBUG__PRINT__
-#include <cstdio>
-#endif
 
 // extern "C"
 // bool cuda_available()

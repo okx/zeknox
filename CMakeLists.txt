@@ -1,17 +1,38 @@
 cmake_minimum_required(VERSION 3.22.1)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 include(cmake/platform.cmake)
 
 set(USE_ASM    ON CACHE BOOL "Use asm implementation for Fr and Fq")
 set(USE_OPENMP ON CACHE BOOL "Use OpenMP")
 
+if (${CMAKE_VERSION} VERSION_LESS "3.24.0")
+    set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
+else()
+    set(CMAKE_CUDA_ARCHITECTURES native) # on 3.24+, on earlier it is ignored, and the target is not passed
+endif ()
+
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES 70)
 endif()
 
+
 project(cryptography_cuda_cpp LANGUAGES CXX CUDA ASM)
-set(CMAKE_CXX_STANDARD 17)
-# set(CUDA_SEPARABLE_COMPILATION ON)
+
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    message("Build on Release Mode")
+    set(CMAKE_CUDA_FLAGS_RELEASE "")  # without this setting, the msm_g2 will panic with memory segmentation
+else()
+    message("Build on Debug Mode")
+    set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
+endif()
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+
+set(CUDA_SEPARABLE_COMPILATION ON)
 
 if (NOT EXISTS ${GMP_INCLUDE_FILE_FULLPATH})
     message("WARNING: ${GMP_INCLUDE_FILE_FULLPATH} is not found and so system ${GMP_INCLUDE_FILE} is used.")
@@ -63,7 +84,7 @@ set(LIB_SOURCES
 )
 add_library(cryptography_cuda STATIC ${LIB_SOURCES} )
 ## todo: pass feature as environment variable, or as option
-target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN128 -D__ADX__)
+target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN254 -D__ADX__)
 # target_compile_options(cryptography_cuda PRIVATE
 #    "-Xcompiler=-ffunction-sections"
 # )

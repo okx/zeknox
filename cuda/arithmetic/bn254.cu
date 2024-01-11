@@ -1,6 +1,6 @@
 #ifndef __CRYPTO_ARITHMEETIC_GL64_CU__
 #define __CRYPTO_ARITHMEETIC_CL64_CU__
-#include <arithmetic/kernels/bn128_kernel.cu>
+#include <arithmetic/kernels/bn254_kernel.cu>
 #ifndef __CUDA_ARCH__   // below is cpu code; __CUDA_ARCH__ should not be defined
 
 #if defined(EXPOSE_C_INTERFACE)
