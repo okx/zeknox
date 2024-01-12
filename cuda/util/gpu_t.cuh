@@ -63,7 +63,8 @@ public:
     {   cudaStreamDestroy(stream);   }
     inline operator decltype(stream)() const    { return stream; }
     inline int id() const                       { return gpu_id; }
-    inline operator int() const                 { return gpu_id; }
+    // stream is equal to its gpu id
+    inline operator int() const                 { return gpu_id; } 
 
     inline void* Dmalloc(size_t sz) const
     {   void *d_ptr;
@@ -169,7 +170,8 @@ private:
     int gpu_id, cuda_id;
     cudaDeviceProp prop;
     size_t total_mem;
-    mutable stream_t zero = {gpu_id};
+    mutable stream_t zero = {gpu_id}; // the default stream, zero
+    // in each gpu, there are three streams by default
     mutable stream_t flipflop[FLIP_FLOP] = {gpu_id, gpu_id, gpu_id};
     mutable thread_pool_t pool{"SPPARK_GPU_T_AFFINITY"};
 
@@ -177,6 +179,7 @@ public:
     gpu_t(int id, int real_id, const cudaDeviceProp& p)
     : gpu_id(id), cuda_id(real_id), prop(p)
     {   size_t freeMem;
+        printf("gpu_id: %d, cuda_id: %d \n", id, real_id);
         CUDA_OK(cudaMemGetInfo(&freeMem, &total_mem));
     }
 
@@ -198,6 +201,7 @@ public:
                         size_t max_workers = 0) const
     {   pool.par_map(num_items, stride, work, max_workers);   }
 
+    /*stream allocate memory, return the pointer to the allocation*/
     inline void* Dmalloc(size_t sz) const
     {   void *d_ptr = zero.Dmalloc(sz);
         zero.sync();
@@ -216,6 +220,8 @@ public:
     inline void HtoD(T& dst, const void* src, size_t nelems,
                      size_t sz = sizeof(T)) const
     {   HtoD(&dst, src, nelems, sz);   }
+
+    /** copy from host vector `src` to device `dst`*/
     template<typename T, typename U>
     inline void HtoD(T& dst, const std::vector<U>& src,
                      size_t sz = sizeof(T)) const

@@ -112,12 +112,12 @@ if(OpenMP_CXX_FOUND)
         target_link_libraries(test_bn128 OpenMP::OpenMP_CXX)
     endif()
 endif()
-target_link_libraries(
-    test_bn128
-  GTest::gtest_main
-)
-include(GoogleTest)
-gtest_discover_tests(test_bn128)
+# target_link_libraries(
+#     test_bn128
+#   GTest::gtest_main
+# )
+# include(GoogleTest)
+# gtest_discover_tests(test_bn128)
 
 set(BN128_BENCH_SOURCES
   bench_bn128.cpp

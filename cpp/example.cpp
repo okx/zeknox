@@ -36,30 +36,10 @@ void test_fft()
     return;
 }
 
-int main()
-{
-    int NMExp = 4;
-    typedef uint8_t Scalar[32];
 
-    Scalar *scalars = new Scalar[NMExp];
-    G1PointAffine *bases = new G1PointAffine[NMExp];
-    uint64_t acc = 0;
-    // for (int i = 0; i < NMExp; i++)
-    // {
-    //     if (i == 0)
-    //     {
-    //         G1.copy(bases[0], G1.one());
-    //     }
-    //     else
-    //     {
-    //         G1.add(bases[i], bases[i - 1], G1.one());
-    //     }
-    //     for (int j = 0; j < 32; j++)
-    //         scalars[i][j] = 0;
-    //     *(int *)&scalars[i][0] = i + 1;
-    //     acc += (i + 1) * (i + 1);
-    // }
-    // G1Point p1;
-    // G1.multiMulByScalar(p1, bases, (uint8_t *)scalars, 32, NMExp);
+int main(int  argc, char** argv)
+{
+    uint32_t N = atoi(argv[1]);
+    // msm_g2(N);
     return 0;
 }

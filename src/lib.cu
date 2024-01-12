@@ -24,6 +24,7 @@
 #endif
 
 #include "lib.h"
+#include <util/gpu_t.cuh>
 #include <util/cuda_available.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
@@ -82,8 +83,11 @@ RustError::by_value mult_pippenger(point_t *result, const affine_t points[],
 extern "C"
 RustError::by_value mult_pippenger_g2(g2_projective_t* result, g2_affine_t* points, size_t msm_size, scalar_field_t* scalars, size_t large_bucket_factor, bool on_device, bool big_triangle)
 {
-    large_msm<scalar_field_t, g2_projective_t, g2_affine_t>(
-        scalars, points, msm_size, result, on_device, big_triangle, large_bucket_factor);
-
+    mult_pippenger_g2_internal<scalar_field_t, g2_projective_t, g2_affine_t>(
+        result, points, scalars, msm_size, on_device, big_triangle, large_bucket_factor);
+    uint32_t* pzr = result->z.real.export_limbs();
+    uint32_t* pzi = result->z.imaginary.export_limbs();
+    printf("result after pzr: %d pzi: %d\n", *pzr, *pzi);
+    CHECK_LAST_CUDA_ERROR();
 }
 #endif
