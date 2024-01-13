@@ -287,76 +287,76 @@ void print_g1_point_affine(G1PointAffine &p)
 // }
 
 // TEST(altBn128, msm_g1_curve_gpu_consistency_with_cpu)
-// {
+void msm_g1(){
 
-//     int NMExp = 1 << 10;
+    int NMExp = 1 << 10;
 
-//     typedef uint8_t Scalar[32];
+    typedef uint8_t Scalar[32];
 
-//     Scalar *scalars = new Scalar[NMExp];
-//     G1PointAffine *bases = new G1PointAffine[NMExp];
+    Scalar *scalars = new Scalar[NMExp];
+    G1PointAffine *bases = new G1PointAffine[NMExp];
 
-//     uint64_t acc = 0;
-//     for (int i = 0; i < NMExp; i++)
-//     {
-//         if (i == 0)
-//         {
-//             G1.copy(bases[0], G1.one());
-//         }
-//         else
-//         {
-//             G1.add(bases[i], bases[i - 1], G1.one());
-//         }
-//         for (int j = 0; j < 32; j++)
-//             scalars[i][j] = 0;
-//         *(int *)&scalars[i][0] = i + 1;
-//         acc += (i + 1) * (i + 1);
-//     }
+    uint64_t acc = 0;
+    for (int i = 0; i < NMExp; i++)
+    {
+        if (i == 0)
+        {
+            G1.copy(bases[0], G1.one());
+        }
+        else
+        {
+            G1.add(bases[i], bases[i - 1], G1.one());
+        }
+        for (int j = 0; j < 32; j++)
+            scalars[i][j] = 0;
+        *(int *)&scalars[i][0] = i + 1;
+        acc += (i + 1) * (i + 1);
+    }
 
-//     G1Point p1;
-//     G1.multiMulByScalar(p1, bases, (uint8_t *)scalars, 32, NMExp);
+    G1Point p1;
+    G1.multiMulByScalar(p1, bases, (uint8_t *)scalars, 32, NMExp);
 
-//     mpz_t e;
-//     mpz_init_set_ui(e, acc);
+    mpz_t e;
+    mpz_init_set_ui(e, acc);
 
-//     Scalar sAcc;
+    Scalar sAcc;
 
-//     for (int i = 0; i < 32; i++)
-//         sAcc[i] = 0;
-//     mpz_export((void *)sAcc, NULL, -1, 8, -1, 0, e);
-//     mpz_clear(e);
+    for (int i = 0; i < 32; i++)
+        sAcc[i] = 0;
+    mpz_export((void *)sAcc, NULL, -1, 8, -1, 0, e);
+    mpz_clear(e);
 
-//     G1Point p2;
-//     G1.mulByScalar(p2, G1.one(), sAcc, 32);
+    G1Point p2;
+    G1.mulByScalar(p2, G1.one(), sAcc, 32);
 
-//     ASSERT_TRUE(G1.eq(p1, p2));
+    // ASSERT_TRUE(G1.eq(p1, p2));
 
-//     point_t *gpu_result = new point_t{};
-//     size_t sz = sizeof(affine_t);
+    point_t *gpu_result = new point_t{};
+    size_t sz = sizeof(affine_t);
 
-//     mult_pippenger(gpu_result, (affine_t *)bases, NMExp, (fr_t *)scalars, sz);
+    mult_pippenger(gpu_result, (affine_t *)bases, NMExp, (fr_t *)scalars, sz);
 
-//     // remain in Montgmery Space
-//     F1Element *gpu_x = (F1Element *)(&gpu_result->X);
-//     F1Element *gpu_y = (F1Element *)(&gpu_result->Y);
-//     F1Element *gpu_z = (F1Element *)(&gpu_result->Z);
+    // remain in Montgmery Space
+    F1Element *gpu_x = (F1Element *)(&gpu_result->X);
+    F1Element *gpu_y = (F1Element *)(&gpu_result->Y);
+    F1Element *gpu_z = (F1Element *)(&gpu_result->Z);
 
-//     G1Point gpu_point_result{
-//         x : F1.zero(),
-//         y : F1.zero(),
-//         zz : F1.zero(),
-//         zzz : F1.zero(),
-//     };
-//     F1.copy(gpu_point_result.x, *gpu_x);
-//     F1.copy(gpu_point_result.y, *gpu_y);
-//     F1.square(gpu_point_result.zz, *gpu_z);
-//     F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
-//     print_g1_point(gpu_point_result);
-//     ASSERT_TRUE(G1.eq(p1, gpu_point_result));
+    G1Point gpu_point_result{
+        x : F1.zero(),
+        y : F1.zero(),
+        zz : F1.zero(),
+        zzz : F1.zero(),
+    };
+    F1.copy(gpu_point_result.x, *gpu_x);
+    F1.copy(gpu_point_result.y, *gpu_y);
+    F1.square(gpu_point_result.zz, *gpu_z);
+    F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
+    print_g1_point(gpu_point_result);
+    // ASSERT_TRUE(G1.eq(p1, gpu_point_result));
 
-//     delete[] bases;
-//     delete[] scalars;
-// }
+    delete[] bases;
+    delete[] scalars;
+}
 
 // #if defined(FEATURE_BN254)
 // TEST(altBn128, msm_g2_curve_gpu_consistency_with_cpu)
@@ -502,8 +502,9 @@ void casting(uint32_t N, uint32_t bucket_factor)
 
 int main(int argc, char **argv)
 {
-    uint32_t N = atoi(argv[1]);
-    uint32_t bucket_factor = atoi(argv[2]);
-    msm_g2(N, bucket_factor);
+    // uint32_t N = atoi(argv[1]);
+    // uint32_t bucket_factor = atoi(argv[2]);
+    // msm_g2(N, bucket_factor);
+    msm_g1();
     return 0;
 }

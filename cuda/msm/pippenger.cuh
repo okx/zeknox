@@ -1023,6 +1023,7 @@ void bucket_method_msm(
       1 << (unsigned)ceil(log2((h_largest_bucket_size + bucket_th - 1) / bucket_th)); // global param
     unsigned max_bucket_size_run_length = (h_largest_bucket_size + threads_per_bucket - 1) / threads_per_bucket;
     unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
+    printf("total byts to allocate: %d \n", sizeof(P) * total_large_buckets_size);
     CUDA_OK(cudaMallocAsync(&large_buckets, sizeof(P) * total_large_buckets_size, stream2));
 
     NUM_THREADS = min(1 << 8, total_large_buckets_size);
