@@ -426,13 +426,9 @@ void print_g1_point_affine(G1PointAffine &p)
 //     return RUN_ALL_TESTS();
 // }
 
-void msm_g2(uint32_t N, uint32_t bucket_factor) {
+void msm_g2(uint32_t N, uint32_t bucket_factor)
+{
     printf("msg_g2 with msm_size: %d, bucket_factor: %d\n", N, bucket_factor);
-    //     unsigned batch_size = 1;
-    // int lg_n_size = 12;
-
-    // unsigned msm_size = 1 << lg_n_size;
-    // unsigned N = batch_size * msm_size;
 
     scalar_field_t *scalars = new scalar_field_t[N];
     g2_affine_t *points = new g2_affine_t[N];
@@ -442,53 +438,72 @@ void msm_g2(uint32_t N, uint32_t bucket_factor) {
         points[i] = (i % N < 10) ? g2_projective_t::to_affine(g2_projective_t::rand_host()) : points[i - 10];
         scalars[i] = scalar_field_t::rand_host();
     }
-    g2_projective_t *gpu_result_projective = new g2_projective_t();
-    std::cout << gpu_result_projective[0] << std::endl;
-
+    g2_projective_t *gpu_result_projective = (g2_projective_t *)malloc(sizeof(g2_projective_t));
+    auto start = omp_get_wtime();
     mult_pippenger_g2(gpu_result_projective, points, N, scalars, bucket_factor, false, false);
+    auto end = omp_get_wtime();
+    auto gpu_time_used = ((double)(end - start));
+    printf("Time used gpu msm (ms): %.3lf\n", gpu_time_used * 1000); // lf stands for long float
 
-    // std::cout << *gpu_result_projective << std::endl;
     g2_affine_t gpu_result_affine = g2_projective_t::to_affine(*gpu_result_projective);
     std::cout << "gpu_result_affine" << gpu_result_affine << std::endl;
 
-    G2Point cpu_result_projective;
-    G2PointAffine cpu_result_affine;
-     printf("1\n");
-    G2PointAffine *cpu_base_points_affine = (G2PointAffine*)malloc(N* sizeof(G2PointAffine));
-    printf("2\n");
-    for (int i = 0; i < N; i++)
-    {
-        g2_affine_t g2_affine = points[i];
+    // G2Point cpu_result_projective;
+    // G2PointAffine cpu_result_affine;
+    // G2PointAffine *cpu_base_points_affine = (G2PointAffine *)points;
+    // for (int i = 0; i < N; i++)
+    // {
+    //     F1.fromRprLE((cpu_base_points_affine + i)->x.a, (uint8_t *)(points + i)->x.real.export_limbs(), 32);
+    //     F1.fromRprLE((cpu_base_points_affine + i)->x.b, (uint8_t *)(points + i)->x.imaginary.export_limbs(), 32);
+    //     F1.fromRprLE((cpu_base_points_affine + i)->y.a, (uint8_t *)(points + i)->y.real.export_limbs(), 32);
+    //     F1.fromRprLE((cpu_base_points_affine + i)->y.b, (uint8_t *)(points + i)->y.imaginary.export_limbs(), 32);
+    // }
+    // auto start_cpu = omp_get_wtime();
+    // G2.multiMulByScalar(cpu_result_projective, cpu_base_points_affine, (uint8_t *)scalars, 32, N);
+    // auto end_cpu = omp_get_wtime();
+    // auto cpu_time_used = ((double)(end_cpu - start_cpu));
+    // printf("Time used cpu msm (ms): %.3lf\n", cpu_time_used * 1000); // lf stands for long float
+    // G2.copy(cpu_result_affine, cpu_result_projective);
 
-        uint32_t *x_real = g2_affine.x.real.export_limbs();
-        uint32_t *x_imag = g2_affine.x.imaginary.export_limbs();
-        uint32_t *y_real = g2_affine.y.real.export_limbs();
-        uint32_t *y_imag = g2_affine.y.imaginary.export_limbs();
-        F1.fromRprLE(cpu_base_points_affine[i].x.a, (uint8_t *)(x_real), 32);
-        F1.fromRprLE(cpu_base_points_affine[i].x.b, (uint8_t *)(x_imag), 32);
-        F1.fromRprLE(cpu_base_points_affine[i].y.a, (uint8_t *)(y_real), 32);
-        F1.fromRprLE(cpu_base_points_affine[i].y.b, (uint8_t *)(y_imag), 32);
-    }
- printf("3\n");
-    G2.multiMulByScalar(cpu_result_projective, cpu_base_points_affine, (uint8_t *)scalars, 32, N);
-    G2.copy(cpu_result_affine, cpu_result_projective);
+    // G2PointAffine gpu_result_affine_in_host_format;
 
-    G2PointAffine gpu_result_affine_in_host_format;
-    uint32_t *x_real = gpu_result_affine.x.real.export_limbs();
-    uint32_t *x_imag = gpu_result_affine.x.imaginary.export_limbs();
-    uint32_t *y_real = gpu_result_affine.y.real.export_limbs();
-    uint32_t *y_imag = gpu_result_affine.y.imaginary.export_limbs();
-    F1.fromRprLE(gpu_result_affine_in_host_format.x.a, (uint8_t *)(x_real), 32);
-    F1.fromRprLE(gpu_result_affine_in_host_format.x.b, (uint8_t *)(x_imag), 32);
-    F1.fromRprLE(gpu_result_affine_in_host_format.y.a, (uint8_t *)(y_real), 32);
-    F1.fromRprLE(gpu_result_affine_in_host_format.y.b, (uint8_t *)(y_imag), 32);
-    printf("is equal: %d  \n", G2.eq(cpu_result_affine, gpu_result_affine_in_host_format));
+    // F1.fromRprLE(gpu_result_affine_in_host_format.x.a, (uint8_t *)(gpu_result_affine.x.real.export_limbs()), 32);
+    // F1.fromRprLE(gpu_result_affine_in_host_format.x.b, (uint8_t *)(gpu_result_affine.x.imaginary.export_limbs()), 32);
+    // F1.fromRprLE(gpu_result_affine_in_host_format.y.a, (uint8_t *)(gpu_result_affine.y.real.export_limbs()), 32);
+    // F1.fromRprLE(gpu_result_affine_in_host_format.y.b, (uint8_t *)(gpu_result_affine.y.imaginary.export_limbs()), 32);
+    // printf("is equal: %d  \n", G2.eq(cpu_result_affine, gpu_result_affine_in_host_format));
+    delete[] points;
+    delete[] scalars;
 }
 
-int main(int  argc, char** argv)
+void casting(uint32_t N, uint32_t bucket_factor)
+{
+    G2PointAffine cpu_point = G2.oneAffine();
+
+    G2PointAffine *p = &cpu_point;
+    bool is_equal = G2.eq(*p, G2.oneAffine());
+    std::cout << "p0 is_equal: " << is_equal << std::endl;
+    printf("point to cpu_point: %x \n", p);
+    g2_affine_t *p_g = (g2_affine_t *)p;
+    printf("point to gpu_point: %x \n", p_g);
+
+    F1.toRprLE(p->x.a, (uint8_t *)(p_g->x.real.export_limbs()), 32);
+    F1.toRprLE(p->x.b, (uint8_t *)(p_g->x.imaginary.export_limbs()), 32);
+    F1.toRprLE(p->y.a, (uint8_t *)(p_g->y.real.export_limbs()), 32);
+    F1.toRprLE(p->y.b, (uint8_t *)(p_g->y.imaginary.export_limbs()), 32);
+
+    F1.fromRprLE(p->x.a, (uint8_t *)(p_g->x.real.export_limbs()), 32);
+    F1.fromRprLE(p->x.b, (uint8_t *)(p_g->x.imaginary.export_limbs()), 32);
+    F1.fromRprLE(p->y.a, (uint8_t *)(p_g->y.real.export_limbs()), 32);
+    F1.fromRprLE(p->y.b, (uint8_t *)(p_g->y.imaginary.export_limbs()), 32);
+    bool is_equal1 = G2.eq(*p, G2.oneAffine());
+    std::cout << "p1 is_equal: " << is_equal1 << std::endl;
+}
+
+int main(int argc, char **argv)
 {
     uint32_t N = atoi(argv[1]);
-    uint32_t bucket_factor  =  atoi(argv[2]);
-    msm_g2(N,  bucket_factor);
+    uint32_t bucket_factor = atoi(argv[2]);
+    msm_g2(N, bucket_factor);
     return 0;
 }

@@ -47,3 +47,12 @@ export LD_LIBRARY_PATH=package/lib/
 ./package/bin/example
 ./package/bin/test_bn128 --gtest_filter=*xxx*
 ```
+
+## factor, rt(ms)
+2, 1862
+4, 1895.108
+6, 1911.426
+10, 1794.383
+
+10615314
+1048576

@@ -1060,10 +1060,10 @@ void bucket_method_msm(
       sorted_single_bucket_indices + h_nof_large_buckets, point_indices, d_points, nof_buckets,
       h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c);
   }
-
-  // all the large buckets need to be accumulated before the final summation
-  CUDA_OK(cudaStreamSynchronize(stream2));
-  CUDA_OK(cudaStreamDestroy(stream2));
+    CUDA_OK(cudaFreeAsync(large_buckets, stream2));
+    // all the large buckets need to be accumulated before the final summation
+    CUDA_OK(cudaStreamSynchronize(stream2));
+    CUDA_OK(cudaStreamDestroy(stream2));
 
 #ifdef SSM_SUM
   // sum each bucket

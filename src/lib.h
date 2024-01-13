@@ -20,7 +20,7 @@ RustError::by_value mult_pippenger(point_t* out, const affine_t points[],
                                        size_t npoints, const scalar_t scalars[],
                                        size_t ffi_affine_sz);
 
-#if defined(FEATURE_BN254)
+
 #include <primitives/field.cuh>
 #include <primitives/extension_field.cuh>
 #include <primitives/projective.cuh>
@@ -40,4 +40,3 @@ typedef Affine<g2_point_field_t> g2_affine_t;
 extern "C"
 RustError::by_value mult_pippenger_g2(g2_projective_t* out, g2_affine_t* points, size_t msm_size, scalar_field_t* scalars, size_t large_bucket_factor, bool on_device,
   bool big_triangle);
-#endif
