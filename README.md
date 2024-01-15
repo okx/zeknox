@@ -2,12 +2,16 @@
 
 this repo implements cryptography arithmatic using cuda.
 
-# algorithm support
+# features
+## algorithm support
 - NTT
 much of the code has been taken from https://github.com/supranational/sppark. only a small portion of the code is actually requied to our project; also, as a purpose of learning, we implemented the algorithm from scratch, but it is mainly based on the work of sppark.
+- MSM
+based on pippenger algorithm, supporting both G1 and G2 curve. currently, if the input points contains zero points, the kernel will return zero. Therefore, the user should set the corresponding scalar to zero to make the result valid.
 
-# field support
+## field support
 - Goldilocks
+- BN254
 
 # rust usage
 **note** a gpu is required to run below tests
@@ -40,21 +44,9 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package
 make -j4 & make install
 ```
 
-## run
-- run example
+## test
+- run test
 ```
-export LD_LIBRARY_PATH=package/lib/
-./package/bin/example
+export LD_LIBRARY_PATH=package/lib/ # if building a shared lib
 ./package/bin/test_bn128 --gtest_filter=*xxx*
 ```
-
-## factor, rt(ms)
-2, 1862
-4, 1895.108
-6, 1911.426
-10, 1794.383
-
-10615314
-1048576
-
-713,031,680

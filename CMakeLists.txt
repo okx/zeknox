@@ -8,6 +8,11 @@ include(cmake/platform.cmake)
 
 set(USE_ASM    ON CACHE BOOL "Use asm implementation for Fr and Fq")
 set(USE_OPENMP ON CACHE BOOL "Use OpenMP")
+set(G2_ENABLED OFF CACHE BOOL "enable G2 curve")
+
+if(G2_ENABLED)
+    add_definitions(-DG2_ENABLED)
+endif()
 
 if (${CMAKE_VERSION} VERSION_LESS "3.24.0")
     set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
@@ -101,10 +106,10 @@ FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(cpp)
 
-# install(TARGETS example  test_bn128 bench_bn128 cryptography_cuda
-#     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-#     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
-#     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+install(TARGETS test_bn254 bench_bn254 cryptography_cuda
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+    BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
 install(FILES src/lib.h
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include)

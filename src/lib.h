@@ -13,7 +13,6 @@ RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
 #include <ec/xyzz_t.hpp>
 typedef jacobian_t<fp_t> point_t;
 typedef xyzz_t<fp_t> bucket_t;
-// typedef bucket_t::affine_inf_t affine_inf_t;
 typedef bucket_t::affine_t affine_t;
 typedef fr_t scalar_t;
 RustError::by_value mult_pippenger(point_t* out, const affine_t points[],

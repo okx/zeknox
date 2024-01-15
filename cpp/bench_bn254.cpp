@@ -40,14 +40,10 @@ void print_char_array(uint8_t *p, uint32_t size)
     }
 }
 
-
-
-int main(int argc, char **argv)
+void bench_fft(int lg_n_size)
 {
-    int lg_n_size = atoi(argv[1]);
-    printf("log n size: %d \n", lg_n_size);
-    int N = 1 << lg_n_size;
 
+    int N = 1 << lg_n_size;
     uint8_t *raw_data = new uint8_t[N * 32];
 
     for (int i = 0; i < N * 32; i++)
@@ -91,6 +87,62 @@ int main(int argc, char **argv)
     gpu_time_used = ((double)(end_gpu - start_gpu));
     printf("Time used  gpu fft (ms): %.3lf\n", gpu_time_used * 1000); // lf stands for long float
 
-
     delete[] gpu_data_in;
+}
+
+void bench_msm_bn254_g1(int lg_n_size)
+{
+
+    unsigned batch_size = 1;
+    unsigned msm_size = 1 << lg_n_size;
+    unsigned N = batch_size * msm_size;
+
+    uint8_t *raw_scalars = (uint8_t *)malloc(N * 32);
+    uint8_t *raw_point_x = (uint8_t *)malloc(N * 32);
+    uint8_t *raw_point_y = (uint8_t *)malloc(N * 32);
+
+    for (int i = 0; i < N * 32; i++)
+    {
+        *(raw_scalars + i) = i % 32 == 31 ? 0 : lehmer64();
+        *(raw_point_x + i) = i % 32 == 31 ? 0 : lehmer64();
+        *(raw_point_y + i) = i % 32 == 31 ? 0 : lehmer64();
+    }
+
+    G1PointAffine *cpu_points = (G1PointAffine *)malloc(N * sizeof(G1PointAffine));
+    for (int i = 0; i < N; i++)
+    {
+        F1.fromRprLE((cpu_points + i)->x, (uint8_t *)(raw_point_x + i), 32);
+        F1.fromRprLE((cpu_points + i)->y, (uint8_t *)(raw_point_y + i), 32);
+    }
+
+    G1Point p1;
+    double start_cpu, end_cpu;
+    double cpu_time_used;
+    start_cpu = omp_get_wtime();
+    G1.multiMulByScalar(p1, cpu_points, raw_scalars, 32, N);
+    end_cpu = omp_get_wtime();
+    cpu_time_used = ((double)(end_cpu - start_cpu));
+    printf("Time used  cpu msm g1 (ms): %.3lf\n", cpu_time_used * 1000); // lf stands for long float
+
+
+    point_t *gpu_result = new point_t{};
+    size_t sz = sizeof(affine_t);
+    double start_gpu, end_gpu;
+    double gpu_time_used;
+    start_gpu = omp_get_wtime();
+
+    mult_pippenger(gpu_result, (affine_t *)cpu_points, N, (fr_t *)raw_scalars, sz);
+    end_gpu = omp_get_wtime();
+    gpu_time_used = ((double)(end_gpu - start_gpu));
+    printf("Time used  gpu fft (ms): %.3lf\n", gpu_time_used * 1000); // lf stands for long float
+
+    delete[] cpu_points;
+
+}
+
+int main(int argc, char **argv)
+{
+    int lg_n_size = atoi(argv[1]);
+    // bench_fft(lg_n_size);
+    bench_msm_bn254_g1(lg_n_size);
 }
