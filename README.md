@@ -50,3 +50,6 @@ make -j4 & make install
 export LD_LIBRARY_PATH=package/lib/ # if building a shared lib
 ./package/bin/test_bn128 --gtest_filter=*xxx*
 ```
+
+# remarks
+- current cuda build time for G2_ENABLED is very slow. therefore G2_ENABLED is not enabled by default.

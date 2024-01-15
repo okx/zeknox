@@ -124,7 +124,6 @@ void bench_msm_bn254_g1(int lg_n_size)
     cpu_time_used = ((double)(end_cpu - start_cpu));
     printf("Time used  cpu msm g1 (ms): %.3lf\n", cpu_time_used * 1000); // lf stands for long float
 
-
     point_t *gpu_result = new point_t{};
     size_t sz = sizeof(affine_t);
     double start_gpu, end_gpu;
@@ -134,15 +133,58 @@ void bench_msm_bn254_g1(int lg_n_size)
     mult_pippenger(gpu_result, (affine_t *)cpu_points, N, (fr_t *)raw_scalars, sz);
     end_gpu = omp_get_wtime();
     gpu_time_used = ((double)(end_gpu - start_gpu));
-    printf("Time used  gpu fft (ms): %.3lf\n", gpu_time_used * 1000); // lf stands for long float
+    printf("Time used  gpu msm g1 (ms): %.3lf\n", gpu_time_used * 1000); // lf stands for long float
 
     delete[] cpu_points;
-
 }
 
+void bench_msm_bn254_g2(int lg_n_size)
+{
+    unsigned msm_size = 1 << lg_n_size;
+
+    scalar_field_t *scalars = new scalar_field_t[msm_size];
+    g2_affine_t *points = new g2_affine_t[msm_size];
+
+    for (unsigned i = 0; i < msm_size; i++)
+    {
+        points[i] = (i % msm_size < 100) ? g2_projective_t::to_affine(g2_projective_t::rand_host()) : points[i - 100];
+        scalars[i] = scalar_field_t::rand_host();
+    }
+    size_t large_bucket_factor = 10;
+    g2_projective_t *gpu_result_projective = new g2_projective_t();
+
+    double start_gpu, end_gpu;
+    double gpu_time_used;
+    start_gpu = omp_get_wtime();
+    mult_pippenger_g2(gpu_result_projective, points, msm_size, scalars, large_bucket_factor, false, false);
+    end_gpu = omp_get_wtime();
+    gpu_time_used = ((double)(end_gpu - start_gpu));
+    printf("Time used  gpu msm bn254 g2 (ms): %.3lf\n", gpu_time_used * 1000); // lf stands for long float
+
+    G2Point cpu_result_projective;
+    G2PointAffine *cpu_base_points_affine = (G2PointAffine *)points;
+
+    for (int i = 0; i < msm_size; i++)
+    {
+        F1.fromRprLE(cpu_base_points_affine[i].x.a, (uint8_t *)((points + i)->x.real.export_limbs()), 32);
+        F1.fromRprLE(cpu_base_points_affine[i].x.b, (uint8_t *)((points + i)->x.imaginary.export_limbs()), 32);
+        F1.fromRprLE(cpu_base_points_affine[i].y.a, (uint8_t *)((points + i)->y.real.export_limbs()), 32);
+        F1.fromRprLE(cpu_base_points_affine[i].y.b, (uint8_t *)((points + i)->y.imaginary.export_limbs()), 32);
+    }
+    double start_cpu, end_cpu;
+    double cpu_time_used;
+    start_cpu = omp_get_wtime();
+    G2.multiMulByScalar(cpu_result_projective, cpu_base_points_affine, (uint8_t *)scalars, 32, msm_size);
+    end_cpu = omp_get_wtime();
+    cpu_time_used = ((double)(end_cpu - start_cpu));
+    printf("Time used  cpu msm bn254 g2 (ms): %.3lf\n", cpu_time_used * 1000); // lf stands for long float
+    delete[] cpu_base_points_affine;
+    delete[] scalars;
+}
 int main(int argc, char **argv)
 {
     int lg_n_size = atoi(argv[1]);
     // bench_fft(lg_n_size);
-    bench_msm_bn254_g1(lg_n_size);
+    // bench_msm_bn254_g1(lg_n_size);
+    bench_msm_bn254_g2(lg_n_size);
 }
