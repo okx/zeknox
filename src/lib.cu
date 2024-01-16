@@ -24,6 +24,7 @@
 #endif
 
 #include "lib.h"
+#include <util/gpu_t.cuh>
 #include <util/cuda_available.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
@@ -58,32 +59,16 @@ RustError::by_value mult_pippenger(point_t *result, const affine_t points[],
                                    size_t npoints, const scalar_t scalars[],
                                    size_t ffi_affine_sz)
 {
-    // return mult_pippenger<bucket_t>(result, points, npoints, scalars, false, ffi_affine_sz);
-    // printf("npoints: %d \n", npoints);
-    // uint8_t *p1 = (uint8_t *)(uint64_t *)(&scalars[1]);
-    // printf("first scalar x \n");
-    // for(int i=0;i<32;i++) {
-    //     printf("%x", p1[i]);
-    // }
-    // printf("\n");
     RustError r = mult_pippenger<bucket_t>(result, points, npoints, scalars, false, ffi_affine_sz);
-
-    // fp_t *x = &result->X;
-    // uint8_t *p = (uint8_t *)(uint64_t *)(limb_t *)x;
-    // printf("result point x \n");
-    // for(int i=0;i<32;i++) {
-    //     printf("%x", p[i]);
-    // }
-    // printf("\n");
     return r;
 }
 
-#if defined(FEATURE_BN254)
+#if defined(G2_ENABLED)
 extern "C"
 RustError::by_value mult_pippenger_g2(g2_projective_t* result, g2_affine_t* points, size_t msm_size, scalar_field_t* scalars, size_t large_bucket_factor, bool on_device, bool big_triangle)
 {
-    large_msm<scalar_field_t, g2_projective_t, g2_affine_t>(
-        scalars, points, msm_size, result, on_device, big_triangle, large_bucket_factor);
-
+    mult_pippenger_g2_internal<scalar_field_t, g2_projective_t, g2_affine_t>(
+        result, points, scalars, msm_size, on_device, big_triangle, large_bucket_factor);
+    CHECK_LAST_CUDA_ERROR();
 }
 #endif
