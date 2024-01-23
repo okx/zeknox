@@ -95,7 +95,8 @@ void bench_msm_bn254_g1(int lg_n_size)
 
     unsigned batch_size = 1;
     unsigned msm_size = 1 << lg_n_size;
-    unsigned N = batch_size * msm_size;
+    // unsigned N = batch_size * msm_size;
+    unsigned N =1023;
 
     uint8_t *raw_scalars = (uint8_t *)malloc(N * 32);
     uint8_t *raw_point_x = (uint8_t *)malloc(N * 32);
@@ -137,7 +138,7 @@ void bench_msm_bn254_g1(int lg_n_size)
 
     delete[] cpu_points;
 }
-
+#if defined(G2_ENABLED)
 void bench_msm_bn254_g2(int lg_n_size)
 {
     unsigned msm_size = 1 << lg_n_size;
@@ -181,10 +182,11 @@ void bench_msm_bn254_g2(int lg_n_size)
     delete[] cpu_base_points_affine;
     delete[] scalars;
 }
+#endif
 int main(int argc, char **argv)
 {
     int lg_n_size = atoi(argv[1]);
     // bench_fft(lg_n_size);
-    // bench_msm_bn254_g1(lg_n_size);
-    bench_msm_bn254_g2(lg_n_size);
+    bench_msm_bn254_g1(lg_n_size);
+    // bench_msm_bn254_g2(lg_n_size);
 }

@@ -40,7 +40,7 @@ git submodule init
 git submodule update
 ./build_gmp.sh host
 mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package -DG2_ENABLED=OFF
 make -j4 & make install
 ```
 

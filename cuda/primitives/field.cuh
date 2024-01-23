@@ -101,9 +101,10 @@ public:
 
   static constexpr unsigned slack_bits = 32 * TLC - NBITS;
 
+  // extension field to 2 degrees
   struct Wide {
     ff_wide_storage limbs_storage;
-
+    // limbs below TLC
     static constexpr Field HOST_DEVICE_INLINE get_lower(const Wide& xs)
     {
       Field out{};
@@ -117,6 +118,7 @@ public:
       return out;
     }
 
+    // limbs highr than TLC, lower than 2* TLC
     static constexpr Field HOST_DEVICE_INLINE get_higher(const Wide& xs)
     {
       Field out{};

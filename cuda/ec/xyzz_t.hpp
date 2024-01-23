@@ -1,6 +1,8 @@
 // Copyright Supranational LLC
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
+#define XSTR(x) STR(x)
+#define STR(x) #x
 
 #ifndef __SPPARK_EC_XYZZ_T_HPP__
 #define __SPPARK_EC_XYZZ_T_HPP__
@@ -13,7 +15,12 @@
 # undef  __noinline__
 # define __noinline__
 #endif
+#pragma message "The value of __NVCC__ in xyzz.hpp: " XSTR(__NVCC__)
 
+/**
+ * ZZ is Z^2
+ * ZZZ is Z^3
+*/
 template<class field_t, class field_h = typename field_t::mem_t>
 class xyzz_t {
     field_t X, Y, ZZZ, ZZ;

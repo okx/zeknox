@@ -116,8 +116,8 @@ static const vec256 ALT_BN128_ONE = {   /* (1<<256)%P */
     TO_LIMB_T(0x666ea36f7879462c), TO_LIMB_T(0x0e0a77c19a07df2f)
 };
 /**
- * template<const size_t N, const vec256 MOD, const limb_t M0,
-                         const vec256 RR, const vec256 ONE>
+ * template<const size_t N, const vec256 MOD, const limb_t M0, const vec256 RR, const vec256 ONE>
+ * RR' + NN' = 1 the full n' should be 0xf57a22b791888c6bd8afcbd01833da809ede7d651eca6ac987d20782e4866389 in big endian format
 */
 typedef blst_256_t<254, ALT_BN128_P, 0x87d20782e4866389u,
                         ALT_BN128_RR, ALT_BN128_ONE> fp_mont;
@@ -127,6 +127,7 @@ struct fp_t : public fp_mont {
     inline fp_t(const fp_mont& a) : fp_mont(a) {}
 };
 
+// the prime is 21888242871839275222246405745257275088548364400416034343698204186575808495617
 static const vec256 ALT_BN128_r = {
     TO_LIMB_T(0x43e1f593f0000001), TO_LIMB_T(0x2833e84879b97091),
     TO_LIMB_T(0xb85045b68181585d), TO_LIMB_T(0x30644e72e131a029)
@@ -139,6 +140,7 @@ static const vec256 ALT_BN128_rONE = {  /* (1<<256)%r */
     TO_LIMB_T(0xac96341c4ffffffb), TO_LIMB_T(0x36fc76959f60cd29),
     TO_LIMB_T(0x666ea36f7879462e), TO_LIMB_T(0x0e0a77c19a07df2f)
 };
+// the full n' should be 0x73f82f1d0d8341b2e39a9828990623916586864b4c6911b3c2e1f593efffffff
 typedef blst_256_t<254, ALT_BN128_r, 0xc2e1f593efffffffu,
                         ALT_BN128_rRR, ALT_BN128_rONE> fr_mont;
 struct fr_t : public fr_mont {
