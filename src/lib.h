@@ -1,15 +1,15 @@
 #pragma once
-# include <ff/alt_bn254.hpp>
 # include <util/rusterror.h>
 # include <ntt/ntt.h>
 
-void bn128_add(fp_t *result, fp_t *a, fp_t *b);
-
+// void bn128_add(fp_t *result, fp_t *a, fp_t *b);
 RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                 Ntt_Types::InputOutputOrder ntt_order,
                 Ntt_Types::Direction ntt_direction,
                 Ntt_Types::Type ntt_type);
 
+#ifndef FEATURE_GOLDILOCKS
+# include <ff/alt_bn254.hpp>
 #include <ec/jacobian_t.hpp>
 #include <ec/xyzz_t.hpp>
 typedef jacobian_t<fp_t> point_t;
@@ -40,3 +40,4 @@ typedef Affine<g2_point_field_t> g2_affine_t;
 extern "C"
 RustError::by_value mult_pippenger_g2(g2_projective_t* out, g2_affine_t* points, size_t msm_size, scalar_field_t* scalars, size_t large_bucket_factor, bool on_device,
   bool big_triangle);
+#endif

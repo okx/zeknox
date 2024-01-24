@@ -28,7 +28,7 @@
 #include <util/cuda_available.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
-#include <arithmetic/arithmetic.hpp>
+// #include <arithmetic/arithmetic.hpp>
 
 #ifndef __CUDA_ARCH__ // below is cpu code; __CUDA_ARCH__ should not be defined
 
@@ -48,6 +48,7 @@ extern "C"
 }
 #endif
 
+#ifndef FEATURE_GOLDILOCKS
 #include <ec/jacobian_t.hpp>
 #include <ec/xyzz_t.hpp>
 
@@ -71,4 +72,5 @@ RustError::by_value mult_pippenger_g2(g2_projective_t* result, g2_affine_t* poin
         result, points, scalars, msm_size, on_device, big_triangle, large_bucket_factor);
     CHECK_LAST_CUDA_ERROR();
 }
+#endif
 #endif
