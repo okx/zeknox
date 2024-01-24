@@ -9,14 +9,13 @@
 #include "poseidon.h"
 #include "poseidon_bn128.h"
 #include "keccak.h"
-#include "keccak.cuh"
 
 // #include "goldilocks.hpp"
 
 #define TPB 128
 
 // pointers to the actual hash functions (could be Poseidon or Keccak)
-__device__ void (*gpu_hash_one_ptr)(gl64_t *inputs, u32 num_inputs, gl64_t *hash);
+__device__ void (*gpu_hash_one_ptr)(gl64_t *input, u32 size, gl64_t *hash);
 __device__ void (*gpu_hash_two_ptr)(gl64_t *hash1, gl64_t *hash2, gl64_t *hash);
 
 __global__ void init_gpu_functions_poseidon_kernel()
@@ -55,8 +54,8 @@ void init_gpu_functions(u64 hash_type)
     {
     case 0:
         init_gpu_functions_poseidon_kernel<<<1, 1>>>();
-        cpu_hash_one_ptr = &poseidon_hash_leaf;
-        cpu_hash_two_ptr = &poseidon_hash_of_two;
+        cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+        cpu_hash_two_ptr = &cpu_poseidon_hash_two;
         break;
     case 1:
         init_gpu_functions_keccak_kernel<<<1, 1>>>();
@@ -65,13 +64,13 @@ void init_gpu_functions(u64 hash_type)
         break;
     case 2:
         init_gpu_functions_poseidon_bn128_kernel<<<1, 1>>>();
-        cpu_hash_one_ptr = &poseidon_bn128_hash_leaf;
-        cpu_hash_two_ptr = &poseidon_bn128_hash_of_two;
+        cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
+        cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
         break;
     default:
         init_gpu_functions_poseidon_kernel<<<1, 1>>>();
-        cpu_hash_one_ptr = &poseidon_hash_leaf;
-        cpu_hash_two_ptr = &poseidon_hash_of_two;
+        cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+        cpu_hash_two_ptr = &cpu_poseidon_hash_two;
     }
 }
 
@@ -211,7 +210,7 @@ void fill_digests_buf_in_rounds_in_c_on_gpu(
     u32 *gpu_round_size;
     HashTask *gpu_internal_indexes;
 
-    u32 leaves_size_bytes = leaves_buf_size * leaf_size * 8;    
+    u32 leaves_size_bytes = leaves_buf_size * leaf_size * 8;
     CHECKCUDAERR(cudaMalloc(&gpu_leaves, leaves_size_bytes));
     CHECKCUDAERR(cudaMemcpyAsync(gpu_leaves, global_leaves_buf, leaves_size_bytes, cudaMemcpyHostToDevice));
 
@@ -240,7 +239,7 @@ void fill_digests_buf_in_rounds_in_c_on_gpu(
     u64 subtree_digests_len = digests_buf_size >> cap_height;
     u64 subtree_leaves_len = leaves_buf_size >> cap_height;
     u64 digests_chunks = digests_buf_size / subtree_digests_len;
-    u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;    
+    u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;
     assert(digests_chunks == cap_buf_size);
     assert(digests_chunks == leaves_chunks);
 
@@ -262,7 +261,7 @@ void fill_digests_buf_in_rounds_in_c_on_gpu(
     CHECKCUDAERR(cudaMemcpyAsync((void *)gpu_internal_indexes, (void *)internal_index, (max_round + 1) * max_round_size * sizeof(HashTask), cudaMemcpyHostToDevice));
     compute_leaves_hashes<<<leaves_buf_size / TPB + 1, TPB>>>(gpu_leaves, leaves_buf_size, leaf_size, gpu_digests, gpu_indexes);
 
-    // compute_internal_hashes<<<max_round_size / TPB, TPB>>>(gpu_digests, max_round, max_round_size, gpu_round_size, gpu_internal_indexes, TPB);    
+    // compute_internal_hashes<<<max_round_size / TPB, TPB>>>(gpu_digests, max_round, max_round_size, gpu_round_size, gpu_internal_indexes, TPB);
 
     int r = max_round;
     for (; round_size[r] > TPB; r--)
@@ -270,7 +269,7 @@ void fill_digests_buf_in_rounds_in_c_on_gpu(
         compute_internal_hashes_per_round<<<round_size[r] / TPB, TPB>>>(gpu_digests, round_size[r], r, max_round_size, gpu_internal_indexes);
     }
 
-    CHECKCUDAERR(cudaMemcpy(global_digests_buf, gpu_digests, digests_size_bytes, cudaMemcpyDeviceToHost));    
+    CHECKCUDAERR(cudaMemcpy(global_digests_buf, gpu_digests, digests_size_bytes, cudaMemcpyDeviceToHost));
 
     // internal rounds on digest buffer on CPU -- for testing only!
     // for (int r = max_round-1; r > 0; r--) {
@@ -280,16 +279,16 @@ void fill_digests_buf_in_rounds_in_c_on_gpu(
         for (int i = 0; i < round_size[r]; i++)
         {
             HashTask *ht = &internal_index[r * max_round_size + i];
-            cpu_hash_two_ptr(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
+            cpu_hash_two_ptr(global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64), global_digests_buf + (ht->target_index * HASH_SIZE_U64));
         }
     }
-    
+
     // cap buffer (on CPU)
     for (int i = 0; i < round_size[0]; i++)
     {
         HashTask *ht = &internal_index[i];
-        cpu_hash_two_ptr(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
-    }    
+        cpu_hash_two_ptr(global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64), global_cap_buf + (ht->target_index * HASH_SIZE_U64));
+    }
 
     // free
     cudaFree(gpu_digests);
@@ -361,16 +360,16 @@ void fill_digests_buf_linear_gpu(
             // if one leaf => return it hash
             if (subtree_leaves_len == 1)
             {
-                cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
+                cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
                 memcpy(cap_buf_ptr, digests_buf_ptr, HASH_SIZE);
                 continue;
             }
             // if two leaves => return their concat hash
             if (subtree_leaves_len == 2)
             {
-                cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
-                cpu_hash_one_ptr(digests_buf_ptr + HASH_SIZE_U64, leaves_buf_ptr + leaf_size, leaf_size);
-                cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+                cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
+                cpu_hash_one_ptr(leaves_buf_ptr + leaf_size, leaf_size, digests_buf_ptr + HASH_SIZE_U64);
+                cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
                 continue;
             }
         }
@@ -422,12 +421,12 @@ void fill_digests_buf_linear_gpu(
                 u64 *left_ptr = digests_buf_ptr2 + (left_idx * HASH_SIZE_U64);
                 u64 *right_ptr = digests_buf_ptr2 + (right_idx * HASH_SIZE_U64);
                 // printf("%lu %lu\n", *left_ptr, *right_ptr);
-                cpu_hash_two_ptr(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
+                cpu_hash_two_ptr(left_ptr, right_ptr, digests_buf_ptr2 + (idx * HASH_SIZE_U64));
             }
         }
 
         // 6. compute cap hashes on CPU
-        cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+        cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
 
     } // end for k
 
@@ -492,16 +491,16 @@ void fill_digests_buf_linear_gpu_v1(
         // if one leaf => return it hash
         if (subtree_leaves_len == 1)
         {
-            cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
+            cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
             memcpy(cap_buf_ptr, digests_buf_ptr, HASH_SIZE);
             continue;
         }
         // if two leaves => return their concat hash
         if (subtree_leaves_len == 2)
         {
-            cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
-            cpu_hash_one_ptr(digests_buf_ptr + HASH_SIZE_U64, leaves_buf_ptr + leaf_size, leaf_size);
-            cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+            cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
+            cpu_hash_one_ptr(leaves_buf_ptr + leaf_size, leaf_size, digests_buf_ptr + HASH_SIZE_U64);
+            cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
             continue;
         }
 
@@ -539,12 +538,12 @@ void fill_digests_buf_linear_gpu_v1(
                 u64 *left_ptr = digests_buf_ptr2 + (left_idx * HASH_SIZE_U64);
                 u64 *right_ptr = digests_buf_ptr2 + (right_idx * HASH_SIZE_U64);
                 // printf("%lu %lu\n", *left_ptr, *right_ptr);
-                cpu_hash_two_ptr(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
+                cpu_hash_two_ptr(left_ptr, right_ptr, digests_buf_ptr2 + (idx * HASH_SIZE_U64));
             }
         }
 
         // 6. compute cap hashes on CPU
-        cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+        cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
 
     } // end for k
 
@@ -595,7 +594,7 @@ int main0()
     fill_init_rounds(n_leaves, rounds);
     read_leaves(global_leaves_buf, n_leaves, leaf_size);
 
-    gettimeofday(&t0, 0);    
+    gettimeofday(&t0, 0);
     fill_digests_buf_in_rounds_in_c_on_gpu(n_digests, n_caps, n_leaves, leaf_size, cap_h);
     gettimeofday(&t1, 0);
     long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
@@ -689,7 +688,7 @@ void run_gpu_leaves_hashes()
     {
         u64 *dptr = global_digests_buf + i * HASH_SIZE_U64;
         u64 *lptr = global_leaves_buf + i * leaf_size;
-        cpu_hash_one_ptr(dptr, lptr, leaf_size);
+        cpu_hash_one_ptr(lptr, leaf_size, dptr);
     }
 
     // Compute on GPU

@@ -21,8 +21,8 @@ u64 *global_digests_buf_end = NULL;
 u64 *global_leaves_buf_end = NULL;
 u64 *global_cap_buf_end = NULL;
 
-void (*cpu_hash_one_ptr)(u64 *digest, u64 *data, u32 data_size);
-void (*cpu_hash_two_ptr)(u64 *digest, u64 *digest_left, u64 *digest_right);
+void (*cpu_hash_one_ptr)(u64 *input, u32 size, u64 *data);
+void (*cpu_hash_two_ptr)(u64 *hash1, u64 *hash2, u64 *hash);
 
 int *leaf_index = NULL;
 HashTask *internal_index = NULL;
@@ -34,7 +34,7 @@ int max_round_size = 0;
  * Version 1 - Fill in a recursive way (the same as in Plonky2 Rust code)
  */
 void fill_subtree(u64 *target_hash, u64 *digests, u64 digests_count, u64 *leaves, u64 leaves_count, u64 leaf_size, char target_type)
-{    
+{
     if (target_type == 0)
     {
         assert(target_hash >= global_cap_buf && target_hash < global_cap_buf_end);
@@ -53,7 +53,7 @@ void fill_subtree(u64 *target_hash, u64 *digests, u64 digests_count, u64 *leaves
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_or_noop(target_hash, leaves, leaf_size);
 #else
-        cpu_hash_one_ptr(target_hash, leaves, leaf_size);
+        cpu_hash_one_ptr(leaves, leaf_size, target_hash);
 #endif
     }
     else
@@ -73,7 +73,7 @@ void fill_subtree(u64 *target_hash, u64 *digests, u64 digests_count, u64 *leaves
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_of_two(target_hash, left_digest, right_digest);
 #else
-        cpu_hash_two_ptr(target_hash, left_digest, right_digest);
+        cpu_hash_two_ptr(left_digest, right_digest, target_hash);
 #endif
     }
 }
@@ -97,7 +97,7 @@ void fill_digests_buf_in_c(
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_or_noop(cptr, lptr, leaf_size);
 #else
-            cpu_hash_one_ptr(cptr, lptr, leaf_size);
+            cpu_hash_one_ptr(lptr, leaf_size, cptr);
 #endif
             cptr += HASH_SIZE_U64;
             lptr += leaf_size;
@@ -177,7 +177,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size)
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_or_noop(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
 #else
-        cpu_hash_one_ptr(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
+        cpu_hash_one_ptr(global_leaves_buf + (i * leaf_size), leaf_size, global_digests_buf + (leaf_index[i] * HASH_SIZE_U64));
 #endif
     }
     // internal rounds on digest buffer
@@ -190,7 +190,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size)
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_of_two(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
-            cpu_hash_two_ptr(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
+            cpu_hash_two_ptr(global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64), global_digests_buf + (ht->target_index * HASH_SIZE_U64));
 #endif
         }
     }
@@ -202,7 +202,7 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size)
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_of_two(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
-        cpu_hash_two_ptr(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
+        cpu_hash_two_ptr(global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64), global_cap_buf + (ht->target_index * HASH_SIZE_U64));
 #endif
     }
 }
@@ -226,7 +226,7 @@ void fill_digests_buf_in_rounds_in_c(
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_or_noop(cptr, lptr, leaf_size);
 #else
-            cpu_hash_one_ptr(cptr, lptr, leaf_size);
+            cpu_hash_one_ptr(lptr, leaf_size, cptr);
 #endif
         }
         return;
@@ -261,7 +261,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_or_noop(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
 #else
-            cpu_hash_one_ptr(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
+            cpu_hash_one_ptr(global_leaves_buf + (i * leaf_size), leaf_size, global_digests_buf + i * HASH_SIZE_U64);
 #endif
         }
         return;
@@ -284,16 +284,16 @@ void fill_digests_buf_linear_cpu(
         // if one leaf => return it hash
         if (subtree_leaves_len == 1)
         {
-            cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
+            cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
             memcpy(cap_buf_ptr, digests_buf_ptr, HASH_SIZE);
             continue;
         }
         // if two leaves => return their concat hash
         if (subtree_leaves_len == 2)
         {
-            cpu_hash_one_ptr(digests_buf_ptr, leaves_buf_ptr, leaf_size);
-            cpu_hash_one_ptr(digests_buf_ptr + HASH_SIZE_U64, leaves_buf_ptr + leaf_size, leaf_size);
-            cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+            cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
+            cpu_hash_one_ptr(leaves_buf_ptr + leaf_size, leaf_size, digests_buf_ptr + HASH_SIZE_U64);
+            cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
             continue;
         }
 
@@ -305,7 +305,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_or_noop(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
 #else
-            cpu_hash_one_ptr(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
+            cpu_hash_one_ptr(leaves_buf_ptr + (i * leaf_size), leaf_size, digests_curr_ptr + (i * HASH_SIZE_U64));
 #endif
         }
 
@@ -330,7 +330,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
                 ext_poseidon_hash_of_two(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
 #else
-                cpu_hash_two_ptr(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
+                cpu_hash_two_ptr(left_ptr, right_ptr, digests_buf_ptr2 + (idx * HASH_SIZE_U64));
 #endif
             }
         }
@@ -339,7 +339,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_of_two(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
 #else
-        cpu_hash_two_ptr(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
+        cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
 #endif
 
     } // end for k
@@ -370,20 +370,20 @@ void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_siz
     switch (hash_type)
     {
     case 0:
-        cpu_hash_one_ptr = &poseidon_hash_leaf;
-        cpu_hash_two_ptr = &poseidon_hash_of_two;
+        cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+        cpu_hash_two_ptr = &cpu_poseidon_hash_two;
         break;
     case 1:
         cpu_hash_one_ptr = &cpu_keccak_hash_one;
         cpu_hash_two_ptr = &cpu_keccak_hash_two;
         break;
     case 2:
-        cpu_hash_one_ptr = &poseidon_bn128_hash_leaf;
-        cpu_hash_two_ptr = &poseidon_bn128_hash_of_two;
+        cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
+        cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
         break;
     default:
-        cpu_hash_one_ptr = &poseidon_hash_leaf;
-        cpu_hash_two_ptr = &poseidon_hash_of_two;
+        cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+        cpu_hash_two_ptr = &cpu_poseidon_hash_two;
     }
     init_gpu_functions(hash_type);
 }
@@ -435,8 +435,8 @@ u64 *get_leaves_ptr()
  * End of library code.
  */
 
-// #define DEBUG
-#ifdef DEBUG
+// #define TESTING
+#ifdef TESTING
 
 #define LEAF_SIZE_U64 1
 
@@ -588,4 +588,4 @@ int main2()
 
     return 0;
 }
-#endif // DEBUG
+#endif // TESTING

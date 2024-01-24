@@ -1,9 +1,10 @@
 #include "int_types.h"
-#include "element.cuh"
+#include "element_bn128.cuh"
 #include "poseidon_bn128.h"
 
-#ifdef USE_CUDA
 #include "cuda_utils.cuh"
+
+#ifdef USE_CUDA
 #include "poseidon.cuh"
 typedef gl64_t GoldilocksField;
 #else
@@ -215,7 +216,7 @@ DEVICE void gpu_poseidon_bn128_hash_one(gl64_t *data, u32 data_size, gl64_t *dig
     }
 }
 #else
-DEVICE void poseidon_bn128_hash_leaf(u64 *digest, u64 *data, u32 data_size)
+DEVICE void cpu_poseidon_bn128_hash_one(u64 *data, u32 data_size, u64 *digest)
 {
 	assert (data_size > NUM_HASH_OUT_ELTS);
 
@@ -260,7 +261,7 @@ DEVICE void gpu_poseidon_bn128_hash_two(gl64_t *digest_left, gl64_t *digest_righ
     }
 }
 #else
-DEVICE void poseidon_bn128_hash_of_two(u64 *digest, u64 *digest_left, u64 *digest_right)
+DEVICE void cpu_poseidon_bn128_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
 	HashOut in_l = HashOut(digest_left, NUM_HASH_OUT_ELTS);
 	HashOut in_r = HashOut(digest_right, NUM_HASH_OUT_ELTS);
@@ -335,12 +336,11 @@ int main2()
 
 int main()
 {
-	u64 cpu_out[12 * 32];
 	u64 inp[5] = {8917524657281059100u, 13029010200779371910u, 16138660518493481604u, 17277322750214136960u, 1441151880423231822u};
 	u64 out[4] = {0};
 
 #ifndef USE_CUDA
-	poseidon_bn128_hash_leaf(out, inp, 5);
+	cpu_poseidon_bn128_hash_one(inp, 5, out);
 #endif
 	printf("Output:\n");
 	for (int i = 0; i < 4; i++)

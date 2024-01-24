@@ -5,8 +5,8 @@ Our C version is taken from [saarinen-keccak](https://github.com/coruus/saarinen
 The CUDA version is a simple adaptation.
 
 ```
-make test_keccak
-./test_kekkac
+make test_keccak_cpu
+./test_keccak_cpu
+make test_keccak_gpu
+./test_keccak_gpu
 ```
-
-The outputs are different.

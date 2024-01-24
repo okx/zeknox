@@ -1,13 +1,20 @@
 CC := gcc
 CXX := g++
 NVCC := /usr/local/cuda/bin/nvcc
+CUDA_ARCH := sm_86
 
-all: test_keccak
+all: test_keccak_cpu.exe
 
-test_keccak_v1: test_keccak.cpp keccak_sha3.cu ../poseidon/libposeidon.a
-	$(NVCC) -I../util -I../merkle keccak_sha3.cu -dc
-	$(CXX) -I../merkle test_keccak.cpp -c
-	$(NVCC) test_keccak.o keccak_sha3.o ../poseidon/libposeidon.a -o $@ -L/usr/local/cuda/lib64 -lcudart
+test_keccak_cpu.exe: keccak.cu
+	$(NVCC) -I../util -I../types keccak.cu -dc
+	$(CC) -I../types test_keccak.c -c
+	$(NVCC) test_keccak.o keccak.o -o $@ -L/usr/local/cuda/lib64 -lcudart
 
-test_keccak: test_keccak.c keccak.c ../poseidon/libposeidon.a
-	$(CC) -I../util -I../merkle $^ -o $@
+test_keccak_gpu.exe: keccak.cu
+	$(NVCC) -I../util -I../types keccak.cu -arch=$(CUDA_ARCH) -dc -o keccak.o
+	$(NVCC) -DUSE_CUDA -I../util -I../types keccak.cu -arch=$(CUDA_ARCH) -dc -o keccak_gpu.o
+	$(CC) -I../types test_keccak.c -c
+	$(NVCC) test_keccak.o keccak.o keccak_gpu.o -arch=$(CUDA_ARCH) -o $@ -L/usr/local/cuda/lib64 -lcudart
+
+clean:
+	rm -rf *.o *.exe

@@ -52,10 +52,10 @@ void test_MDS(GoldilocksField *inputs, u64 num_inputs)
 {
     PoseidonPermutation perm = PoseidonPermutation();
     perm.set_from_slice(inputs, num_inputs, 0);
-    // perm.mds_layer(perm.state, inputs);    
+    // perm.mds_layer(perm.state, inputs);
 }
 
-void poseidon_hash_leaf(u64 *digest, u64 *data, u32 data_size)
+void cpu_poseidon_hash_one(u64 *data, u32 data_size, u64 *digest)
 {
     GoldilocksField *in = (GoldilocksField *)malloc(data_size * sizeof(GoldilocksField));
     for (u32 i = 0; i < data_size; i++)
@@ -70,7 +70,7 @@ void poseidon_hash_leaf(u64 *digest, u64 *data, u32 data_size)
     free(in);
 }
 
-void poseidon_hash_of_two(u64 *digest, u64 *digest_left, u64 *digest_right)
+void cpu_poseidon_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
     HashOut in_l = HashOut(digest_left, NUM_HASH_OUT_ELTS);
     HashOut in_r = HashOut(digest_right, NUM_HASH_OUT_ELTS);

@@ -1,13 +1,4 @@
-#include "element.cuh"
-
-/*
-CONST u64 qElement[4] = {
-    4891460686036598785u,
-    2896914383306846353u,
-    13281191951274694749u,
-    3486998266802970665u
-};
-*/
+#include "element_bn128.cuh"
 
 #ifdef USE_CUDA
 CONST u64 rSquareGPU[4]

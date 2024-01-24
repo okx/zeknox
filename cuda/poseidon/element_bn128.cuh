@@ -1,23 +1,8 @@
-#ifndef __ELEMENT_CUH__
-#define __ELEMENT_CUH__
+#ifndef __ELEMENT_BN128_CUH__
+#define __ELEMENT_BN128_CUH__
 
 #include "int_types.h"
-
-#ifdef USE_CUDA
-
 #include "cuda_utils.cuh"
-
-#define INLINE __device__ __forceinline__
-#define CONST __device__
-#define DEVICE __device__
-
-#else // USE_CUDA
-
-#define INLINE __host__ inline
-#define CONST const
-#define DEVICE __host__
-
-#endif // USE_CUDA
 
 #ifdef USE_CUDA
 extern CONST u64 rSquareGPU[4];
@@ -177,4 +162,4 @@ public:
     }
 };
 
-#endif // __ELEMENT_CUH__
+#endif // __ELEMENT_BN128_CUH__
