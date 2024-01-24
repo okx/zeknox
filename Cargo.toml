@@ -18,6 +18,10 @@ include = [
 name = "gpu_fft"
 harness = false
 
+[[bench]]
+name = "cpu_fft"
+harness = false
+
 [dependencies] 
 
 
