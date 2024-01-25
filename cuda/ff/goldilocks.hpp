@@ -5,7 +5,7 @@
 #ifndef __CRYPTO__FF__GL64__HPP__
 #define __CRYPTO__FF__GL64__HPP__
 
-#ifdef __NVCC__
+// #ifdef __NVCC__
 # include "gl64_t.cuh"  // device-side field types
 # ifndef __CUDA_ARCH__  // host-side stand-in to make CUDA code compile,
 #  include <cstdint>    // not to produce correct result...
@@ -37,5 +37,5 @@ public:
 #  endif
 # endif
 typedef gl64_t fr_t;
-#endif
+// #endif
 #endif

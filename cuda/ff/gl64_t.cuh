@@ -4,7 +4,7 @@
 
 #ifndef __CRYPTO_FF_GL64_T_CUH__
 #define __CRYPTO_FF_GL64_T_CUH__
-
+#ifdef __NVCC__
 #include <cstdint>
 namespace gl64_device
 {
@@ -354,6 +354,7 @@ private:
 
 #undef inline
 #undef asm
+#endif
 #endif
 
 #endif

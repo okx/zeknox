@@ -122,7 +122,7 @@ FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(cpp)
 
-install(TARGETS test_bn254 bench_bn254 cryptography_cuda
+install(TARGETS test_bn254 bench_bn254 test_gl64 cryptography_cuda
     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

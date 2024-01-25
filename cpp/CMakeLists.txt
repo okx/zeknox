@@ -79,6 +79,16 @@ if(OpenMP_CXX_FOUND)
     add_compile_options(${OpenMP_CXX_FLAGS})
 endif()
 
+set(GL64_TEST_SOURCCES
+    test_gl64.cpp
+)
+add_executable(test_gl64 ${GL64_TEST_SOURCCES})
+target_link_libraries(test_gl64 cryptography_cuda)
+target_link_libraries(
+    test_gl64
+  GTest::gtest_main
+)
+include(GoogleTest)
 
 set(BN254_TEST_SOURCES
   test_bn254.cpp
@@ -105,6 +115,7 @@ target_link_libraries(
   GTest::gtest_main
 )
 include(GoogleTest)
+
 gtest_discover_tests(test_bn254)
 
 set(BN254_BENCH_SOURCES
