@@ -1,13 +1,14 @@
+#include <gtest/gtest.h>
+#if defined(FEATURE_BN254)
 #include <cassert>
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstdint>
-#include <gtest/gtest.h>
 #include <blst_t.hpp>
 #include <vect.h>
 #include <ntt/ntt.h>
-#include "../src/lib.h"
 #include <gmp.h>
+#include "../src/lib.h"
 #include "alt_bn128.hpp"
 #include <time.h>
 #include "fft.hpp"
@@ -97,6 +98,8 @@ void print_g1_point_affine(G1PointAffine &p)
     std::string y = F1.toString(p.y, 16);
     printf("x: %s, y:%s, \n", x.c_str(), y.c_str());
 }
+
+#if defined(FEATURE_BN254)
 TEST(altBn128, fft_cpu_self_consistency)
 {
     int lg_n_size = 10;
@@ -358,7 +361,7 @@ TEST(altBn128, msm_bn254_g1_curve_gpu_consistency_with_cpu)
     delete[] bases;
     delete[] scalars;
 }
-
+#endif
 
 #if defined(G2_ENABLED)
 
@@ -484,6 +487,8 @@ TEST(altBn128, msm_bn254_g2_with_zero_points)
 
     ASSERT_TRUE(G2.eq(result_gpu, cpu_result_expected));
 }
+#endif
+
 #endif
 int main(int argc, char **argv)
 {

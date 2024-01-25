@@ -93,7 +93,7 @@ include_directories(
 )
 
 add_executable(test_bn254 ${BN254_TEST_SOURCES})
-target_compile_definitions(test_bn254 PUBLIC -DFEATURE_BN254)
+# target_compile_definitions(test_bn254 PUBLIC -DFEATURE_BN254)
 target_link_libraries(test_bn254 cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")

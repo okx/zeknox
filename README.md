@@ -40,8 +40,13 @@ git submodule init
 git submodule update
 ./build_gmp.sh host
 mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package -DCURVE=${BN254,GOLDILOCKS}
 make -j4 & make install
+```
+
+to enable G2
+```
+-DG2_ENABLED=ON
 ```
 
 ## test

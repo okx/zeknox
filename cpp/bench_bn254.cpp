@@ -1,3 +1,4 @@
+#if defined(FEATURE_BN254)
 #include <cassert>
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,10 +182,14 @@ void bench_msm_bn254_g2(int lg_n_size)
     delete[] cpu_base_points_affine;
     delete[] scalars;
 }
+
+#endif
 int main(int argc, char **argv)
 {
+    #if defined(FEATURE_BN254)
     int lg_n_size = atoi(argv[1]);
     // bench_fft(lg_n_size);
     // bench_msm_bn254_g1(lg_n_size);
     bench_msm_bn254_g2(lg_n_size);
+    #endif
 }

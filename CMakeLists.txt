@@ -88,8 +88,24 @@ set(LIB_SOURCES
     cuda/util/all_gpus.cpp
 )
 add_library(cryptography_cuda STATIC ${LIB_SOURCES} )
-## todo: pass feature as environment variable, or as option
-target_compile_definitions(cryptography_cuda PUBLIC -DFEATURE_BN254 -D__ADX__)
+
+set(IS_CURVE_SUPPORTED FALSE)
+set(SUPPORTED_CURVES BN254;GOLDILOCKS)
+foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
+
+  if (CURVE STREQUAL SUPPORTED_CURVE)
+    add_definitions(-DFEATURE_${CURVE})
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DFEATURE_${CURVE}")
+    set(IS_CURVE_SUPPORTED TRUE)
+  endif ()
+endforeach()
+if (NOT IS_CURVE_SUPPORTED)
+  message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported curves: ${SUPPORTED_CURVES}" )
+else()
+    message("value of CURVE is ${CURVE}")
+endif ()
+
+target_compile_definitions(cryptography_cuda PUBLIC -D__ADX__)
 # target_compile_options(cryptography_cuda PRIVATE
 #    "-Xcompiler=-ffunction-sections"
 # )
