@@ -13,6 +13,9 @@ based on pippenger algorithm, supporting both G1 and G2 curve. currently, if the
 - Goldilocks
 - BN254
 
+# prerequisite
+- nvcc > 12.0
+
 # rust usage
 **note** a gpu is required to run below tests
 ## run integration test
