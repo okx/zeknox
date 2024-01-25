@@ -1119,6 +1119,40 @@ void bucket_method_msm(
         P *target_buckets;
         P *temp_buckets1;
         P *temp_buckets2;
+        /**
+         * Assuming C is 4, which represents a window size of 4 bits, and target_c is 2, indicating a target window size of 2 bits.
+
+            Suppose source_windows_count is 64, signifying that there are 64 source windows. In this case, target_windows_count would be 128.
+
+            If source_buckets is an array with a length of 1024:
+
+            In the first round:
+            The first call to single_stage_multi_reduction_kernel is made with nof_threads set to 512.
+            The launch parameters are (2, 1, 1) and (256, 1, 1).
+            The kernel parameters are (source_buckets, temp_buckets1, 16, 0, 0, 0, 512).
+            Here, the "jump" variable is 8, and the operation is as follows:
+
+            temp_buckets1[0] = source_buckets[0] + source_buckets[8]
+            temp_buckets1[1] = source_buckets[1] + source_buckets[9]
+            temp_buckets1[2] = source_buckets[2] + source_buckets[10]
+            ...
+            temp_buckets1[7] = source_buckets[7] + source_buckets[15]
+            temp_buckets1[8] = source_buckets[16] + source_buckets[24]
+            ...
+            Ultimately, temp_buckets1 consists of 512 elements, where each element is obtained by taking pairs of elements from source_buckets at specific intervals and adding them together.
+            In the second call to single_stage_multi_reduction_kernel, nof_threads remains at 512.
+            The launch parameters are once again (2, 1, 1) and (256, 1, 1).
+            The kernel parameters are (source_buckets, temp_buckets2, 4, 0, 0, 0, 512).
+            This time, the "jump" variable is 2, and the operation is as follows:
+
+            temp_buckets2[0] = source_buckets[0] + source_buckets[2]
+            temp_buckets2[1] = source_buckets[1] + source_buckets[3]
+            temp_buckets2[2] = source_buckets[4] + source_buckets[6]
+            temp_buckets2[3] = source_buckets[5] + source_buckets[7]
+            ...
+            In the end, temp_buckets2 consists of 512 elements, and, similar to the first call, it pairs up elements from source_buckets at specific intervals and adds them together.
+            It's important to note that these two calls do not handle low and high bits separately. Instead, they both involve adding pairs of elements with a specific step size from the source_buckets.
+        */
         for (unsigned i = 0;; i++)
         {
             const unsigned target_bits_count = (source_bits_count + 1) >> 1;                        // c/2=8
@@ -1132,6 +1166,13 @@ void bucket_method_msm(
             {
                 for (unsigned j = 0; j < target_bits_count; j++)
                 {
+                    /**
+                     * there are two calls to single_stage_multi_reduction_kernel
+                     * it splits windows of bitsize c into windows of bitsize c/2, and the first call computes the lower window and the second computes higher.
+                     * An example for c=4, it looks like:
+                     * 1*P_1 + 2*P_2 + ... + 15*P_15 = ((P_1 + P_2 + P_9 + P_13) + ... + 3*(P_3 + P_7 + P_11 + P_15)) + 4*((P_4 + P_5 + P_6 + P_7) + ... + 3*(P_12 + P_13 + P_14 + P_15))
+                     * The first sum is the first single_stage_multi_reduction_kernel and the second sum (that's multiplied by 4) is the second call
+                     */
                     unsigned last_j = target_bits_count - 1;
                     unsigned nof_threads = (source_buckets_count >> (1 + j));
                     NUM_THREADS = min(MAX_TH, nof_threads);
