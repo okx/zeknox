@@ -12,7 +12,6 @@ namespace gl64_device
     static __device__ __constant__ /*const*/ uint32_t W = 0xffffffffU;
 }
 
-
 #ifdef __CUDA_ARCH__
 #define inline __device__ __forceinline__
 #ifdef __GNUC__
@@ -21,42 +20,75 @@ namespace gl64_device
 #define asm asm volatile
 #endif
 
-static constexpr uint64_t inv_logs[32] ={
- 9223372034707292161,
-13835058052060938241,
-16140901060737761281,
-17293822565076172801,
-17870283317245378561,
-18158513693329981441,
-18302628881372282881,
-18374686475393433601,
-18410715272404008961,
-18428729670909296641,
-18437736870161940481,
-18442240469788262401,
-18444492269601423361,
-18445618169508003841,
-18446181119461294081,
-18446462594437939201,
-18446603331926261761,
-18446673700670423041,
-18446708885042503681,
-18446726477228544001,
-18446735273321564161,
-18446739671368074241,
-18446741870391329281,
-18446742969902956801,
-18446743519658770561,
-18446743794536677441,
-18446743931975630881,
-18446744000695107601,
-18446744035054845961,
-18446744052234715141,
-18446744060824649731,
-18446744065119617026
-};
+static constexpr uint64_t inv_logs[32] = {
+    0x7fffffff80000001,
+    0xbfffffff40000001,
+    0xdfffffff20000001,
+    0xefffffff10000001,
+    0xf7ffffff08000001,
+    0xfbffffff04000001,
+    0xfdffffff02000001,
+    0xfeffffff01000001,
+    0xff7fffff00800001,
+    0xffbfffff00400001,
+    0xffdfffff00200001,
+    0xffefffff00100001,
+    0xfff7ffff00080001,
+    0xfffbffff00040001,
+    0xfffdffff00020001,
+    0xfffeffff00010001,
+    0xffff7fff00008001,
+    0xffffbfff00004001,
+    0xffffdfff00002001,
+    0xffffefff00001001,
+    0xfffff7ff00000801,
+    0xfffffbff00000401,
+    0xfffffdff00000201,
+    0xfffffeff00000101,
+    0xffffff7f00000081,
+    0xffffffbf00000041,
+    0xffffffdf00000021,
+    0xffffffef00000011,
+    0xfffffff700000009,
+    0xfffffffb00000005,
+    0xfffffffd00000003,
+    0xfffffffe00000002};
 
+static constexpr uint64_t omegas[32] = {
+    0xffffffff00000000,
+    0x0001000000000000,
+    0xfffffffeff000001,
+    0xefffffff00000001,
+    0x00003fffffffc000,
+    0x0000008000000000,
+    0xf80007ff08000001,
+    0xbf79143ce60ca966,
+    0x1905d02a5c411f4e,
+    0x9d8f2ad78bfed972,
+    0x0653b4801da1c8cf,
+    0xf2c35199959dfcb6,
+    0x1544ef2335d17997,
+    0xe0ee099310bba1e2,
+    0xf6b2cffe2306baac,
+    0x54df9630bf79450e,
+    0xabd0a6e8aa3d8a0e,
+    0x81281a7b05f9beac,
+    0xfbd41c6b8caa3302,
+    0x30ba2ecd5e93e76d,
+    0xf502aef532322654,
+    0x4b2a18ade67246b5,
+    0xea9d5a1336fbc98b,
+    0x86cdcc31c307e171,
+    0x4bbaf5976ecfefd8,
+    0xed41d05b78d6e286,
+    0x10d78dd8915a171d,
+    0x59049500004a4485,
+    0xdfa8c93ba46d2666,
+    0x7e9bd009b86a0845,
+    0x400a7f755588e659,
+    0x185629dcda58878c}
 
+static constexpr uint64_t omegas_inv[32] = {0xffffffff00000000, 0xfffeffff00000001, 0x000000ffffffff00, 0x0000001000000000, 0xfffffffefffc0001, 0xfdffffff00000001, 0xffefffff00000011, 0x1d62e30fa4a4eeb0, 0x3de19c67cf496a74, 0x3b9ae9d1d8d87589, 0x76a40e0866a8e50d, 0x9af01e431fbd6ea0, 0x3712791d9eb0314a, 0x409730a1895adfb6, 0x158ee068c8241329, 0x6d341b1c9a04ed19, 0xcc9e5a57b8343b3f, 0x22e1fbf03f8b95d6, 0x46a23c48234c7df9, 0xef8856969fe6ed7b, 0xa52008ac564a2368, 0xd46e5a4c36458c11, 0x4bb9aee372cf655e, 0x10eb845263814db7, 0xc01f93fc71bb0b9b, 0xea52f593bb20759a, 0x91f3853f38e675d9, 0x3ea7eab8d8857184, 0xe4d14a114454645d, 0xe2434909eec4f00b, 0x95c0ec9a7ab50701, 0x76b6b635b6fc8719}
 
 class gl64_t
 {
@@ -93,9 +125,30 @@ public:
         return ret;
     }
 
-    static inline const gl64_t inv_log_size(uint32_t logn) {
-        if (logn==0) {return one();}
-        return inv_logs[logn];
+
+
+    static inline gl64_t omega(uint32_t logn) {
+         if (logn == 0)
+        {
+            return one();
+        }
+         return omegas[logn-1];
+    }
+    static inline gl64_t omega_inv(uint32_t logn) {
+          if (logn == 0)
+        {
+            return one();
+        }
+         return omegas_inv[logn-1];
+    }
+
+        static inline const gl64_t inv_log_size(uint32_t logn)
+    {
+        if (logn == 0)
+        {
+            return one();
+        }
+        return inv_logs[logn-1];
     }
 
     inline operator uint64_t() const
@@ -222,7 +275,7 @@ public:
         //  printf("start exp, val: %llu, b: %llu \n", val, p);
         gl64_t sqr = *this;
         *this = csel(*this, one(), p & 1); // if p is odd, return *this, else return one
-        // printf("*this: %llu \n", val);
+                                           // printf("*this: %llu \n", val);
 #pragma unroll 1
         while (p >>= 1)
         {
@@ -234,7 +287,7 @@ public:
 
         return *this;
     }
-   
+
     friend inline gl64_t operator^(gl64_t a, uint32_t p)
     {
         return a ^= p;
@@ -245,22 +298,25 @@ public:
     }
 
     // raise to a constant power, e.g. x^7, to be unrolled at compile time
-    inline gl64_t& operator^=(int p)
+    inline gl64_t &operator^=(int p)
     {
         if (p < 2)
             asm("trap;");
 
         gl64_t sqr = *this;
-        if ((p&1) == 0) {
-            do {
+        if ((p & 1) == 0)
+        {
+            do
+            {
                 sqr.mul(sqr);
                 p >>= 1;
-            } while ((p&1) == 0);
+            } while ((p & 1) == 0);
             *this = sqr;
         }
-        for (p >>= 1; p; p >>= 1) {
+        for (p >>= 1; p; p >>= 1)
+        {
             sqr.mul(sqr);
-            if (p&1)
+            if (p & 1)
                 mul(sqr);
         }
         to();
@@ -268,9 +324,13 @@ public:
         return *this;
     }
     friend inline gl64_t operator^(gl64_t a, int p)
-    {   return a ^= p;   }
+    {
+        return a ^= p;
+    }
     inline gl64_t operator()(int p)
-    {   return *this^p;   }
+    {
+        return *this ^ p;
+    }
 
 public:
     inline gl64_t reciprocal() const
@@ -309,6 +369,7 @@ public:
 public:
     inline uint32_t lo() const { return (uint32_t)(val); }
     inline uint32_t hi() const { return (uint32_t)(val >> 32); }
+
 private:
     // multiply another gl64
     inline void mul(const gl64_t &b)
@@ -396,15 +457,10 @@ private:
     }
 };
 
-
-
 #undef inline
 #undef asm
 #endif
 
-
-
 #endif
-
 
 #endif

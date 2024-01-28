@@ -27,6 +27,8 @@ public:
     static const uint32_t degree = 1;
     static const uint64_t MOD = 0xffffffff00000001U;
     static inline const gl64_t inv_log_size(uint32_t logn) {}
+    static inline gl64_t omega(uint32_t logn) {}
+    static inline gl64_t omega_inv(uint32_t logn) {}
 
     inline gl64_t()                     {}
     inline gl64_t(uint64_t a) : val(a)  {}

@@ -30,8 +30,6 @@ namespace ntt
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
-
-
     // class NTT
     // {
 
@@ -103,6 +101,7 @@ namespace ntt
         fr_t *d_output)
     {
 
+        CHECK_LAST_CUDA_ERROR();
         bool is_shared_mem_enabled = sizeof(fr_t) <= MAX_SHARED_MEM_ELEMENT_SIZE;
         const int log2_shmem_elems = is_shared_mem_enabled ? int(log(int(MAX_SHARED_MEM / sizeof(fr_t))) / log(2)) : logn;
         int num_threads = max(min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1)), 1);
@@ -121,14 +120,16 @@ namespace ntt
             d_twiddles = d_twiddles + n_twiddles;
             n_twiddles = -n_twiddles;
         }
-
+        CHECK_LAST_CUDA_ERROR();
         bool is_on_coset = (coset_gen_index != 0) || arbitrary_coset;
+        printf("coset_gen_index: %d, arbitrary_coset: %d \n", coset_gen_index, arbitrary_coset);
         bool direct_coset = (!inverse && is_on_coset);
+        CHECK_LAST_CUDA_ERROR();
         if (direct_coset)
             utils_internal::BatchMulKernel<fr_t, fr_t><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
                 d_input, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles, arbitrary_coset ? 1 : coset_gen_index,
                 n_twiddles, logn, ct_buttterfly, d_output);
-
+        CHECK_LAST_CUDA_ERROR();
         if (ct_buttterfly)
         {
             if (is_shared_mem_enabled)
@@ -156,7 +157,7 @@ namespace ntt
                     (direct_coset || (logn > logn_shmem)) ? d_output : d_input, 1 << logn_shmem, d_twiddles, n_twiddles,
                     total_tasks, 0, logn_shmem, d_output);
         }
-
+        CHECK_LAST_CUDA_ERROR();
         if (inverse)
         {
             if (is_on_coset)
@@ -303,7 +304,7 @@ namespace ntt
      * \param gpu, which gpu to use, default is 0
      * \param inout, input and output fr array
      * \param lg_domain_size 2^{lg_domain_size} = N, where N is size of input array
-     * \param batch_size, The number of NTTs to compute. Default value: 1.
+     * \param batches, The number of NTTs to compute. Default value: 1.
      * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
      * \param direction, direction of NTT, farward, or inverse, default is farward
      * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
@@ -311,7 +312,7 @@ namespace ntt
      * \param are_outputs_on_device
      */
     // static
-    RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, uint32_t batch_size,
+    RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, uint32_t batches,
                     InputOutputOrder order, Direction direction,
                     Type type, bool coset_ext_pow = false, bool are_outputs_on_device = false)
     {
@@ -324,7 +325,21 @@ namespace ntt
             gpu.select();
 
             size_t size = (size_t)1 << lg_domain_size;
-            int input_size_bytes = size * batch_size * sizeof(fr_t);
+
+            uint32_t n_twiddles = size;
+
+            fr_t *d_twiddles;
+            if (direction ==Direction::inverse)
+            {
+                d_twiddles = fill_twiddle_factors_array(n_twiddles, fr_t::omega_inv(logn), gpu);
+            }
+            else
+            {
+                d_twiddles = fill_twiddle_factors_array(n_twiddles, fr_t::omega(logn), gpu);
+            }
+
+            int input_size_bytes = size * batches * sizeof(fr_t);
+
             dev_ptr_t<fr_t> d_input{input_size_bytes, gpu};
             gpu.HtoD(&d_input[0], inout, input_size_bytes);
 
@@ -369,20 +384,17 @@ namespace ntt
             printf("before reverse_order_batch, size: %d, batch_size: %d, reverse_input: %d\n", size, batch_size, reverse_input);
             if (reverse_input)
                 reverse_order_batch(d_input, size, lg_domain_size, batch_size, gpu, d_output);
-  cudaError_t err1{cudaGetLastError()};
-  if (err1 != cudaSuccess) {
-    std::cerr << "CUDA Runtime Error at: " << __FILE__ << ":" << __LINE__ << std::endl;
-    std::cerr << cudaGetErrorString(err1) << std::endl;
-  }
+            cudaError_t err1{cudaGetLastError()};
+            if (err1 != cudaSuccess)
+            {
+                std::cerr << "CUDA Runtime Error at: " << __FILE__ << ":" << __LINE__ << std::endl;
+                std::cerr << cudaGetErrorString(err1) << std::endl;
+            }
             ntt_inplace_batch_template(
                 reverse_input ? d_output : d_input, size, twiddles, max_size, batch_size, lg_domain_size,
-                direction == Direction::inverse, ct_butterfly, coset, coset_index, gpu, d_output);
+                direction == Direction::inverse, ct_butterfly, nullptr, coset_index, gpu, d_output);
 
-  cudaError_t err{cudaGetLastError()};
-  if (err != cudaSuccess) {
-    std::cerr << "CUDA Runtime Error at: " << __FILE__ << ":" << __LINE__ << std::endl;
-    std::cerr << cudaGetErrorString(err) << std::endl;
-  }
+            CHECK_LAST_CUDA_ERROR();
             if (!are_outputs_on_device)
                 CUDA_OK(cudaMemcpyAsync(inout, d_output, input_size_bytes, cudaMemcpyDeviceToHost, gpu));
 
