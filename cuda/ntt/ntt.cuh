@@ -369,7 +369,11 @@ namespace ntt
             printf("before reverse_order_batch, size: %d, batch_size: %d, reverse_input: %d\n", size, batch_size, reverse_input);
             if (reverse_input)
                 reverse_order_batch(d_input, size, lg_domain_size, batch_size, gpu, d_output);
-
+  cudaError_t err1{cudaGetLastError()};
+  if (err1 != cudaSuccess) {
+    std::cerr << "CUDA Runtime Error at: " << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << cudaGetErrorString(err1) << std::endl;
+  }
             ntt_inplace_batch_template(
                 reverse_input ? d_output : d_input, size, twiddles, max_size, batch_size, lg_domain_size,
                 direction == Direction::inverse, ct_butterfly, coset, coset_index, gpu, d_output);
