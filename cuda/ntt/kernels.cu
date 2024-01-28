@@ -323,9 +323,89 @@ ntt_template_kernel(fr_t *arr_in, int n, fr_t *twiddles, int n_twiddles, int max
                 v = tw * v;
             arr_out[offset + i + j] = u + v;
             v = u - v;
-            arr_out[offset + k] = rev ? tw * v : v;
+            if (rev)
+            {
+                arr_out[offset + k] = ((fr_t)tw * v);
+            }
+            else
+            {
+                arr_out[offset + k] = v;
+            }
+            //  = rev ? : (fr_t)v;
         }
     }
 }
+
+ /**
+     * Cooley-Tuckey NTT.
+     * NOTE! this function assumes that d_twiddles are located in the device memory.
+     * @param arr_in input array of type E (elements).
+     * @param n length of d_arr.
+     * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
+     * @param n_twiddles length of twiddles, should be negative for intt.
+     * @param max_task max count of parallel tasks.
+     * @param s log2(n) loop index.
+     * @param arr_out buffer for the output.
+     */
+    __global__ void ntt_template_kernel_shared_rev(
+      fr_t* __restrict__ arr_in,
+      int n,
+      const fr_t* __restrict__ r_twiddles,
+      int n_twiddles,
+      int max_task,
+      int ss,
+      int logn,
+      fr_t* __restrict__ arr_out)
+    {
+      SharedMemory<fr_t> smem;
+      fr_t* arr = smem.getPointer();
+
+      uint32_t task = blockIdx.x;
+      uint32_t loop_limit = blockDim.x;
+      uint32_t chunks = n / (loop_limit * 2);
+      uint32_t offset = (task / chunks) * n;
+      if (task < max_task) {
+        // flattened loop allows parallel processing
+        uint32_t l = threadIdx.x;
+
+        if (l < loop_limit) {
+#pragma unroll
+          for (; ss < logn; ss++) {
+            int s = logn - ss - 1;
+            bool is_beginning = ss == 0;
+            bool is_end = ss == (logn - 1);
+
+            uint32_t ntw_i = task % chunks;
+
+            uint32_t n_twiddles_div = n_twiddles >> (s + 1);
+
+            uint32_t shift_s = 1 << s;
+            uint32_t shift2_s = 1 << (s + 1);
+
+            l = ntw_i * loop_limit + l; // to l from chunks to full
+
+            uint32_t j = l & (shift_s - 1);               // Equivalent to: l % (1 << s)
+            uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
+            uint32_t oij = i + j;
+            uint32_t k = oij + shift_s;
+
+            fr_t tw = *(r_twiddles + (int)(j * n_twiddles_div));
+
+            fr_t u = is_beginning ? arr_in[offset + oij] : arr[oij];
+            fr_t v = is_beginning ? arr_in[offset + k] : arr[k];
+            if (is_end) {
+              arr_out[offset + oij] = u + v;
+              arr_out[offset + k] = tw * (u - v);
+            } else {
+              arr[oij] = u + v;
+              arr[k] = tw * (u - v);
+            }
+
+            __syncthreads();
+          }
+        }
+      }
+    }
+
 
 #endif /**__CRYPTO_KERNELS_CU__ */

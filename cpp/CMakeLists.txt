@@ -1,3 +1,5 @@
+set(CMAKE_CXX_STANDARD 17)
+
 # target_include_directories(cryptography_cuda PRIVATE "./depends/blst/src") 
 # target_link_libraries(cryptography_cuda ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
 enable_testing()

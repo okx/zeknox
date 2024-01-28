@@ -5,11 +5,13 @@
 #ifndef __CRYPTO_FF_GL64_T_CUH__
 #define __CRYPTO_FF_GL64_T_CUH__
 #ifdef __NVCC__
+#include <functional>
 #include <cstdint>
 namespace gl64_device
 {
     static __device__ __constant__ /*const*/ uint32_t W = 0xffffffffU;
 }
+
 
 #ifdef __CUDA_ARCH__
 #define inline __device__ __forceinline__
@@ -19,9 +21,46 @@ namespace gl64_device
 #define asm asm volatile
 #endif
 
+static constexpr uint64_t inv_logs[32] ={
+ 9223372034707292161,
+13835058052060938241,
+16140901060737761281,
+17293822565076172801,
+17870283317245378561,
+18158513693329981441,
+18302628881372282881,
+18374686475393433601,
+18410715272404008961,
+18428729670909296641,
+18437736870161940481,
+18442240469788262401,
+18444492269601423361,
+18445618169508003841,
+18446181119461294081,
+18446462594437939201,
+18446603331926261761,
+18446673700670423041,
+18446708885042503681,
+18446726477228544001,
+18446735273321564161,
+18446739671368074241,
+18446741870391329281,
+18446742969902956801,
+18446743519658770561,
+18446743794536677441,
+18446743931975630881,
+18446744000695107601,
+18446744035054845961,
+18446744052234715141,
+18446744060824649731,
+18446744065119617026
+};
+
+
+
 class gl64_t
 {
-private:
+public:
     uint64_t val;
 
 public:
@@ -52,6 +91,11 @@ public:
         gl64_t ret;
         ret.val = 1;
         return ret;
+    }
+
+    static inline const gl64_t inv_log_size(uint32_t logn) {
+        if (logn==0) {return one();}
+        return inv_logs[logn];
     }
 
     inline operator uint64_t() const
@@ -262,10 +306,10 @@ public:
         return *this *= a.reciprocal();
     }
 
-private:
+public:
     inline uint32_t lo() const { return (uint32_t)(val); }
     inline uint32_t hi() const { return (uint32_t)(val >> 32); }
-
+private:
     // multiply another gl64
     inline void mul(const gl64_t &b)
     {
@@ -352,9 +396,15 @@ private:
     }
 };
 
+
+
 #undef inline
 #undef asm
 #endif
+
+
+
 #endif
+
 
 #endif

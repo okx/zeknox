@@ -213,23 +213,23 @@ struct SharedMemory<uchar4> {
   }
 };
 
-template <T>
-struct SharedMemory<T> {
-  __device__ T* getPointer()
+template <>
+struct SharedMemory<fr_t> {
+  __device__ fr_t* getPointer()
   {
-    extern __shared__ T s_scalar_[];
+    extern __shared__ fr_t s_scalar_[];
     return s_scalar_;
   }
 };
 
-template <T>
-struct SharedMemory<T> {
-  __device__ T* getPointer()
-  {
-    extern __shared__ T s_projective_[];
-    return s_projective_;
-  }
-};
+// template <>
+// struct SharedMemory<fr_t> {
+//   __device__ fr_t* getPointer()
+//   {
+//     extern __shared__ fr_t s_projective_[];
+//     return s_projective_;
+//   }
+// };
 
 #endif //_SHAREDMEM_H_
 

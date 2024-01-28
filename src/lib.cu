@@ -42,7 +42,7 @@ extern "C"
 {
     auto &gpu = select_gpu(device_id);
 
-    return NTT::Base(gpu, inout, lg_domain_size,
+    return ntt::Base(gpu, inout, lg_domain_size,
                      ntt_order, ntt_direction, ntt_type);
 }
 
@@ -56,7 +56,7 @@ extern "C"
                         Ntt_Types::Type ntt_type)
 {
     auto &gpu = select_gpu(device_id);
-    return NTT::Batch(gpu, inout, lg_domain_size, batch_size,
+    return ntt::Batch(gpu, inout, lg_domain_size, batch_size,
                      ntt_order, ntt_direction, ntt_type);
 }
 
