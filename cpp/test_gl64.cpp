@@ -12,6 +12,7 @@
 // #include "fft.hpp"
 #include <random>
 #include <cmath>
+#include <chrono>
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
@@ -75,7 +76,7 @@ void print_u64_array(uint64_t *p, uint32_t size)
 
 TEST(gl64, fft_gpu_self_consistency)
 {
-    int lg_n_size = 14;
+    int lg_n_size = 19;
     int N = 1 << lg_n_size;
 
     uint64_t *raw_data = new uint64_t[N];
@@ -97,7 +98,23 @@ TEST(gl64, fft_gpu_self_consistency)
     size_t device_id = 0;
     printf("data before \n");
         print_char_array((uint8_t*)gpu_data_in, 16);
+
+ auto start_time = std::chrono::high_resolution_clock::now();
+
+
+
+
+
     compute_batched_ntt(device_id, gpu_data_in, lg_n_size, 1, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::forward, Ntt_Types::Type::standard);
+
+        // Record the end time
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+    // Calculate the elapsed time in microseconds
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+    long long microseconds = duration.count();
+
+    std::cout << "Time elapsed: " << microseconds << " microseconds" << std::endl;
      printf("data end \n");
         print_char_array((uint8_t*)gpu_data_in, 16);
     // compute_ntt(device_id, gpu_data_in, lg_n_size, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::inverse, Ntt_Types::Type::standard);
