@@ -14,6 +14,11 @@ extern "C" {
         ntt_type: types::NTTType,
     ) -> error::Error;
 
+    fn compute_batched_ntt(device_id: usize, inout: *mut core::ffi::c_void, lg_domain_size: u32, batch_size :u32,
+        ntt_order: types::NTTInputOutputOrder,
+        ntt_direction: types::NTTDirection,
+        ntt_type: types::NTTType) -> error::Error;
+
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
     fn goldilocks_sub(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
@@ -123,6 +128,26 @@ pub fn goldilocks_exp_rust(a: &mut u64, r: &mut u32) -> u64 {
 
 pub fn check_cuda_available() -> bool {
     unsafe { cuda_available() }
+}
+
+pub fn ntt_batch<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder, batch_size: u32, log_n_size: u32) {
+    
+
+    let err = unsafe {
+        compute_batched_ntt(
+            device_id,
+            inout.as_mut_ptr() as *mut core::ffi::c_void,
+            log_n_size,
+            batch_size,
+            order,
+            types::NTTDirection::Forward,
+            types::NTTType::Standard,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
 }
 
 #[allow(non_snake_case)]

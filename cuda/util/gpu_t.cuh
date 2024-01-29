@@ -179,7 +179,6 @@ public:
     gpu_t(int id, int real_id, const cudaDeviceProp& p)
     : gpu_id(id), cuda_id(real_id), prop(p)
     {   size_t freeMem;
-        printf("gpu_id: %d, cuda_id: %d \n", id, real_id);
         CUDA_OK(cudaMemGetInfo(&freeMem, &total_mem));
     }
 
@@ -326,12 +325,12 @@ public:
     dev_ptr_t(size_t nelems, stream_t& s) : d_ptr(nullptr)
     {
         if (nelems) {
-            size_t n = (nelems+WARP_SZ-1) & ((size_t)0-WARP_SZ);
+            size_t n = (nelems+WARP_SZ-1) & ((size_t)0-WARP_SZ);  // make n multiples of 32
             CUDA_OK(cudaMallocAsync(&d_ptr, n * sizeof(T), s));
         }
     }
-    dev_ptr_t(const dev_ptr_t& r) = delete;
-    dev_ptr_t& operator=(const dev_ptr_t& r) = delete;
+    dev_ptr_t(const dev_ptr_t& r) = delete;  // Copy constructor explicitly deleted
+    dev_ptr_t& operator=(const dev_ptr_t& r) = delete;  // Copy assignment operator explicitly deleted
     ~dev_ptr_t() { if (d_ptr) cudaFree((void*)d_ptr); }
 
     inline operator const T*() const            { return d_ptr; }

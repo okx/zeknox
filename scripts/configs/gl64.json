@@ -1,0 +1,21 @@
+{
+    "curve_name" : "gl64",
+    "modulus_p" : 18446744069414584321,
+    "bit_count_p" : 64,
+    "limb_p" :  2,
+    "ntt_size" : 32,
+    "modulus_q" : null,
+    "bit_count_q" : null,
+    "limb_q" : null,
+    "root_of_unity": 1753635133440165772,
+    "weierstrass_b" : null,
+    "weierstrass_b_g2_re" : null,
+    "weierstrass_b_g2_im" : null,
+    "g1_gen_x" : null,
+    "g1_gen_y" : null,
+    "g2_gen_x_re" : null,
+    "g2_gen_x_im" : null,
+    "g2_gen_y_re" : null,
+    "g2_gen_y_im" : null,
+    "nonresidue" : null 
+}

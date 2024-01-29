@@ -1,6 +1,6 @@
 #ifndef __CRYPTO_NTT_NTT_H__
 #define __CRYPTO_NTT_NTT_H__
-
+#include <map>
 namespace Ntt_Types
 {
     enum InputOutputOrder
@@ -25,6 +25,7 @@ namespace Ntt_Types
         GS,
         CT
     };
+
 }
 
 #endif
