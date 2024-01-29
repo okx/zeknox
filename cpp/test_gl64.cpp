@@ -16,7 +16,6 @@
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
-
 __uint128_t g_lehmer64_state = 0xAAAAAAAAAAAAAAAALL;
 
 // Fast random generator
@@ -72,8 +71,6 @@ void print_u64_array(uint64_t *p, uint32_t size)
     printf("\n");
 }
 
-
-
 TEST(gl64, fft_gpu_self_consistency)
 {
     int lg_n_size = 19;
@@ -83,31 +80,28 @@ TEST(gl64, fft_gpu_self_consistency)
 
     for (int i = 0; i < N; i++)
     {
-        *(raw_data + i) = lehmer64(); 
+        *(raw_data + i) = lehmer64();
     }
-
 
     fr_t *gpu_data_in = (fr_t *)malloc(N * sizeof(fr_t));
     for (int i = 0; i < N; i++)
     {
-        gpu_data_in[i] = *(fr_t *)(raw_data+i);
+        gpu_data_in[i] = *(fr_t *)(raw_data + i);
     }
     // printf("gpu_data_in \n");
     // print_char_array((uint8_t*)gpu_data_in, N*32);
 
     size_t device_id = 0;
     printf("data before \n");
-        print_char_array((uint8_t*)gpu_data_in, 16);
+    print_char_array((uint8_t *)gpu_data_in, 16);
+// compute_batched_ntt(device_id, gpu_data_in, lg_n_size, 1, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::forward, Ntt_Types::Type::standard);
 
- auto start_time = std::chrono::high_resolution_clock::now();
+    auto start_time = std::chrono::high_resolution_clock::now();
 
-
-
-
-
+    init_twiddle_factors();
     compute_batched_ntt(device_id, gpu_data_in, lg_n_size, 1, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::forward, Ntt_Types::Type::standard);
 
-        // Record the end time
+    // Record the end time
     auto end_time = std::chrono::high_resolution_clock::now();
 
     // Calculate the elapsed time in microseconds
@@ -115,8 +109,8 @@ TEST(gl64, fft_gpu_self_consistency)
     long long microseconds = duration.count();
 
     std::cout << "Time elapsed: " << microseconds << " microseconds" << std::endl;
-     printf("data end \n");
-        print_char_array((uint8_t*)gpu_data_in, 16);
+    printf("data end \n");
+    print_char_array((uint8_t *)gpu_data_in, 16);
     // compute_ntt(device_id, gpu_data_in, lg_n_size, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::inverse, Ntt_Types::Type::standard);
     // // printf("gpu_data_in \n");
 
@@ -137,7 +131,6 @@ TEST(gl64, fft_gpu_self_consistency)
     // delete[] raw_data;
     // delete[] gpu_data_in;
 }
-
 
 #endif
 int main(int argc, char **argv)

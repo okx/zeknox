@@ -14,10 +14,17 @@ extern "C" {
         ntt_type: types::NTTType,
     ) -> error::Error;
 
-    fn compute_batched_ntt(device_id: usize, inout: *mut core::ffi::c_void, lg_domain_size: u32, batch_size :u32,
+    fn compute_batched_ntt(
+        device_id: usize,
+        inout: *mut core::ffi::c_void,
+        lg_domain_size: u32,
+        batch_size: u32,
         ntt_order: types::NTTInputOutputOrder,
         ntt_direction: types::NTTDirection,
-        ntt_type: types::NTTType) -> error::Error;
+        ntt_type: types::NTTType,
+    ) -> error::Error;
+
+    fn init_twiddle_factors() -> error::Error;
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -130,9 +137,13 @@ pub fn check_cuda_available() -> bool {
     unsafe { cuda_available() }
 }
 
-pub fn ntt_batch<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder, batch_size: u32, log_n_size: u32) {
-    
-
+pub fn ntt_batch<T>(
+    device_id: usize,
+    inout: &mut [T],
+    order: types::NTTInputOutputOrder,
+    batch_size: u32,
+    log_n_size: u32,
+) {
     let err = unsafe {
         compute_batched_ntt(
             device_id,
@@ -144,6 +155,14 @@ pub fn ntt_batch<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOut
             types::NTTType::Standard,
         )
     };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+pub fn init_twiddle_factors_rust() {
+    let err = unsafe { init_twiddle_factors() };
 
     if err.code != 0 {
         panic!("{}", String::from(err));

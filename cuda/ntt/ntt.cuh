@@ -19,7 +19,7 @@ namespace ntt
 {
 
     static int max_size;
-    static fr_t *twiddles;
+    static fr_t *d_twiddles_global;
     static std::map<fr_t, int> coset_index_map;
 
 #ifndef __CUDA_ARCH__
@@ -273,6 +273,38 @@ namespace ntt
         cudaStreamSynchronize(stream);
     }
 
+    RustError InitTwiddleFactors(const gpu_t &gpu)
+    {
+        printf("start InitTwiddleFactors\n");
+        if (!d_twiddles_global)
+        {
+            printf("need generate twiddle factors\n");
+
+            size_t lg_domain_size = 19;
+            size_t size = (size_t)1 << lg_domain_size;
+            fr_t *twiddles = fill_twiddle_factors_array(size, fr_t::omega(lg_domain_size), gpu);
+            cudaMallocAsync(&d_twiddles_global, size * sizeof(fr_t), gpu);
+            printf("after allocate \n");
+            cudaMemcpyAsync(d_twiddles_global, twiddles, size * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
+            // gpu.HtoD(d_twiddles_global, twiddles, size * sizeof(fr_t));
+            printf("after copy \n");
+
+            printf("generate twiddle factors completed\n");
+        }
+        CHECK_LAST_CUDA_ERROR();
+        cudaStreamSynchronize(gpu);
+        // cudaStreamSynchronize(gpu);
+        CHECK_LAST_CUDA_ERROR();
+
+        //      dev_ptr_t<fr_t> d_inout{domain_size, gpu};
+        //
+        // NTT_internal(&d_inout[0], lg_domain_size, order, direction, type, gpu,
+        //              coset_ext_pow);
+        // gpu.DtoH(inout, &d_inout[0], domain_size);
+        // gpu.sync();
+        return RustError{cudaSuccess};
+    }
+
     /**
      * \param gpu, which gpu to use, default is 0
      * \param inout, input and output fr array
@@ -294,25 +326,30 @@ namespace ntt
 
         try
         {
-
+            printf("sart batch\n");
             gpu.select();
 
             size_t size = (size_t)1 << lg_domain_size;
 
             uint32_t n_twiddles = size;
-            fr_t *d_twiddles;
+
             CHECK_LAST_CUDA_ERROR();
-            if (direction == Direction::inverse)
+            if (d_twiddles_global)
             {
-                d_twiddles = fill_twiddle_factors_array(n_twiddles, fr_t::omega_inv(lg_domain_size), gpu);
-                CHECK_LAST_CUDA_ERROR();
+                printf("already has twiddles\n");
             }
-            else
-            {
-                // printf("omega at %d is %x \n", lg_domain_size, fr_t::omega(lg_domain_size));
-                d_twiddles = fill_twiddle_factors_array(n_twiddles, fr_t::omega(lg_domain_size), gpu);
-                CHECK_LAST_CUDA_ERROR();
-            }
+
+            //    fr_t *d_twiddles;
+            // if (direction == Direction::inverse)
+            // {
+            //     d_twiddles = fill_twiddle_factors_array(n_twiddles, fr_t::omega_inv(lg_domain_size), gpu);
+            //     CHECK_LAST_CUDA_ERROR();
+            // }
+            // else
+            // {
+            //     d_twiddles = fill_twiddle_factors_array(n_twiddles, fr_t::omega(lg_domain_size), gpu);
+            //     CHECK_LAST_CUDA_ERROR();
+            // }
             CHECK_LAST_CUDA_ERROR();
 
             int input_size_bytes = size * batches * sizeof(fr_t);
@@ -343,13 +380,13 @@ namespace ntt
 
             fr_t *_null = nullptr;
 
-            ntt_inplace_batch_template(d_input, d_twiddles, n_twiddles, batches, direction == Direction::inverse, false, _null, gpu, false);
+            ntt_inplace_batch_template(d_input, d_twiddles_global, n_twiddles, batches, direction == Direction::inverse, false, _null, gpu, false);
 
             reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
             // gpu.DtoH(inout, &d_input[0], input_size_bytes);
             cudaMemcpyAsync(inout, &d_input[0], input_size_bytes, cudaMemcpyDeviceToHost, gpu);
             gpu.Dfree(d_input);
-            gpu.Dfree(d_twiddles);
+            // gpu.Dfree(d_twiddles);
             gpu.sync();
         }
         catch (const cuda_error &e)
