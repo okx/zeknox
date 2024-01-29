@@ -92,7 +92,7 @@ static constexpr uint64_t omegas_inv[32] = {0xffffffff00000000, 0xfffeffff000000
 
 class gl64_t
 {
-public:
+private:
   uint64_t val;
 
 public:

@@ -22,7 +22,7 @@ namespace gl64_device
 
 class gl64_t
 {
-public:
+private:
     uint64_t val;
 
 public:
