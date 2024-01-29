@@ -22,6 +22,10 @@ harness = false
 name = "cpu_fft"
 harness = false
 
+[[bench]]
+name = "gpu_fft_batch"
+harness = false
+
 [dependencies] 
 blst = "~0.3.11"
 
