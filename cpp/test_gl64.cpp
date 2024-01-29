@@ -7,10 +7,9 @@
 #include <blst_t.hpp>
 #include <vect.h>
 #include <ntt/ntt.h>
-#include <gmp.h>
 #include "../src/lib.h"
 #include <time.h>
-#include "fft.hpp"
+// #include "fft.hpp"
 #include <random>
 #include <cmath>
 
@@ -76,7 +75,7 @@ void print_u64_array(uint64_t *p, uint32_t size)
 
 TEST(gl64, fft_gpu_self_consistency)
 {
-    int lg_n_size = 10;
+    int lg_n_size = 14;
     int N = 1 << lg_n_size;
 
     uint64_t *raw_data = new uint64_t[N];
@@ -96,10 +95,14 @@ TEST(gl64, fft_gpu_self_consistency)
     // print_char_array((uint8_t*)gpu_data_in, N*32);
 
     size_t device_id = 0;
+    printf("data before \n");
+        print_char_array((uint8_t*)gpu_data_in, 16);
     compute_batched_ntt(device_id, gpu_data_in, lg_n_size, 1, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::forward, Ntt_Types::Type::standard);
+     printf("data end \n");
+        print_char_array((uint8_t*)gpu_data_in, 16);
     // compute_ntt(device_id, gpu_data_in, lg_n_size, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::inverse, Ntt_Types::Type::standard);
     // // printf("gpu_data_in \n");
-    // // print_char_array((uint8_t*)gpu_data_in, N*32);
+
     // // printf("gpu result \n");
     // for (int i = 0; i < N; i++)
     // {

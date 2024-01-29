@@ -179,7 +179,6 @@ public:
     gpu_t(int id, int real_id, const cudaDeviceProp& p)
     : gpu_id(id), cuda_id(real_id), prop(p)
     {   size_t freeMem;
-        printf("gpu_id: %d, cuda_id: %d \n", id, real_id);
         CUDA_OK(cudaMemGetInfo(&freeMem, &total_mem));
     }
 
