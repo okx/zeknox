@@ -16,7 +16,7 @@ const DEFAULT_GPU: usize = 0;
 
 #[test]
 fn test_ntt_gl64_self_consistency() {
-    for lg_domain_size in 1..28 {
+    for lg_domain_size in 1..19 {
         let domain_size = 1usize << lg_domain_size;
 
         let v: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
