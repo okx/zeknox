@@ -3,10 +3,10 @@ use cryptography_cuda::{ntt_batch,init_twiddle_factors_rust, types::NTTInputOutp
 use rand::random;
 use icicle_cuda_runtime::{
     stream::CudaStream,
-    // memory::DeviceSlice,
     device_context::get_default_device_context
 };
-
+use rustacuda::memory::DeviceSlice;
+// memory::DeviceSlice,
 const DEFAULT_GPU: usize = 0;
 fn random_fr() -> u64 {
     let fr: u64 = random();

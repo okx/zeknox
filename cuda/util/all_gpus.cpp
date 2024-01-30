@@ -8,7 +8,7 @@ class gpus_t {
     std::vector<const gpu_t*> gpus;
 public:
     gpus_t()
-    {
+    {  
         int n;
         if (cudaGetDeviceCount(&n) != cudaSuccess)
             return;
@@ -23,11 +23,11 @@ public:
         cudaSetDevice(0);
     }
     ~gpus_t()
-    {   for (auto* ptr: gpus) delete ptr;   }
+    { for (auto* ptr: gpus) delete ptr;   }
 
     static const auto& all()
     {
-        static gpus_t all_gpus;
+        static gpus_t all_gpus; // all_gpus will only be initated onetime throuout the lifetime of the program, as it is static
         return all_gpus.gpus;
     }
 };
