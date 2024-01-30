@@ -2,6 +2,7 @@
 # include <util/rusterror.h>
 # include <ntt/ntt.h>
 # include <ff/goldilocks.hpp>
+# include <util/device_context.cuh>
 
 #ifndef FEATURE_GOLDILOCKS
 # include <ff/alt_bn254.hpp>
