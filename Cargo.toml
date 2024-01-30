@@ -22,8 +22,13 @@ harness = false
 name = "cpu_fft"
 harness = false
 
+[[bench]]
+name = "gpu_fft_batch"
+harness = false
+
 [dependencies] 
 blst = "~0.3.11"
+icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev" }
 
 [build-dependencies]
 cc = "^1.0.70"

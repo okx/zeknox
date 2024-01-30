@@ -60,6 +60,16 @@ extern "C"
                      ntt_order, ntt_direction, ntt_type);
 }
 
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+    RustError
+    init_twiddle_factors(size_t device_id, uint32_t lg_domain_size)
+{
+    auto &gpu = select_gpu(device_id);
+    return ntt::InitTwiddleFactors(gpu,  lg_domain_size);
+}
+
 #endif
 
 #ifndef FEATURE_GOLDILOCKS

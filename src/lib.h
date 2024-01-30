@@ -2,6 +2,7 @@
 # include <util/rusterror.h>
 # include <ntt/ntt.h>
 # include <ff/goldilocks.hpp>
+# include <util/device_context.cuh>
 
 #ifndef FEATURE_GOLDILOCKS
 # include <ff/alt_bn254.hpp>
@@ -49,3 +50,6 @@ RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_
                 Ntt_Types::InputOutputOrder ntt_order,
                 Ntt_Types::Direction ntt_direction,
                 Ntt_Types::Type ntt_type);
+
+extern "C"
+RustError init_twiddle_factors( size_t device_id, uint32_t lg_domain_size);
