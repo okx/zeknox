@@ -18,9 +18,8 @@
 namespace ntt
 {
 
-    static int max_size;
-    static fr_t *d_twiddles_global;
-    static std::map<fr_t, int> coset_index_map;
+    static std::map<uint32_t, fr_t *> twiddle_p_map_forward;
+    static std::map<uint32_t, fr_t *> twiddle_p_map_inverse;
 
 #ifndef __CUDA_ARCH__
     using namespace Ntt_Types;
@@ -190,7 +189,7 @@ namespace ntt
         float elapsed_time;
         cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
 
-        printf("time elapsed in twiddle generations: %f \n", elapsed_time);
+        // printf("time elapsed in twiddle generations: %f \n", elapsed_time);
         // Destroy the CUDA events
         cudaEventDestroy(startEvent);
         cudaEventDestroy(endEvent);
@@ -273,35 +272,30 @@ namespace ntt
         cudaStreamSynchronize(stream);
     }
 
-    RustError InitTwiddleFactors(const gpu_t &gpu)
+    RustError InitTwiddleFactors(const gpu_t &gpu, size_t lg_domain_size)
     {
-        printf("start InitTwiddleFactors\n");
-        if (!d_twiddles_global)
+        auto it = twiddle_p_map_forward.find(lg_domain_size);
+
+        if (it == twiddle_p_map_forward.end())
         {
-            printf("need generate twiddle factors\n");
 
-            size_t lg_domain_size = 19;
             size_t size = (size_t)1 << lg_domain_size;
-            fr_t *twiddles = fill_twiddle_factors_array(size, fr_t::omega(lg_domain_size), gpu);
-            cudaMallocAsync(&d_twiddles_global, size * sizeof(fr_t), gpu);
-            printf("after allocate \n");
-            cudaMemcpyAsync(d_twiddles_global, twiddles, size * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
-            // gpu.HtoD(d_twiddles_global, twiddles, size * sizeof(fr_t));
-            printf("after copy \n");
+            fr_t *twiddles_forward = fill_twiddle_factors_array(size, fr_t::omega(lg_domain_size), gpu);
+            fr_t *d_twiddles_forward;
+            cudaMallocAsync(&d_twiddles_forward, size * sizeof(fr_t), gpu);
+            cudaMemcpyAsync(d_twiddles_forward, twiddles_forward, size * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
 
-            printf("generate twiddle factors completed\n");
+            fr_t *twiddles_inverse = fill_twiddle_factors_array(size, fr_t::omega_inv(lg_domain_size), gpu);
+            fr_t *d_twiddles_inverse;
+            cudaMallocAsync(&d_twiddles_inverse, size * sizeof(fr_t), gpu);
+            cudaMemcpyAsync(d_twiddles_inverse, twiddles_inverse, size * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
+
+            twiddle_p_map_forward[lg_domain_size] = d_twiddles_forward;
+            twiddle_p_map_inverse[lg_domain_size] = d_twiddles_inverse;
         }
-        CHECK_LAST_CUDA_ERROR();
-        cudaStreamSynchronize(gpu);
-        // cudaStreamSynchronize(gpu);
-        CHECK_LAST_CUDA_ERROR();
 
-        //      dev_ptr_t<fr_t> d_inout{domain_size, gpu};
-        //
-        // NTT_internal(&d_inout[0], lg_domain_size, order, direction, type, gpu,
-        //              coset_ext_pow);
-        // gpu.DtoH(inout, &d_inout[0], domain_size);
-        // gpu.sync();
+        cudaStreamSynchronize(gpu);
+
         return RustError{cudaSuccess};
     }
 
@@ -326,7 +320,7 @@ namespace ntt
 
         try
         {
-            printf("sart batch\n");
+            // printf("sart batch\n");
             gpu.select();
 
             size_t size = (size_t)1 << lg_domain_size;
@@ -334,9 +328,10 @@ namespace ntt
             uint32_t n_twiddles = size;
 
             CHECK_LAST_CUDA_ERROR();
-            if (d_twiddles_global)
+           fr_t *d_twiddle = twiddle_p_map_forward.at(lg_domain_size);
+            if (direction == Direction::inverse)
             {
-                printf("already has twiddles\n");
+                d_twiddle = twiddle_p_map_inverse.at(lg_domain_size);
             }
 
             //    fr_t *d_twiddles;
@@ -370,7 +365,7 @@ namespace ntt
             float elapsed_time;
             cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
 
-            printf("time elapsed in copy data: %f \n", elapsed_time);
+            // printf("time elapsed in copy data: %f \n", elapsed_time);
             // Destroy the CUDA events
             cudaEventDestroy(startEvent);
             cudaEventDestroy(endEvent);
@@ -380,7 +375,7 @@ namespace ntt
 
             fr_t *_null = nullptr;
 
-            ntt_inplace_batch_template(d_input, d_twiddles_global, n_twiddles, batches, direction == Direction::inverse, false, _null, gpu, false);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, _null, gpu, false);
 
             reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
             // gpu.DtoH(inout, &d_input[0], input_size_bytes);

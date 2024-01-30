@@ -1,4 +1,4 @@
-use cryptography_cuda::{iNTT, ntt_batch, types::*, NTT};
+use cryptography_cuda::{iNTT, ntt_batch,init_twiddle_factors_rust, types::*, NTT};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{
     fft::fft,
@@ -55,7 +55,8 @@ fn test_ntt_gl64_consistency_with_plonky2() {
 
 #[test]
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
-    let lg_domain_size: u32 = 19;
+    let lg_domain_size: usize = 19;
+    init_twiddle_factors_rust(0, lg_domain_size);
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
