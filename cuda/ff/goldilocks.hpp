@@ -88,7 +88,39 @@ static constexpr uint64_t omegas[32] = {
     0x400a7f755588e659,
     0x185629dcda58878c};
 
-static constexpr uint64_t omegas_inv[32] = {0xffffffff00000000, 0xfffeffff00000001, 0x000000ffffffff00, 0x0000001000000000, 0xfffffffefffc0001, 0xfdffffff00000001, 0xffefffff00000011, 0x1d62e30fa4a4eeb0, 0x3de19c67cf496a74, 0x3b9ae9d1d8d87589, 0x76a40e0866a8e50d, 0x9af01e431fbd6ea0, 0x3712791d9eb0314a, 0x409730a1895adfb6, 0x158ee068c8241329, 0x6d341b1c9a04ed19, 0xcc9e5a57b8343b3f, 0x22e1fbf03f8b95d6, 0x46a23c48234c7df9, 0xef8856969fe6ed7b, 0xa52008ac564a2368, 0xd46e5a4c36458c11, 0x4bb9aee372cf655e, 0x10eb845263814db7, 0xc01f93fc71bb0b9b, 0xea52f593bb20759a, 0x91f3853f38e675d9, 0x3ea7eab8d8857184, 0xe4d14a114454645d, 0xe2434909eec4f00b, 0x95c0ec9a7ab50701, 0x76b6b635b6fc8719};
+static constexpr uint64_t omegas_inv[32] = {
+    0xffffffff00000000,
+    0xfffeffff00000001,
+    0x000000ffffffff00,
+    0x0000001000000000,
+    0xfffffffefffc0001,
+    0xfdffffff00000001,
+    0xffefffff00000011,
+    0x1d62e30fa4a4eeb0,
+    0x3de19c67cf496a74,
+    0x3b9ae9d1d8d87589,
+    0x76a40e0866a8e50d,
+    0x9af01e431fbd6ea0,
+    0x3712791d9eb0314a,
+    0x409730a1895adfb6,
+    0x158ee068c8241329,
+    0x6d341b1c9a04ed19,
+    0xcc9e5a57b8343b3f,
+    0x22e1fbf03f8b95d6,
+    0x46a23c48234c7df9,
+    0xef8856969fe6ed7b,
+    0xa52008ac564a2368,
+    0xd46e5a4c36458c11,
+    0x4bb9aee372cf655e,
+    0x10eb845263814db7,
+    0xc01f93fc71bb0b9b,
+    0xea52f593bb20759a,
+    0x91f3853f38e675d9,
+    0x3ea7eab8d8857184,
+    0xe4d14a114454645d,
+    0xe2434909eec4f00b,
+    0x95c0ec9a7ab50701,
+    0x76b6b635b6fc8719};
 
 class gl64_t
 {

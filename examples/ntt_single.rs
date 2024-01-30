@@ -1,4 +1,9 @@
-use cryptography_cuda::{iNTT, ntt_batch,init_twiddle_factors_rust, types::*, NTT};
+use cryptography_cuda::{iNTT, init_twiddle_factors_rust, ntt_batch, types::*, NTT};
+use icicle_cuda_runtime::{
+    // memory::DeviceSlice,
+    device_context::get_default_device_context,
+    stream::CudaStream,
+};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{
     fft::fft,
@@ -6,11 +11,6 @@ use plonky2_field::{
     types::{Field, PrimeField64},
 };
 use rand::random;
-use icicle_cuda_runtime::{
-    stream::CudaStream,
-    // memory::DeviceSlice,
-    device_context::get_default_device_context
-};
 
 fn random_fr() -> u64 {
     let fr: u64 = random();
@@ -47,16 +47,15 @@ fn main() {
     let start = std::time::Instant::now();
     let stream = CudaStream::create().unwrap();
     println!("total time spend init context: {:?}", start.elapsed());
-
-    init_twiddle_factors_rust();
+    let log_ntt_size = 19;
+    init_twiddle_factors_rust(0, log_ntt_size);
 
     gpu_fft(2);
-    let log_ntt_size = 19;
+
     println!("after warm up");
     let mut i = 0;
-    while(i<5){
+    while (i < 5) {
         gpu_fft(log_ntt_size);
-        i=i+1;
+        i = i + 1;
     }
-
 }

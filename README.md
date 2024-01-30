@@ -22,7 +22,7 @@ based on pippenger algorithm, supporting both G1 and G2 curve. currently, if the
 ```
 cargo test --test goldilocks_arithmetic -- test_goldilocks_exp_rust --exact --nocapture
 cargo test --features=bn254 --test bn128_arithmetic -- test_bn128_add_rust --exact --nocapture
-cargo test --features=gl64 --test ntt -- test_ntt_batch_gl64_consistency_with_plonky2 --exact --nocapture
+cargo test --features=gl64 --test ntt -- test_ntt_batch_gl64_self_consistency --exact --nocapture
 ```
 ## run benchmarks
 ```

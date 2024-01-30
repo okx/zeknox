@@ -9,7 +9,7 @@ fn random_fr() -> u64 {
     fr % 0xffffffff00000001
 }
 
-fn ntt_batch_with_lg(batches: usize, log_ntt_size: u32) {
+fn ntt_batch_with_lg(batches: usize, log_ntt_size: usize) {
     let domain_size = 1usize << log_ntt_size;
 
     let mut gpu_buffer: Vec<u64> = (0..domain_size * batches).map(|_| random_fr()).collect();
