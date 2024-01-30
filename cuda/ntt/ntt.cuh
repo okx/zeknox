@@ -171,27 +171,26 @@ namespace ntt
      */
     fr_t *fill_twiddle_factors_array(uint32_t n_twiddles, fr_t omega, stream_t &stream)
     {
-        cudaEvent_t startEvent, endEvent;
-        cudaEventCreate(&startEvent);
-        cudaEventCreate(&endEvent);
-        cudaEventRecord(startEvent, 0);
+        // cudaEvent_t startEvent, endEvent;
+        // cudaEventCreate(&startEvent);
+        // cudaEventCreate(&endEvent);
+        // cudaEventRecord(startEvent, 0);
         size_t size_twiddles = n_twiddles * sizeof(fr_t);
         fr_t *d_twiddles;
         cudaMallocAsync(&d_twiddles, size_twiddles, stream);
-        CHECK_LAST_CUDA_ERROR();
+        // CHECK_LAST_CUDA_ERROR();
         twiddle_factors_kernel<<<1, 1, 0, stream>>>(d_twiddles, n_twiddles, omega);
-        CHECK_LAST_CUDA_ERROR();
-        cudaStreamSynchronize(stream);
+        // CHECK_LAST_CUDA_ERROR();
+        // cudaStreamSynchronize(stream);
 
-        cudaEventRecord(endEvent, 0);
-        cudaEventSynchronize(endEvent);
-        float elapsed_time;
-        cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
+        // cudaEventRecord(endEvent, 0);
+        // cudaEventSynchronize(endEvent);
+        // float elapsed_time;
+        // cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
 
-        printf("time elapsed in twiddle generations: %f \n", elapsed_time);
-        // Destroy the CUDA events
-        cudaEventDestroy(startEvent);
-        cudaEventDestroy(endEvent);
+        // printf("time elapsed in twiddle generations: %f \n", elapsed_time);
+        // cudaEventDestroy(startEvent);
+        // cudaEventDestroy(endEvent);
         return d_twiddles;
     }
 
@@ -335,22 +334,22 @@ namespace ntt
 
             dev_ptr_t<fr_t> d_input{input_size_bytes, gpu};
 
-            cudaEvent_t startEvent, endEvent;
-            cudaEventCreate(&startEvent);
-            cudaEventCreate(&endEvent);
-            cudaEventRecord(startEvent, 0);
+            // cudaEvent_t startEvent, endEvent;
+            // cudaEventCreate(&startEvent);
+            // cudaEventCreate(&endEvent);
+            // cudaEventRecord(startEvent, 0);
 
             cudaMemcpyAsync(&d_input[0], inout, input_size_bytes, cudaMemcpyHostToDevice, gpu);
 
-            cudaEventRecord(endEvent, 0);
-            cudaEventSynchronize(endEvent);
-            float elapsed_time;
-            cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
+            // cudaEventRecord(endEvent, 0);
+            // cudaEventSynchronize(endEvent);
+            // float elapsed_time;
+            // cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
 
-            printf("time elapsed in copy data: %f \n", elapsed_time);
+            // printf("time elapsed in copy data: %f \n", elapsed_time);
 
-            cudaEventDestroy(startEvent);
-            cudaEventDestroy(endEvent);
+            // cudaEventDestroy(startEvent);
+            // cudaEventDestroy(endEvent);
 
             int NUM_THREADS = MAX_THREADS_BATCH;
             int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
@@ -360,8 +359,12 @@ namespace ntt
             ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, _null, gpu, false);
 
             reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
-            cudaMemcpyAsync(inout, &d_input[0], input_size_bytes, cudaMemcpyDeviceToHost, gpu);
-            gpu.Dfree(d_input);
+            if (!are_outputs_on_device)
+            {
+                cudaMemcpyAsync(inout, &d_input[0], input_size_bytes, cudaMemcpyDeviceToHost, gpu);
+                gpu.Dfree(d_input);
+            }
+
             gpu.sync();
         }
         catch (const cuda_error &e)

@@ -24,7 +24,7 @@ extern "C" {
         ntt_type: types::NTTType,
     ) -> error::Error;
 
-    fn init_twiddle_factors() -> error::Error;
+    fn init_twiddle_factors(device_id: usize, lg_domain_size: u32) -> error::Error;
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -161,8 +161,8 @@ pub fn ntt_batch<T>(
     }
 }
 
-pub fn init_twiddle_factors_rust() {
-    let err = unsafe { init_twiddle_factors() };
+pub fn init_twiddle_factors_rust(device_id: usize,   log_n_size: u32) {
+    let err = unsafe { init_twiddle_factors(device_id, log_n_size) };
 
     if err.code != 0 {
         panic!("{}", String::from(err));
