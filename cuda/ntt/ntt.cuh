@@ -209,13 +209,15 @@ namespace ntt
                 ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
                     d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
 
-            for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
+            for (int s = logn_shmem; s < logn; s++)
             {
                 ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
             }
 
             if (is_coset)
+            {
                 batch_vector_mult(coset, d_inout, n, batch_size, stream);
+            }
 
             num_threads = max(min(n / 2, MAX_NUM_THREADS), 1);
             num_blocks = (n * batch_size + num_threads - 1) / num_threads;
@@ -293,28 +295,32 @@ namespace ntt
 
             uint32_t n_twiddles = size;
 
-            fr_t *d_twiddle = twiddle_p_map_forward.at(lg_domain_size);
+            fr_t *d_twiddle;
             if (direction == Direction::inverse)
             {
                 d_twiddle = twiddle_p_map_inverse.at(lg_domain_size);
+            }
+            else
+            {
+                d_twiddle = twiddle_p_map_forward.at(lg_domain_size);
             }
 
             int input_size_bytes = size * batches * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{input_size_bytes, gpu};
-
-
             cudaMemcpyAsync(&d_input[0], inout, input_size_bytes, cudaMemcpyHostToDevice, gpu);
+            if (direction == Direction::inverse)
+            {
+                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+            }
 
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
 
-            int NUM_THREADS = MAX_THREADS_BATCH;
-            int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
-
-            fr_t *_null = nullptr;
-
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, _null, gpu);
-
-            reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+            if (direction != Direction::inverse)
+            {
+                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+            }
+            //
             if (!are_outputs_on_device)
             {
                 cudaMemcpyAsync(inout, &d_input[0], input_size_bytes, cudaMemcpyDeviceToHost, gpu);

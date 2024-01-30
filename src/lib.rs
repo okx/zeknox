@@ -161,6 +161,31 @@ pub fn ntt_batch<T>(
     }
 }
 
+pub fn intt_batch<T>(
+    device_id: usize,
+    inout: &mut [T],
+    order: types::NTTInputOutputOrder,
+    batch_size: u32,
+    log_n_size: usize,
+) {
+    let err = unsafe {
+        compute_batched_ntt(
+            device_id,
+            inout.as_mut_ptr() as *mut core::ffi::c_void,
+            log_n_size,
+            batch_size,
+            order,
+            types::NTTDirection::Inverse,
+            types::NTTType::Standard,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+
 pub fn init_twiddle_factors_rust(device_id: usize, lg_n: usize) {
     let err = unsafe { init_twiddle_factors(device_id, lg_n) };
 

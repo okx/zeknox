@@ -21,8 +21,7 @@ __global__ void reverse_order_kernel(fr_t *arr, fr_t *arr_reversed, uint32_t n, 
     }
 }
 
-__global__
-    void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
+__global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
 {
     for (uint32_t i = 0; i < n_twiddles; i++)
     {
@@ -48,9 +47,10 @@ __global__
 __global__ void
 ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, bool rev)
 {
+
     int task = blockIdx.x;
     int chunks = n / (blockDim.x * 2);
-   
+
     if (task < max_task)
     {
         // flattened loop allows parallel processing
@@ -72,25 +72,23 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
             uint32_t k = i + j + shift_s;
 
             fr_t tw = twiddles[j * n_twiddles_div];
-       
+
             uint32_t offset = (task / chunks) * n;
-            fr_t u = *(arr+offset + i + j);
-            fr_t v = *(arr+offset + k);
-            if(v==0) {
-                printf("v is zero\n");
-            }
+            fr_t u = *(arr + offset + i + j);
+            fr_t v = *(arr + offset + k);
+
             if (!rev)
                 v = tw * v;
-            *(arr+offset + i + j) = u + v;
+            *(arr + offset + i + j) = u + v;
             v = u - v;
             if (rev)
             {
-                
-                *(arr+offset + k) = tw * v;
+
+                *(arr + offset + k) = tw * v;
             }
             else
             {
-                *(arr+offset + k) = v;
+                *(arr + offset + k) = v;
             }
         }
     }
@@ -102,12 +100,12 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
  * @param n size of arr.
  * @param n_inv scalar of type S (scalar).
  */
-__global__ void template_normalize_kernel(fr_t *arr, uint32_t n, fr_t scalar)
+__global__ void template_normalize_kernel(fr_t *arr, uint32_t n, fr_t n_inv)
 {
     int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (tid < n)
     {
-        arr[tid] = scalar * arr[tid];
+        arr[tid] = n_inv * arr[tid];
     }
 }
 
@@ -197,18 +195,17 @@ __global__ void ntt_template_kernel_shared_rev(
  * @param max_task max count of parallel tasks.
  * @param s log2(n) loop index.
  */
-template <typename E, typename S>
 __global__ void ntt_template_kernel_shared(
-    E *__restrict__ arr_g,
+    fr_t *__restrict__ arr_g,
     uint32_t n,
-    const S *__restrict__ r_twiddles,
+    const fr_t *__restrict__ r_twiddles,
     uint32_t n_twiddles,
     uint32_t max_task,
     uint32_t s,
     uint32_t logn)
 {
-    SharedMemory<E> smem;
-    E *arr = smem.getPointer();
+    SharedMemory<fr_t> smem;
+    fr_t *arr = smem.getPointer();
 
     uint32_t task = blockIdx.x;
     uint32_t loop_limit = blockDim.x;
@@ -237,10 +234,23 @@ __global__ void ntt_template_kernel_shared(
                 uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
                 uint32_t oij = i + j;
                 uint32_t k = oij + shift_s;
-                S tw = r_twiddles[j * n_twiddles_div];
+                fr_t tw = r_twiddles[j * n_twiddles_div];
 
-                E u = s == 0 ? arr_g[offset + oij] : arr[oij];
-                E v = s == 0 ? arr_g[offset + k] : arr[k];
+                fr_t u = s == 0 ? arr_g[offset + oij] : arr[oij];
+                fr_t v = s == 0 ? arr_g[offset + k] : arr[k];
+                // v = tw * v;
+                // if (s == (logn - 1))
+                // {
+                //     printf("set with offset: offset: %d, oij: %d, k: %d\n", offset, oij, k);
+                //     arr_g[offset + oij] = u + tw*v;
+                //     arr_g[offset + k] =  u- tw*v;
+                // }
+                // else
+                // {
+                //     printf("set without offset\n");
+                //     arr[oij] = u + tw*v;
+                //     arr[k] = u- tw*v;
+                // }
                 v = tw * v;
                 if (s == (logn - 1))
                 {
@@ -252,7 +262,6 @@ __global__ void ntt_template_kernel_shared(
                     arr[oij] = u + v;
                     arr[k] = u - v;
                 }
-
                 __syncthreads();
             }
         }

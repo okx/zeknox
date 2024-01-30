@@ -129,7 +129,6 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
         for k in range(size):
             omega += "\n              {"+ to_hex(omegas[k],limb_size)+"}," if k>0 else "      {"+ to_hex(omegas[k],limb_size)+"},"
             omega_inv += "\n              {"+ to_hex(omegas_inv[k],limb_size)+"}," if k>0 else "      {"+ to_hex(omegas_inv[k],limb_size)+"},"
-            print(pow(int(pow(2,k+1)), -1, modulus))
             inv += "\n              {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),limb_size)+"}," if k>0 else "      {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),limb_size)+"},"
   
   
