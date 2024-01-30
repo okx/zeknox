@@ -171,26 +171,27 @@ namespace ntt
      */
     fr_t *fill_twiddle_factors_array(uint32_t n_twiddles, fr_t omega, stream_t &stream)
     {
-        // cudaEvent_t startEvent, endEvent;
-        // cudaEventCreate(&startEvent);
-        // cudaEventCreate(&endEvent);
-        // cudaEventRecord(startEvent, 0);
+ cudaEvent_t startEvent, endEvent;
+        cudaEventCreate(&startEvent);
+        cudaEventCreate(&endEvent);
+        cudaEventRecord(startEvent, 0);
         size_t size_twiddles = n_twiddles * sizeof(fr_t);
         fr_t *d_twiddles;
         cudaMallocAsync(&d_twiddles, size_twiddles, stream);
-        // CHECK_LAST_CUDA_ERROR();
+        CHECK_LAST_CUDA_ERROR();
         twiddle_factors_kernel<<<1, 1, 0, stream>>>(d_twiddles, n_twiddles, omega);
-        // CHECK_LAST_CUDA_ERROR();
-        // cudaStreamSynchronize(stream);
+        CHECK_LAST_CUDA_ERROR();
+        cudaStreamSynchronize(stream);
 
-        // cudaEventRecord(endEvent, 0);
-        // cudaEventSynchronize(endEvent);
-        // float elapsed_time;
-        // cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
+        cudaEventRecord(endEvent, 0);
+        cudaEventSynchronize(endEvent);
+        float elapsed_time;
+        cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
 
         // printf("time elapsed in twiddle generations: %f \n", elapsed_time);
-        // cudaEventDestroy(startEvent);
-        // cudaEventDestroy(endEvent);
+        // Destroy the CUDA events
+        cudaEventDestroy(startEvent);
+        cudaEventDestroy(endEvent);
         return d_twiddles;
     }
 
@@ -270,7 +271,7 @@ namespace ntt
         cudaStreamSynchronize(stream);
     }
 
-    RustError InitTwiddleFactors(const gpu_t &gpu, uint32_t lg_domain_size)
+    RustError InitTwiddleFactors(const gpu_t &gpu, size_t lg_domain_size)
     {
         auto it = twiddle_p_map_forward.find(lg_domain_size);
 
@@ -318,13 +319,15 @@ namespace ntt
 
         try
         {
+            // printf("sart batch\n");
             gpu.select();
 
             size_t size = (size_t)1 << lg_domain_size;
 
             uint32_t n_twiddles = size;
 
-            fr_t *d_twiddle = twiddle_p_map_forward.at(lg_domain_size);
+            CHECK_LAST_CUDA_ERROR();
+           fr_t *d_twiddle = twiddle_p_map_forward.at(lg_domain_size);
             if (direction == Direction::inverse)
             {
                 d_twiddle = twiddle_p_map_inverse.at(lg_domain_size);
@@ -347,7 +350,7 @@ namespace ntt
             // cudaEventElapsedTime(&elapsed_time, startEvent, endEvent);
 
             // printf("time elapsed in copy data: %f \n", elapsed_time);
-
+            // Destroy the CUDA events
             // cudaEventDestroy(startEvent);
             // cudaEventDestroy(endEvent);
 

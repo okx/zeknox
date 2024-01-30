@@ -64,10 +64,10 @@ extern "C"
 extern "C"
 #endif
     RustError
-    init_twiddle_factors(size_t device_id, uint32_t lg_domain_size)
+    init_twiddle_factors(size_t device_id,size_t lg_n)
 {
     auto &gpu = select_gpu(device_id);
-    return ntt::InitTwiddleFactors(gpu,  lg_domain_size);
+    return ntt::InitTwiddleFactors(gpu, lg_n);
 }
 
 #endif

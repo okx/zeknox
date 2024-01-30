@@ -17,14 +17,14 @@ extern "C" {
     fn compute_batched_ntt(
         device_id: usize,
         inout: *mut core::ffi::c_void,
-        lg_domain_size: u32,
+        lg_domain_size: usize,
         batch_size: u32,
         ntt_order: types::NTTInputOutputOrder,
         ntt_direction: types::NTTDirection,
         ntt_type: types::NTTType,
     ) -> error::Error;
 
-    fn init_twiddle_factors(device_id: usize, lg_domain_size: u32) -> error::Error;
+    fn init_twiddle_factors(device_id: usize, lg_n: usize) -> error::Error;
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -142,7 +142,7 @@ pub fn ntt_batch<T>(
     inout: &mut [T],
     order: types::NTTInputOutputOrder,
     batch_size: u32,
-    log_n_size: u32,
+    log_n_size: usize,
 ) {
     let err = unsafe {
         compute_batched_ntt(
@@ -161,8 +161,8 @@ pub fn ntt_batch<T>(
     }
 }
 
-pub fn init_twiddle_factors_rust(device_id: usize,   log_n_size: u32) {
-    let err = unsafe { init_twiddle_factors(device_id, log_n_size) };
+pub fn init_twiddle_factors_rust(device_id: usize, lg_n: usize) {
+    let err = unsafe { init_twiddle_factors(device_id, lg_n) };
 
     if err.code != 0 {
         panic!("{}", String::from(err));

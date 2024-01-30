@@ -52,4 +52,4 @@ RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_
                 Ntt_Types::Type ntt_type);
 
 extern "C"
-RustError init_twiddle_factors( size_t device_id, uint32_t lg_domain_size);
+RustError init_twiddle_factors(size_t device_id,size_t lg_n);
