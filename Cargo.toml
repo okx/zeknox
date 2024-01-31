@@ -28,7 +28,6 @@ harness = false
 
 [dependencies] 
 blst = "~0.3.11"
-icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev" }
 
 [build-dependencies]
 cc = "^1.0.70"
@@ -43,7 +42,8 @@ rustacuda_derive = "0.1"
 [dev-dependencies]
 rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
 plonky2_field = {git="https://github.com/0xPolygonZero/plonky2.git"}
-"criterion" = "*"
+criterion = "*"
+rayon = "1.8.1"
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
@@ -52,3 +52,4 @@ rustacuda_derive = "0.1"
 default = []
 gl64 = []
 bn254 = []
+no_cuda=[]

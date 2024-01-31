@@ -1,6 +1,5 @@
 extern crate criterion;
 use cryptography_cuda::{init_twiddle_factors_rust, ntt_batch, types::NTTInputOutputOrder};
-use icicle_cuda_runtime::stream::CudaStream;
 use rand::random;
 
 const DEFAULT_GPU: usize = 0;
@@ -26,7 +25,6 @@ fn ntt_batch_with_lg(batches: usize, log_ntt_size: usize) {
 
 fn main() {
     let start = std::time::Instant::now();
-    let stream = CudaStream::create().unwrap();
     println!("total time spend init context: {:?}", start.elapsed());
     let log_ntt_size = 19;
     init_twiddle_factors_rust(0, log_ntt_size);
