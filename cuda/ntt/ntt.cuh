@@ -55,16 +55,11 @@ namespace ntt
      * @param logn log(n).
      * @param batch_size the size of the batch.
      */
-    void reverse_order_batch(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
+    void reverse_order_batch(fr_t *arr, fr_t *arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
     {
-        fr_t *arr_reversed;
-        cudaMallocAsync(&arr_reversed, n * batch_size * sizeof(fr_t), stream);
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, arr_reversed, n, logn, batch_size);
-
-        cudaMemcpyAsync(arr, arr_reversed, n * batch_size * sizeof(fr_t), cudaMemcpyDeviceToDevice, stream);
-        cudaFreeAsync(arr_reversed, stream);
     }
 
     void NTT_internal(fr_t *d_inout, uint32_t lg_domain_size,
@@ -99,7 +94,6 @@ namespace ntt
         default:
             assert(false);
         }
-        // printf("inside NTT_internal \n");
         switch (algorithm)
         {
         case Algorithm::GS:
@@ -112,47 +106,6 @@ namespace ntt
         }
         if (order == InputOutputOrder::RR)
             bit_rev(d_inout, d_inout, lg_domain_size, stream);
-    }
-
-    /**
-     * \param gpu, which gpu to use, default is 0
-     * \param inout, input and output fr array
-     * \param lg_domain_size 2^{lg_domain_size} = N, where N is size of input array
-     * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
-     * \param direction, direction of NTT, farward, or inverse, default is farward
-     * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
-     * \param coset_ext_pow coset_ext_pow
-     */
-    RustError Base(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size,
-                   InputOutputOrder order, Direction direction,
-                   Type type, bool coset_ext_pow = false)
-    {
-        if (lg_domain_size == 0)
-            return RustError{cudaSuccess};
-
-        try
-        {
-
-            gpu.select();
-
-            size_t domain_size = (size_t)1 << lg_domain_size;
-            dev_ptr_t<fr_t> d_inout{domain_size, gpu};
-            gpu.HtoD(&d_inout[0], inout, domain_size);
-            NTT_internal(&d_inout[0], lg_domain_size, order, direction, type, gpu,
-                         coset_ext_pow);
-            gpu.DtoH(inout, &d_inout[0], domain_size);
-            gpu.sync();
-        }
-        catch (const cuda_error &e)
-        {
-#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-            return RustError{e.code(), e.what()};
-#else
-            return RustError{e.code()};
-#endif
-        }
-
-        return RustError{cudaSuccess};
     }
 
     /**
@@ -234,8 +187,11 @@ namespace ntt
             }
 
             if (is_shared_mem_enabled)
+            {
+                // printf("invoking ntt_template_kernel_shared_rev with gpu_id: %d\n", stream.gpu_id);
                 ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
-                    d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+                    d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem, stream.gpu_id);
+            }
         }
 
         return;
@@ -264,6 +220,47 @@ namespace ntt
         }
 
         cudaStreamSynchronize(gpu);
+
+        return RustError{cudaSuccess};
+    }
+
+    /**
+     * \param gpu, which gpu to use, default is 0
+     * \param inout, input and output fr array
+     * \param lg_domain_size 2^{lg_domain_size} = N, where N is size of input array
+     * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
+     * \param direction, direction of NTT, farward, or inverse, default is farward
+     * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
+     * \param coset_ext_pow coset_ext_pow
+     */
+    RustError Base(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size,
+                   InputOutputOrder order, Direction direction,
+                   Type type, bool coset_ext_pow = false)
+    {
+        if (lg_domain_size == 0)
+            return RustError{cudaSuccess};
+
+        try
+        {
+
+            gpu.select();
+
+            size_t domain_size = (size_t)1 << lg_domain_size;
+            dev_ptr_t<fr_t> d_inout{domain_size, gpu};
+            gpu.HtoD(&d_inout[0], inout, domain_size);
+            NTT_internal(&d_inout[0], lg_domain_size, order, direction, type, gpu,
+                         coset_ext_pow);
+            gpu.DtoH(inout, &d_inout[0], domain_size);
+            gpu.sync();
+        }
+        catch (const cuda_error &e)
+        {
+#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+            return RustError{e.code(), e.what()};
+#else
+            return RustError{e.code()};
+#endif
+        }
 
         return RustError{cudaSuccess};
     }
@@ -304,30 +301,31 @@ namespace ntt
             {
                 d_twiddle = twiddle_p_map_forward.at(lg_domain_size);
             }
+            size_t total_elements = size * batches;
+            int input_size_bytes = total_elements * sizeof(fr_t);
 
-            int input_size_bytes = size * batches * sizeof(fr_t);
+            dev_ptr_t<fr_t> d_input{total_elements, gpu};
+            dev_ptr_t<fr_t> d_input_reversed_tmp{total_elements, gpu};
+            gpu.HtoD(&d_input[0], inout, total_elements);
 
-            dev_ptr_t<fr_t> d_input{input_size_bytes, gpu};
-            cudaMemcpyAsync(&d_input[0], inout, input_size_bytes, cudaMemcpyHostToDevice, gpu);
             if (direction == Direction::inverse)
             {
-                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, &d_input_reversed_tmp[0], size, lg_domain_size, batches, gpu);
             }
-
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
-
-            if (direction != Direction::inverse)
+            // CHECK_LAST_CUDA_ERROR();
+            ntt_inplace_batch_template(direction == Direction::inverse ? d_input_reversed_tmp : d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
+            // CHECK_LAST_CUDA_ERROR();
+            // printf("start sync \n");
+            if (direction == Direction::forward)
             {
-                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, &d_input_reversed_tmp[0], size, lg_domain_size, batches, gpu);
             }
-            //
             if (!are_outputs_on_device)
             {
-                cudaMemcpyAsync(inout, &d_input[0], input_size_bytes, cudaMemcpyDeviceToHost, gpu);
-                gpu.Dfree(d_input);
+                gpu.DtoH(inout, &d_input_reversed_tmp[0], total_elements); // TODO: will cause illegal memory during concurrent batch ntt
+                // cudaMemcpyAsync(inout, &d_input_reversed_tmp[0], input_size_bytes, cudaMemcpyDeviceToHost, gpu);
             }
-
-            gpu.sync();
+            gpu.sync();  // TODO: will cause illegal memory during concurrent batch ntt
         }
         catch (const cuda_error &e)
         {

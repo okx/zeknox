@@ -16,7 +16,7 @@ __global__ void reverse_order_kernel(fr_t *arr, fr_t *arr_reversed, uint32_t n, 
         int idx = threadId % n;
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
-        // printf("from: %d, to: %d \n", batch_idx * n + idx, batch_idx * n + idx_reversed);
+        // printf("index: %d, value: %d \n", batch_idx * n + idx_reversed, arr_reversed[batch_idx * n + idx_reversed]);
         arr_reversed[batch_idx * n + idx_reversed] = arr[batch_idx * n + idx];
     }
 }
@@ -127,7 +127,9 @@ __global__ void ntt_template_kernel_shared_rev(
     uint32_t n_twiddles,
     uint32_t max_task,
     uint32_t ss,
-    uint32_t logn)
+    uint32_t logn,
+    int gpu_id
+)
 {
     SharedMemory<fr_t> smem;
     fr_t *arr = smem.getPointer();
@@ -168,6 +170,7 @@ __global__ void ntt_template_kernel_shared_rev(
 
                 fr_t u = is_beginning ? arr_g[offset + oij] : arr[oij];
                 fr_t v = is_beginning ? arr_g[offset + k] : arr[k];
+                // printf("u: %d, gpu_id: %d\n", u, gpu_id);
                 if (is_end)
                 {
                     arr_g[offset + oij] = u + v;
