@@ -1,9 +1,4 @@
 use cryptography_cuda::{iNTT, init_twiddle_factors_rust, ntt_batch, types::*, NTT};
-use icicle_cuda_runtime::{
-    // memory::DeviceSlice,
-    device_context::get_default_device_context,
-    stream::CudaStream,
-};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
