@@ -48,6 +48,16 @@ fn feature_check() -> String {
 }
 
 fn main() {
+    match env::var("CUDA") {
+        Ok(var) => {
+            if var == "OFF" {
+                return;
+            }
+        },
+        Err(_) => {
+        },
+    };
+
     if cfg!(target_os = "windows") && !cfg!(target_env = "msvc") {
         panic!("unsupported compiler");
     }
