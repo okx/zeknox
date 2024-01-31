@@ -40,7 +40,6 @@ fn gpu_fft(log_ntt_size: usize) {
 
 fn main() {
     let start = std::time::Instant::now();
-    let stream = CudaStream::create().unwrap();
     println!("total time spend init context: {:?}", start.elapsed());
     let log_ntt_size = 19;
     init_twiddle_factors_rust(0, log_ntt_size);
