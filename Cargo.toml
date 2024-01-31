@@ -52,3 +52,4 @@ rustacuda_derive = "0.1"
 default = []
 gl64 = []
 bn254 = []
+no_cuda=[]

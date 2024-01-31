@@ -1,12 +1,16 @@
 
 use std::env;
 use std::path::PathBuf;
-#[macro_use]
+#[cfg(not(feature="no_cuda"))]
 extern crate rustacuda;
-
+#[cfg(not(feature="no_cuda"))]
 use rustacuda::device::DeviceAttribute;
+#[cfg(not(feature="no_cuda"))]
 use rustacuda::prelude::*;
 
+
+
+#[cfg(not(feature="no_cuda"))]
 fn get_device_arch() -> String {
     rustacuda::init(CudaFlags::empty()).expect("unable to init");
 
@@ -47,14 +51,8 @@ fn feature_check() -> String {
     }
 }
 
-fn main() {
-    if let Ok(var) =  env::var("CUDA") {
-        if var == "OFF" {
-            println!("skip cuda build");
-            return;
-        }
-    };
-
+#[cfg(not(feature="no_cuda"))]
+fn build_cuda() {
     if cfg!(target_os = "windows") && !cfg!(target_env = "msvc") {
         panic!("unsupported compiler");
     }
@@ -132,4 +130,9 @@ fn main() {
         panic!("no nvcc found");
     }
     println!("cargo:rerun-if-env-changed=NVCC");
+}
+
+fn main() {
+    #[cfg(not(feature="no_cuda"))]
+    build_cuda();
 }
