@@ -124,7 +124,7 @@ static constexpr uint64_t omegas_inv[32] = {
     0x8958579f296dac7a,
     0x16d265893b5b7e85,
 };
-else
+#else
 static constexpr uint64_t omegas[32] = {
     0xffffffff00000000,
     0x0001000000000000,
