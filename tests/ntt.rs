@@ -78,8 +78,8 @@ fn test_intt_gl64_consistency_with_plonky2() {
 
 #[test]
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
-    let lg_domain_size: usize = 19;
-    init_twiddle_factors_rust(0, lg_domain_size);
+    let lg_domain_size: usize = 4;
+    init_twiddle_factors_rust(DEFAULT_GPU, lg_domain_size);
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -132,7 +132,7 @@ fn test_ntt_batch_gl64_consistency_with_plonky2() {
 #[test]
 fn test_ntt_batch_intt_batch_gl64_self_consistency() {
     let lg_domain_size: usize = 10;
-    init_twiddle_factors_rust(0, lg_domain_size);
+    init_twiddle_factors_rust(DEFAULT_GPU, lg_domain_size);
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -161,8 +161,8 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
 
 #[test]
 fn test_intt_batch_gl64_consistency_with_plonky2() {
-    let lg_domain_size: usize = 19;
-    init_twiddle_factors_rust(0, lg_domain_size);
+    let lg_domain_size: usize = 4;
+    init_twiddle_factors_rust(DEFAULT_GPU, lg_domain_size);
 
     let batches = 2;
     let domain_size = 1usize << lg_domain_size;
