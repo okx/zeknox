@@ -48,14 +48,11 @@ fn feature_check() -> String {
 }
 
 fn main() {
-    match env::var("CUDA") {
-        Ok(var) => {
-            if var == "OFF" {
-                return;
-            }
-        },
-        Err(_) => {
-        },
+    if let Ok(var) =  env::var("CUDA") {
+        if var == "OFF" {
+            println!("skip cuda build");
+            return;
+        }
     };
 
     if cfg!(target_os = "windows") && !cfg!(target_env = "msvc") {
