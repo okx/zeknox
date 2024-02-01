@@ -1,5 +1,5 @@
 #[cfg(not(feature = "no_cuda"))]
-use cryptography_cuda::{iNTT, init_twiddle_factors_rust, ntt_batch, types::*, NTT};
+use cryptography_cuda::{intt, init_twiddle_factors_rs, ntt_batch, types::*, ntt};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
@@ -58,7 +58,7 @@ fn gpu_fft_concurrent(device_id: usize, concurrent_nums: usize, log_ntt_size: us
     let start = std::time::Instant::now();
     let _: Vec<_> = gpu_buffers
         .into_par_iter()
-        .map(|mut gpu_buffer| NTT(device_id, &mut gpu_buffer, NTTInputOutputOrder::NN))
+        .map(|mut gpu_buffer| ntt(device_id, &mut gpu_buffer, NTTInputOutputOrder::NN))
         .collect();
     println!(
         "gpu fft of nums: {:?}, log_ntt_size: {:?}, total time spend: {:?}",
@@ -85,7 +85,7 @@ fn gpu_fft_concurrent_multiple_devices(
         .into_par_iter()
         .enumerate()
         .map(|(idx, mut gpu_buffer)| {
-            NTT(idx % device_nums, &mut gpu_buffer, NTTInputOutputOrder::NN)
+            ntt(idx % device_nums, &mut gpu_buffer, NTTInputOutputOrder::NN)
         })
         .collect();
     println!(
@@ -170,7 +170,7 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
 
 fn main() {
     let nums = 200;
-    let log_ntt_size = 23;
+    let log_ntt_size = 19;
 
     let num_devices = 4;
     cpu_fft_concurrent(nums, log_ntt_size);
@@ -178,18 +178,17 @@ fn main() {
     #[cfg(not(feature = "no_cuda"))]
     let mut device_id = 0;
     while (device_id < num_devices) {
-        // println!("init for device: {:?}", device_id);
-        init_twiddle_factors_rust(device_id, log_ntt_size);
+        init_twiddle_factors_rs(device_id, log_ntt_size);
         device_id = device_id + 1;
     }
 
-    // #[cfg(not(feature = "no_cuda"))]
-    // gpu_fft_concurrent(DEFAULT_GPU, nums, log_ntt_size);
-    // #[cfg(not(feature = "no_cuda"))]
-    // gpu_fft_batch(DEFAULT_GPU, nums, log_ntt_size);
+    #[cfg(not(feature = "no_cuda"))]
+    gpu_fft_concurrent(DEFAULT_GPU, nums, log_ntt_size);
+    #[cfg(not(feature = "no_cuda"))]
+    gpu_fft_batch(DEFAULT_GPU, nums, log_ntt_size);
 
     // #[cfg(not(feature = "no_cuda"))]
     // gpu_fft_concurrent_multiple_devices(num_devices, nums, log_ntt_size);
-    #[cfg(not(feature = "no_cuda"))]
-    gpu_fft_batch_multiple_devices(num_devices, nums, log_ntt_size);
+    // #[cfg(not(feature = "no_cuda"))]
+    // gpu_fft_batch_multiple_devices(num_devices, nums, log_ntt_size);
 }
