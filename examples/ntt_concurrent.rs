@@ -129,33 +129,36 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
         .collect();
 
     let mut cpu_buffers = gpu_buffers.clone();
-    println!("input: {:?}", gpu_buffers);
+    // println!("input: {:?}", gpu_buffers);
     let start = std::time::Instant::now();
     let _: Vec<_> = gpu_buffers
         .par_iter_mut()
         .enumerate()
         .map(|(device_id, mut input)| {
+            // println!("invoking gpu: {:?}, input: {:?}", device_id, input);
             ntt_batch(
                 device_id,
                 &mut input,
                 NTTInputOutputOrder::NN,
                 per_device_batch as u32,
                 log_ntt_size,
-            )
+            );
+            // println!("invoking gpu: {:?}, output: {:?}", device_id, input);
+
         })
         .collect();
 
-    println!("after ntt: {:?}", gpu_buffers);
+    // println!("after ntt: {:?}", gpu_buffers);
 
-    println!("cpu input: {:?}", cpu_buffers[1]);
-    let coeffs = cpu_buffers[1][0..domain_size]
+    // println!("cpu input: {:?}", cpu_buffers[1]);
+    let coeffs = cpu_buffers[0][0..domain_size]
         .iter()
         .map(|i| GoldilocksField::from_canonical_u64(*i))
         .collect::<Vec<GoldilocksField>>();
     let coefficients = PolynomialCoeffs { coeffs };
 
     let ret = fft(coefficients.clone());
-    println!("cpu ret: {:?}", ret);
+    // println!("cpu ret: {:?}", ret);
 
     println!(
         "gpu fft batch of nums: {:?}, log_ntt_size: {:?}, total time spend: {:?}",
@@ -166,8 +169,8 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
 }
 
 fn main() {
-    let nums = 50;
-    let log_ntt_size = 24;
+    let nums = 200;
+    let log_ntt_size = 23;
 
     let num_devices = 4;
     cpu_fft_concurrent(nums, log_ntt_size);
@@ -182,11 +185,11 @@ fn main() {
 
     // #[cfg(not(feature = "no_cuda"))]
     // gpu_fft_concurrent(DEFAULT_GPU, nums, log_ntt_size);
-    #[cfg(not(feature = "no_cuda"))]
-    gpu_fft_batch(DEFAULT_GPU, nums, log_ntt_size);
+    // #[cfg(not(feature = "no_cuda"))]
+    // gpu_fft_batch(DEFAULT_GPU, nums, log_ntt_size);
 
     // #[cfg(not(feature = "no_cuda"))]
     // gpu_fft_concurrent_multiple_devices(num_devices, nums, log_ntt_size);
-    // #[cfg(not(feature = "no_cuda"))]
-    // gpu_fft_batch_multiple_devices(2, nums, log_ntt_size);
+    #[cfg(not(feature = "no_cuda"))]
+    gpu_fft_batch_multiple_devices(num_devices, nums, log_ntt_size);
 }
