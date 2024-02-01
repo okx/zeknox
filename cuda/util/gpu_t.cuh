@@ -444,6 +444,7 @@ public:
 template <typename T>
 class dev_ptr_t
 {
+public:
     T *d_ptr;
 
 public:
