@@ -13,11 +13,10 @@
 
 namespace ntt
 {
-    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_forward_arr[4];
-    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_inverse_arr[4];
-    // static std::map<uint32_t, fr_t *> twiddle_p_map_forward_0;
-    // static std::map<uint32_t, fr_t *> twiddle_p_map_forward_1;
-    // static std::map<uint32_t, fr_t *> twiddle_p_map_inverse;
+    // TODO: to remove this hard code, 16 is enough for most machines
+    // TODO: add a method to drop the memory, as it is not auto dropped
+    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_forward_arr[16];
+    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_inverse_arr[16];
 
 #ifndef __CUDA_ARCH__
     using namespace Ntt_Types;

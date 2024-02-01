@@ -1,4 +1,4 @@
-use cryptography_cuda::{iNTT, init_twiddle_factors_rust, intt_batch, ntt_batch, types::*, NTT};
+use cryptography_cuda::{intt, init_twiddle_factors_rs, intt_batch, ntt_batch, types::*, ntt};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
@@ -24,9 +24,9 @@ fn test_ntt_intt_gl64_self_consistency() {
 
         let mut gpu_buffer = v.clone();
 
-        NTT(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
+        ntt(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
 
-        iNTT(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
+        intt(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
 
         assert_eq!(v, gpu_buffer);
     }
@@ -39,7 +39,7 @@ fn test_ntt_gl64_consistency_with_plonky2() {
 
         let v: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
         let mut gpu_buffer = v.clone();
-        NTT(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
+        ntt(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
 
         let plonky2_ntt_input = v.clone();
         let coeffs = plonky2_ntt_input
@@ -61,7 +61,7 @@ fn test_intt_gl64_consistency_with_plonky2() {
 
         let v: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
         let mut gpu_buffer = v.clone();
-        iNTT(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
+        intt(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
 
         let plonky2_ntt_input = v.clone();
         let values = plonky2_ntt_input
@@ -79,7 +79,7 @@ fn test_intt_gl64_consistency_with_plonky2() {
 #[test]
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
     let lg_domain_size: usize = 4;
-    init_twiddle_factors_rust(DEFAULT_GPU, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -132,7 +132,7 @@ fn test_ntt_batch_gl64_consistency_with_plonky2() {
 #[test]
 fn test_ntt_batch_intt_batch_gl64_self_consistency() {
     let lg_domain_size: usize = 10;
-    init_twiddle_factors_rust(DEFAULT_GPU, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -162,7 +162,7 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
 #[test]
 fn test_intt_batch_gl64_consistency_with_plonky2() {
     let lg_domain_size: usize = 4;
-    init_twiddle_factors_rust(DEFAULT_GPU, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
 
     let batches = 2;
     let domain_size = 1usize << lg_domain_size;
