@@ -4,6 +4,7 @@ pub mod types;
 extern "C" {
 
     fn cuda_available() -> bool;
+    fn get_number_of_gpus(ngpus: *mut usize) -> error::Error;
 
     fn compute_ntt(
         device_id: usize,
@@ -137,6 +138,16 @@ pub fn check_cuda_available() -> bool {
     unsafe { cuda_available() }
 }
 
+pub fn get_number_of_gpus_rs() -> usize {
+    let mut nums = 0;
+    let err = unsafe { unsafe { get_number_of_gpus(&mut nums) } };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+    return nums;
+}
+
 pub fn ntt_batch<T>(
     device_id: usize,
     inout: &mut [T],
@@ -184,7 +195,6 @@ pub fn intt_batch<T>(
         panic!("{}", String::from(err));
     }
 }
-
 
 pub fn init_twiddle_factors_rs(device_id: usize, lg_n: usize) {
     let err = unsafe { init_twiddle_factors(device_id, lg_n) };

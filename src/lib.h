@@ -53,3 +53,6 @@ RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_
 
 extern "C"
 RustError init_twiddle_factors(size_t device_id,size_t lg_n);
+
+extern "C"
+RustError get_number_of_gpus(size_t* ngpus);

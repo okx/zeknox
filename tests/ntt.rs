@@ -1,4 +1,4 @@
-use cryptography_cuda::{intt, init_twiddle_factors_rs, intt_batch, ntt_batch, types::*, ntt};
+use cryptography_cuda::{intt, init_twiddle_factors_rs, intt_batch, ntt_batch, types::*, ntt,get_number_of_gpus_rs};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
@@ -14,6 +14,7 @@ fn random_fr() -> u64 {
 }
 
 const DEFAULT_GPU: usize = 1;
+
 
 #[test]
 fn test_ntt_intt_gl64_self_consistency() {

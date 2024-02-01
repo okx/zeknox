@@ -35,6 +35,16 @@
 extern "C"
 #endif
     RustError
+    get_number_of_gpus(size_t *nums)
+{
+    *nums = ngpus();
+    return RustError{cudaSuccess};
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+    RustError
     compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                 Ntt_Types::InputOutputOrder ntt_order,
                 Ntt_Types::Direction ntt_direction,
@@ -57,14 +67,14 @@ extern "C"
 {
     auto &gpu = select_gpu(device_id);
     return ntt::Batch(gpu, inout, lg_domain_size, batch_size,
-                     ntt_order, ntt_direction, ntt_type);
+                      ntt_order, ntt_direction, ntt_type);
 }
 
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
 #endif
     RustError
-    init_twiddle_factors(size_t device_id,size_t lg_n)
+    init_twiddle_factors(size_t device_id, size_t lg_n)
 {
     auto &gpu = select_gpu(device_id);
     return ntt::InitTwiddleFactors(gpu, lg_n);
