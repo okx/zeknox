@@ -10,13 +10,14 @@
 #include "kernels.cu"
 #include <map>
 #include <vector>
+#include <iostream>
 
 namespace ntt
 {
     // TODO: to remove this hard code, 16 is enough for most machines
     // TODO: add a method to drop the memory, as it is not auto dropped
-    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_forward_arr[16];
-    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_inverse_arr[16];
+    static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_forward_arr;
+    static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_inverse_arr;
 
 #ifndef __CUDA_ARCH__
     using namespace Ntt_Types;
@@ -199,25 +200,31 @@ namespace ntt
     {
         gpu.select();
         // printf("init twiddles on device: %d\n", gpu.id());
-         std::map<uint32_t, fr_t *> twiddle_p_map_forward;
-         std::map<uint32_t, fr_t *> twiddle_p_map_inverse;
+        // std::map<uint32_t, fr_t *> twiddle_p_map_forward;
+        // std::map<uint32_t, fr_t *> twiddle_p_map_inverse;
 
-        all_gpus_twiddle_forward_arr[gpu.id()] = twiddle_p_map_forward;
-        all_gpus_twiddle_inverse_arr[gpu.id()] = twiddle_p_map_inverse;
+        // all_gpus_twiddle_forward_arr[gpu.id()] = twiddle_p_map_forward;
+        // all_gpus_twiddle_inverse_arr[gpu.id()] = twiddle_p_map_inverse;
         // std::map<uint32_t, fr_t *> twiddle_p_map_inverse = all_gpus_twiddle_inverse_arr[gpu.id()];
-        auto it = all_gpus_twiddle_forward_arr[gpu.id()].find(lg_domain_size);
+        // auto it = all_gpus_twiddle_forward_arr[gpu.id()].find(lg_domain_size);
 
-        if (it == all_gpus_twiddle_forward_arr[gpu.id()].end())
-        {
+        // if (it == all_gpus_twiddle_forward_arr[gpu.id()].end())
+        // {
 
             size_t size = (size_t)1 << lg_domain_size;
             dev_ptr_t<fr_t> twiddles_forward{size, gpu, true};
             dev_ptr_t<fr_t> twiddles_inverse{size, gpu, true};
             fill_twiddle_factors_array(&twiddles_forward[0], size, fr_t::omega(lg_domain_size), gpu);
-            all_gpus_twiddle_forward_arr[gpu.id()][lg_domain_size] = twiddles_forward;
+            printf("set twiddle for: %d, %x\n", lg_domain_size, twiddles_forward.d_ptr);
+            all_gpus_twiddle_forward_arr[gpu.id()][lg_domain_size] = twiddles_forward; // .insert(std::make_pair(, ));  //[] = ;
             fill_twiddle_factors_array(&twiddles_inverse[0], size, fr_t::omega_inv(lg_domain_size), gpu);
             all_gpus_twiddle_inverse_arr[gpu.id()][lg_domain_size] = twiddles_inverse;
-        }
+        // }
+
+        // for (std::map<uint32_t, fr_t *>::iterator it = all_gpus_twiddle_forward_arr[gpu.id()].begin(); it != all_gpus_twiddle_forward_arr[gpu.id()].end(); it++)
+        // {
+        //     std::cout << "Key: " << it->first << ", Value: " << it->second << std::endl;
+        // }
 
         gpu.sync();
 
@@ -283,8 +290,6 @@ namespace ntt
         if (lg_domain_size == 0)
             return RustError{cudaSuccess};
 
-
-
         try
         {
             gpu.select();
@@ -292,6 +297,8 @@ namespace ntt
             size_t size = (size_t)1 << lg_domain_size;
 
             uint32_t n_twiddles = size;
+
+            // Iterate over the elements using iterators
 
             fr_t *d_twiddle;
             if (direction == Direction::inverse)
