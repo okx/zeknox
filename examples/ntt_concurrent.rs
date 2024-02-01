@@ -169,7 +169,7 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
 }
 
 fn main() {
-    let nums = 10;
+    let nums = 100;
     let log_ntt_size = 19;
 
     let num_devices = 1;
@@ -183,13 +183,13 @@ fn main() {
         device_id = device_id + 1;
     }
 
-    // #[cfg(not(feature = "no_cuda"))]
-    // gpu_fft_concurrent(DEFAULT_GPU, nums, log_ntt_size);
-    // #[cfg(not(feature = "no_cuda"))]
-    // gpu_fft_batch(DEFAULT_GPU, nums, log_ntt_size);
-
-    // #[cfg(not(feature = "no_cuda"))]
-    // gpu_fft_concurrent_multiple_devices(num_devices, nums, log_ntt_size);
     #[cfg(not(feature = "no_cuda"))]
-    gpu_fft_batch_multiple_devices(1, nums, log_ntt_size+1);
+    gpu_fft_concurrent(DEFAULT_GPU, nums, log_ntt_size);
+    #[cfg(not(feature = "no_cuda"))]
+    gpu_fft_batch(DEFAULT_GPU, nums, log_ntt_size);
+
+    #[cfg(not(feature = "no_cuda"))]
+    gpu_fft_concurrent_multiple_devices(num_devices, nums, log_ntt_size);
+    #[cfg(not(feature = "no_cuda"))]
+    gpu_fft_batch_multiple_devices(1, nums, log_ntt_size);
 }
