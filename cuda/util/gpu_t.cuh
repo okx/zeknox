@@ -70,6 +70,7 @@ struct launch_params_t
 class stream_t
 {
     cudaStream_t stream;
+
 public:
     const int gpu_id;
 
@@ -367,7 +368,7 @@ public:
 
     inline void sync() const
     {
-        zero.sync();  // sync the default stream
+        zero.sync(); // sync the default stream
         for (auto &f : flipflop)
             f.sync();
     }
@@ -446,6 +447,9 @@ class dev_ptr_t
     T *d_ptr;
 
 public:
+    int gpu_id;
+    char *name;
+    bool manual_drop;
     dev_ptr_t(size_t nelems) : d_ptr(nullptr)
     {
         if (nelems)
@@ -454,8 +458,10 @@ public:
             CUDA_OK(cudaMalloc(&d_ptr, n * sizeof(T)));
         }
     }
-    dev_ptr_t(size_t nelems, stream_t &s) : d_ptr(nullptr)
+    dev_ptr_t(size_t nelems, stream_t &s, bool manual_drop = false) : d_ptr(nullptr), gpu_id(s.gpu_id), manual_drop(manual_drop)
     {
+        // printf("construct pointer named: %s, on device: %d\n", name, gpu_id);
+        // manual_drop=false;
         if (nelems)
         {
             size_t n = (nelems + WARP_SZ - 1) & ((size_t)0 - WARP_SZ); // make n multiples of 32
@@ -466,8 +472,12 @@ public:
     dev_ptr_t &operator=(const dev_ptr_t &r) = delete; // Copy assignment operator explicitly deleted
     ~dev_ptr_t()
     {
-        if (d_ptr)
+
+        if (d_ptr && !manual_drop)
+        {
+            // printf("drop device pointer, named: %s, on device: %d\n", name, gpu_id);
             cudaFree((void *)d_ptr);
+        }
     }
 
     inline operator const T *() const { return d_ptr; }

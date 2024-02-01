@@ -13,9 +13,11 @@
 
 namespace ntt
 {
-    // cache the device data of ntt twiddle factors
-    static std::map<uint32_t, fr_t *> twiddle_p_map_forward;
-    static std::map<uint32_t, fr_t *> twiddle_p_map_inverse;
+    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_forward_arr[4];
+    static std::map<uint32_t,  fr_t *> all_gpus_twiddle_inverse_arr[4];
+    // static std::map<uint32_t, fr_t *> twiddle_p_map_forward_0;
+    // static std::map<uint32_t, fr_t *> twiddle_p_map_forward_1;
+    // static std::map<uint32_t, fr_t *> twiddle_p_map_inverse;
 
 #ifndef __CUDA_ARCH__
     using namespace Ntt_Types;
@@ -111,15 +113,11 @@ namespace ntt
     /**
      * @brief calculate twiddle factors
      */
-    fr_t *fill_twiddle_factors_array(uint32_t n_twiddles, fr_t omega, stream_t &stream)
+    void fill_twiddle_factors_array(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega, stream_t &stream)
     {
-
         size_t size_twiddles = n_twiddles * sizeof(fr_t);
-        fr_t *d_twiddles;
-        cudaMallocAsync(&d_twiddles, size_twiddles, stream);
         twiddle_factors_kernel<<<1, 1, 0, stream>>>(d_twiddles, n_twiddles, omega);
-        cudaStreamSynchronize(stream);
-        return d_twiddles;
+        return;
     }
 
     /**
@@ -181,6 +179,7 @@ namespace ntt
             if (is_coset)
                 batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
+            // printf("invoking ntt_template_kernel gpu_id: %d, is_shared_mem_enabled: %d >>>>>>>\n", stream.gpu_id, is_shared_mem_enabled);
             for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
             {
                 ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, true);
@@ -188,42 +187,43 @@ namespace ntt
 
             if (is_shared_mem_enabled)
             {
-                // printf("invoking ntt_template_kernel_shared_rev with gpu_id: %d\n", stream.gpu_id);
+                // printf("invoking ntt_template_kernel_shared_rev with gpu_id: %d >>>>>>>>\n", stream.gpu_id);
                 ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
                     d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem, stream.gpu_id);
             }
         }
-
+        // cudaStreamSynchronize(stream);
         return;
     }
 
     RustError InitTwiddleFactors(const gpu_t &gpu, size_t lg_domain_size)
     {
-        auto it = twiddle_p_map_forward.find(lg_domain_size);
+        gpu.select();
+        // printf("init twiddles on device: %d\n", gpu.id());
+         std::map<uint32_t, fr_t *> twiddle_p_map_forward;
+         std::map<uint32_t, fr_t *> twiddle_p_map_inverse;
 
-        if (it == twiddle_p_map_forward.end())
+        all_gpus_twiddle_forward_arr[gpu.id()] = twiddle_p_map_forward;
+        all_gpus_twiddle_inverse_arr[gpu.id()] = twiddle_p_map_inverse;
+        // std::map<uint32_t, fr_t *> twiddle_p_map_inverse = all_gpus_twiddle_inverse_arr[gpu.id()];
+        auto it = all_gpus_twiddle_forward_arr[gpu.id()].find(lg_domain_size);
+
+        if (it == all_gpus_twiddle_forward_arr[gpu.id()].end())
         {
 
             size_t size = (size_t)1 << lg_domain_size;
-            fr_t *twiddles_forward = fill_twiddle_factors_array(size, fr_t::omega(lg_domain_size), gpu);
-            fr_t *d_twiddles_forward;
-            cudaMallocAsync(&d_twiddles_forward, size * sizeof(fr_t), gpu);
-            cudaMemcpyAsync(d_twiddles_forward, twiddles_forward, size * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
-
-            fr_t *twiddles_inverse = fill_twiddle_factors_array(size, fr_t::omega_inv(lg_domain_size), gpu);
-            fr_t *d_twiddles_inverse;
-            cudaMallocAsync(&d_twiddles_inverse, size * sizeof(fr_t), gpu);
-            cudaMemcpyAsync(d_twiddles_inverse, twiddles_inverse, size * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
-
-            twiddle_p_map_forward[lg_domain_size] = d_twiddles_forward;
-            twiddle_p_map_inverse[lg_domain_size] = d_twiddles_inverse;
+            dev_ptr_t<fr_t> twiddles_forward{size, gpu, true};
+            dev_ptr_t<fr_t> twiddles_inverse{size, gpu, true};
+            fill_twiddle_factors_array(&twiddles_forward[0], size, fr_t::omega(lg_domain_size), gpu);
+            all_gpus_twiddle_forward_arr[gpu.id()][lg_domain_size] = twiddles_forward;
+            fill_twiddle_factors_array(&twiddles_inverse[0], size, fr_t::omega_inv(lg_domain_size), gpu);
+            all_gpus_twiddle_inverse_arr[gpu.id()][lg_domain_size] = twiddles_inverse;
         }
 
-        cudaStreamSynchronize(gpu);
+        gpu.sync();
 
         return RustError{cudaSuccess};
     }
-
     /**
      * \param gpu, which gpu to use, default is 0
      * \param inout, input and output fr array
@@ -284,6 +284,8 @@ namespace ntt
         if (lg_domain_size == 0)
             return RustError{cudaSuccess};
 
+
+
         try
         {
             gpu.select();
@@ -295,37 +297,37 @@ namespace ntt
             fr_t *d_twiddle;
             if (direction == Direction::inverse)
             {
-                d_twiddle = twiddle_p_map_inverse.at(lg_domain_size);
+                d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_domain_size);
             }
             else
             {
-                d_twiddle = twiddle_p_map_forward.at(lg_domain_size);
+                d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
             }
+
             size_t total_elements = size * batches;
             int input_size_bytes = total_elements * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{total_elements, gpu};
             dev_ptr_t<fr_t> d_input_reversed_tmp{total_elements, gpu};
-            gpu.HtoD(&d_input[0], inout, total_elements);
 
+            gpu.HtoD(&d_input[0], inout, total_elements);
             if (direction == Direction::inverse)
             {
                 reverse_order_batch(d_input, &d_input_reversed_tmp[0], size, lg_domain_size, batches, gpu);
             }
-            // CHECK_LAST_CUDA_ERROR();
             ntt_inplace_batch_template(direction == Direction::inverse ? d_input_reversed_tmp : d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
-            // CHECK_LAST_CUDA_ERROR();
-            // printf("start sync \n");
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_input, &d_input_reversed_tmp[0], size, lg_domain_size, batches, gpu);
             }
             if (!are_outputs_on_device)
             {
+                // gpu.DtoH(inout, d_input, total_elements);
                 gpu.DtoH(inout, &d_input_reversed_tmp[0], total_elements); // TODO: will cause illegal memory during concurrent batch ntt
                 // cudaMemcpyAsync(inout, &d_input_reversed_tmp[0], input_size_bytes, cudaMemcpyDeviceToHost, gpu);
             }
-            gpu.sync();  // TODO: will cause illegal memory during concurrent batch ntt
+            // gpu.select();
+            gpu.sync(); // TODO: will cause illegal memory during concurrent batch ntt
         }
         catch (const cuda_error &e)
         {
