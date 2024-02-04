@@ -1,5 +1,10 @@
 #pragma once
 # include <util/rusterror.h>
+
+
+extern "C"
+RustError list_devices_info();
+
 # include <ntt/ntt.h>
 # include <ff/goldilocks.hpp>
 # include <util/device_context.cuh>

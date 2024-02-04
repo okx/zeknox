@@ -3,7 +3,7 @@ pub mod types;
 
 extern "C" {
 
-    fn cuda_available() -> bool;
+    fn list_devices_info() -> error::Error;
 
     fn compute_ntt(
         device_id: usize,
@@ -133,8 +133,8 @@ pub fn goldilocks_exp_rust(a: &mut u64, r: &mut u32) -> u64 {
     result
 }
 
-pub fn check_cuda_available() -> bool {
-    unsafe { cuda_available() }
+pub fn list_devices_info_rs()  {
+    unsafe { list_devices_info(); }
 }
 
 pub fn ntt_batch<T>(
