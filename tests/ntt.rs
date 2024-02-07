@@ -13,7 +13,7 @@ fn random_fr() -> u64 {
     fr % 0xffffffff00000001
 }
 
-const DEFAULT_GPU: usize = 1;
+const DEFAULT_GPU: usize = 0;
 
 
 #[test]
