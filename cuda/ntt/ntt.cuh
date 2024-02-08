@@ -57,11 +57,11 @@ namespace ntt
      * @param logn log(n).
      * @param batch_size the size of the batch.
      */
-    void reverse_order_batch(fr_t *arr, fr_t *arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
+    void reverse_order_batch(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
     {
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
-        reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, arr_reversed, n, logn, batch_size);
+        reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
     }
 
     void NTT_internal(fr_t *d_inout, uint32_t lg_domain_size,
@@ -293,21 +293,20 @@ namespace ntt
             int input_size_bytes = total_elements * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{total_elements, gpu};
-            dev_ptr_t<fr_t> d_input_reversed_tmp{total_elements, gpu};
 
             gpu.HtoD(&d_input[0], inout, total_elements);
             if (direction == Direction::inverse)
             {
-                reverse_order_batch(d_input, &d_input_reversed_tmp[0], size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
             }
-            ntt_inplace_batch_template(direction == Direction::inverse ? d_input_reversed_tmp : d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
             if (direction == Direction::forward)
             {
-                reverse_order_batch(d_input, &d_input_reversed_tmp[0], size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
             }
             if (!are_outputs_on_device)
             {
-                gpu.DtoH(inout, &d_input_reversed_tmp[0], total_elements);
+                gpu.DtoH(inout, &d_input[0], total_elements);
                   }
             gpu.sync(); 
         }
