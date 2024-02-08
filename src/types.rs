@@ -17,3 +17,27 @@ pub enum NTTType {
     Standard = 0,
     Coset = 1,
 }
+
+#[repr(C)]
+pub struct NTTConfig {
+    pub batches: u32,
+    /**< The number of NTTs to compute. Default value: 1. */
+    pub order: NTTInputOutputOrder,
+    /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value:
+     *   `InputOutputOrder::NN`. */
+    pub ntt_type: NTTType,
+    pub are_inputs_on_device: bool, //**< True if inputs are on device and false if they're on host. Default value: false.
+    pub are_outputs_on_device: bool, //**< If true, output is preserved on device, otherwise on host. Default value: false.
+}
+
+impl Default for NTTConfig {
+    fn default() -> Self {
+        Self {
+            batches: 1,
+            order: NTTInputOutputOrder::NN,
+            ntt_type: NTTType::Standard,
+            are_inputs_on_device: false,
+            are_outputs_on_device: false,
+        }
+    }
+}

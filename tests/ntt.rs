@@ -1,4 +1,6 @@
-use cryptography_cuda::{intt, init_twiddle_factors_rs, intt_batch, ntt_batch, types::*, ntt,get_number_of_gpus_rs};
+use cryptography_cuda::{
+    get_number_of_gpus_rs, init_twiddle_factors_rs, intt, intt_batch, ntt, ntt_batch, types::*,
+};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
@@ -14,7 +16,6 @@ fn random_fr() -> u64 {
 }
 
 const DEFAULT_GPU: usize = 0;
-
 
 #[test]
 fn test_ntt_intt_gl64_self_consistency() {
@@ -90,7 +91,7 @@ fn test_ntt_batch_gl64_consistency_with_plonky2() {
     gpu_buffer.extend(v2.iter());
     ntt_batch(
         DEFAULT_GPU,
-        &mut gpu_buffer,
+        gpu_buffer.as_mut_ptr(),
         NTTInputOutputOrder::NN,
         2,
         lg_domain_size,
@@ -143,7 +144,7 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
     // gpu_buffer.extend(v2.iter());
     ntt_batch(
         DEFAULT_GPU,
-        &mut gpu_buffer,
+        gpu_buffer.as_mut_ptr(),
         NTTInputOutputOrder::NN,
         1,
         lg_domain_size,
@@ -151,13 +152,12 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
 
     intt_batch(
         DEFAULT_GPU,
-        &mut gpu_buffer,
+        gpu_buffer.as_mut_ptr(),
         NTTInputOutputOrder::NN,
         1,
         lg_domain_size,
     );
     assert_eq!(v1, gpu_buffer);
-
 }
 
 #[test]
@@ -176,7 +176,7 @@ fn test_intt_batch_gl64_consistency_with_plonky2() {
 
     intt_batch(
         DEFAULT_GPU,
-        &mut gpu_buffer,
+        gpu_buffer.as_mut_ptr(),
         NTTInputOutputOrder::NN,
         batches,
         lg_domain_size,

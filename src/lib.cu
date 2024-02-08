@@ -60,14 +60,11 @@ extern "C"
 extern "C"
 #endif
     RustError
-    compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size, uint32_t batch_size,
-                        Ntt_Types::InputOutputOrder ntt_order,
-                        Ntt_Types::Direction ntt_direction,
-                        Ntt_Types::Type ntt_type)
+    compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,  
+                        Ntt_Types::Direction ntt_direction, Ntt_Types::NTTConfig cfg)
 {
     auto &gpu = select_gpu(device_id);
-    return ntt::Batch(gpu, inout, lg_domain_size, batch_size,
-                      ntt_order, ntt_direction, ntt_type, false);
+    return ntt::Batch(gpu, inout, lg_domain_size, ntt_direction, cfg);
 }
 
 #if defined(EXPOSE_C_INTERFACE)

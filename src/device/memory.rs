@@ -113,6 +113,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         );
         let size = size_of::<T>() * self.len();
         if size != 0 {
+            println!("start copy to device");
             unsafe {
                 cudaMemcpy(
                     self.as_mut_ptr() as *mut c_void,
@@ -131,6 +132,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
             Self::Device(_) => {}
             Self::Host(_) => panic!("Need device memory to copy from, and not host"),
         };
+        println!("self.len: {:?}, src len {:?}", self.len(), val.len());
         assert!(
             self.len() == val.len(),
             "destination and source slices have different lengths"
@@ -244,12 +246,12 @@ impl<'a, T> Drop for HostOrDeviceSlice<'a, T> {
                 if s.is_empty() {
                     return;
                 }
-
-                unsafe {
-                    cudaFree(s.as_mut_ptr() as *mut c_void)
-                        .wrap()
-                        .unwrap();
-                }
+                // CUDA code already free
+                // unsafe {
+                //     cudaFree(s.as_mut_ptr() as *mut c_void)
+                //         .wrap()
+                //         .unwrap();
+                // }
             }
             Self::Host(_) => {}
         }

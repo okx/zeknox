@@ -46,10 +46,9 @@ RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                 Ntt_Types::Type ntt_type);
 
 extern "C"
-RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size, uint32_t batch_size,
-                Ntt_Types::InputOutputOrder ntt_order,
+RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size, 
                 Ntt_Types::Direction ntt_direction,
-                Ntt_Types::Type ntt_type);
+                Ntt_Types::NTTConfig cfg);
 
 extern "C"
 RustError init_twiddle_factors(size_t device_id,size_t lg_n);

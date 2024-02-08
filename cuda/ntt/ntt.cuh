@@ -260,13 +260,10 @@ namespace ntt
      * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
      * \param direction, direction of NTT, farward, or inverse, default is farward
      * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
-     * \param coset_ext_pow coset_ext_pow
      * \param are_outputs_on_device
      */
     // static
-    RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, uint32_t batches,
-                    InputOutputOrder order, Direction direction,
-                    Type type, bool are_inputs_on_device, bool are_outputs_on_device = false, bool coset_ext_pow = false)
+    RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, Direction direction, NTTConfig cfg)
     {
         printf("inside batch ntt \n");
         if (lg_domain_size == 0)
@@ -290,11 +287,11 @@ namespace ntt
                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
             }
 
-            size_t total_elements = size * batches;
+            size_t total_elements = size * cfg.batches;
             int input_size_bytes = total_elements * sizeof(fr_t);
 
-            dev_ptr_t<fr_t> d_input{total_elements, gpu, false};
-            if(are_inputs_on_device) {
+            dev_ptr_t<fr_t> d_input{total_elements, gpu, false, false};
+            if(cfg.are_inputs_on_device) {
                 d_input.set_device_ptr(inout);
             } else {
                 d_input.alloc();
@@ -304,14 +301,14 @@ namespace ntt
             
             if (direction == Direction::inverse)
             {
-                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, false, nullptr, gpu);
             if (direction == Direction::forward)
             {
-                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            if (!are_outputs_on_device)
+            if (!cfg.are_outputs_on_device)
             {
                 gpu.DtoH(inout, &d_input[0], total_elements);
             }
