@@ -49,7 +49,7 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
 {
 
     int task = blockIdx.x;
-    int chunks = n / (blockDim.x * 2);
+    int chunks = n / (blockDim.x * 2);  // how many chunks within one NTT
 
     if (task < max_task)
     {
@@ -59,10 +59,10 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
 
         if (l < loop_limit)
         {
-            uint32_t ntw_i = task % chunks;
+            uint32_t ntw_i = task % chunks; // chunk index of the current NTT
 
-            uint32_t shift_s = 1 << s;
-            uint32_t shift2_s = 1 << (s + 1);
+            uint32_t shift_s = 1 << s;  // offset to j, 
+            uint32_t shift2_s = 1 << (s + 1);  // num of continuous elements access
             uint32_t n_twiddles_div = n_twiddles >> (s + 1);
 
             l = ntw_i * blockDim.x + l; // to l from chunks to full
