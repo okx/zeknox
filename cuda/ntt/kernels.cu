@@ -7,6 +7,9 @@
 #include <cooperative_groups.h>
 #include <util/sharedmem.cuh>
 
+#define BLOCK_DIM 64
+
+
 __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
     // printf("inside kernel, reverse_order_kernel \n");
@@ -16,14 +19,45 @@ __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint3
         int idx = threadId % n;
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
-        //Check to ensure that the larger index swaps with the smaller one
+        // Check to ensure that the larger index swaps with the smaller one
         if(idx > idx_reversed){
-            //Swap with temp
+            // Swap with temp
             fr_t temp = arr[batch_idx * n + idx];
             arr[batch_idx * n + idx] = arr[batch_idx * n + idx_reversed];
             arr[batch_idx * n + idx_reversed] = temp;
         }
 
+    }
+}
+
+__global__ void transpose(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t batch_size, uint32_t blocks_per_row)
+{
+    // We use blocks for coalesce memory efficiency improvement
+	__shared__ float block[BLOCK_DIM][BLOCK_DIM+1];
+
+    // Get indexes
+    int j_idx_block = blockIdx.x % blocks_per_row;
+    int j_idx = j_idx_block * BLOCK_DIM + (threadIdx.x*8);
+
+    int i_idx_block = blockIdx.x / blocks_per_row;
+    int i_idx = i_idx_block * BLOCK_DIM + threadIdx.y;
+    
+	// read the matrix tile into shared memory in its transposed position
+    for(int i = 0; i < 8; i++){
+        if((i_idx < batch_size) && (j_idx < n)){
+            block[(8*threadIdx.x)+i][threadIdx.y] = in_arr[i_idx][j_idx+i];
+        }
+    }
+
+    // synchronise to ensure all writes to block[][] have completed
+	__syncthreads();
+
+    i_idx = 
+	// write the transposed matrix tile to global memory (out_arr) in linear order
+	for(int i = 0; i < 8; i++){
+        if((i_idx < n) && (j_idx < batch_size)){
+            out_arr[j_idx+i][i_idx] = block[(8*threadIdx.x)+i][threadIdx.y];
+        }
     }
 }
 
