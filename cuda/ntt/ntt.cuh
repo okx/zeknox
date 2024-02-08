@@ -198,10 +198,10 @@ namespace ntt
     RustError InitTwiddleFactors(const gpu_t &gpu, size_t lg_domain_size)
     {
         gpu.select();
-
+        // printf("start init twiddle factors \n");
         size_t size = (size_t)1 << lg_domain_size;
-        dev_ptr_t<fr_t> twiddles_forward{size, gpu, true};
-        dev_ptr_t<fr_t> twiddles_inverse{size, gpu, true};
+        dev_ptr_t<fr_t> twiddles_forward{size, gpu, true, true};
+        dev_ptr_t<fr_t> twiddles_inverse{size, gpu, true, true};
         fill_twiddle_factors_array(&twiddles_forward[0], size, fr_t::omega(lg_domain_size), gpu);
         all_gpus_twiddle_forward_arr[gpu.id()][lg_domain_size] = twiddles_forward;
         fill_twiddle_factors_array(&twiddles_inverse[0], size, fr_t::omega_inv(lg_domain_size), gpu);
@@ -233,7 +233,7 @@ namespace ntt
             gpu.select();
 
             size_t domain_size = (size_t)1 << lg_domain_size;
-            dev_ptr_t<fr_t> d_inout{domain_size, gpu};
+            dev_ptr_t<fr_t> d_inout{domain_size, gpu, true};
             gpu.HtoD(&d_inout[0], inout, domain_size);
             NTT_internal(&d_inout[0], lg_domain_size, order, direction, type, gpu,
                          coset_ext_pow);
@@ -260,24 +260,22 @@ namespace ntt
      * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
      * \param direction, direction of NTT, farward, or inverse, default is farward
      * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
-     * \param coset_ext_pow coset_ext_pow
      * \param are_outputs_on_device
      */
     // static
-    RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, uint32_t batches,
-                    InputOutputOrder order, Direction direction,
-                    Type type, bool coset_ext_pow = false, bool are_outputs_on_device = false)
+    RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, Direction direction, NTTConfig cfg)
     {
+        // printf("inside batch ntt \n");
         if (lg_domain_size == 0)
             return RustError{cudaSuccess};
 
         try
         {
+
             gpu.select();
 
             size_t size = (size_t)1 << lg_domain_size;
             uint32_t n_twiddles = size;
-
 
             fr_t *d_twiddle;
             if (direction == Direction::inverse)
@@ -289,26 +287,39 @@ namespace ntt
                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
             }
 
-            size_t total_elements = size * batches;
+            size_t total_elements = size * cfg.batches;
             int input_size_bytes = total_elements * sizeof(fr_t);
 
-            dev_ptr_t<fr_t> d_input{total_elements, gpu};
+            dev_ptr_t<fr_t> d_input{
+                total_elements,
+                gpu,
+                cfg.are_inputs_on_device? false: true, // if inputs are already on device, no need to alloc input memory
+                cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
+            };
+            if (cfg.are_inputs_on_device)
+            {
+                d_input.set_device_ptr(inout);
+            }
+            else
+            {
+                d_input.alloc();
+                gpu.HtoD(&d_input[0], inout, total_elements);
+            }
 
-            gpu.HtoD(&d_input[0], inout, total_elements);
             if (direction == Direction::inverse)
             {
-                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, batches, direction == Direction::inverse, false, nullptr, gpu);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, false, nullptr, gpu);
             if (direction == Direction::forward)
             {
-                reverse_order_batch(d_input, size, lg_domain_size, batches, gpu);
+                reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            if (!are_outputs_on_device)
+            if (!cfg.are_outputs_on_device)
             {
                 gpu.DtoH(inout, &d_input[0], total_elements);
-                  }
-            gpu.sync(); 
+            }
+            gpu.sync();
         }
         catch (const cuda_error &e)
         {

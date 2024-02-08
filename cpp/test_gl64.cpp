@@ -104,7 +104,13 @@ TEST(gl64, fft_gpu_self_consistency)
     auto start_time = std::chrono::high_resolution_clock::now();
 
     init_twiddle_factors(0, lg_n_size);
-    compute_batched_ntt(device_id, gpu_data_in, lg_n_size, 1, Ntt_Types::InputOutputOrder::NN, Ntt_Types::Direction::forward, Ntt_Types::Type::standard);
+
+    Ntt_Types::NTTConfig cfg{
+        batches: 1,
+        order: Ntt_Types::InputOutputOrder::NN,
+        type: Ntt_Types::Type::standard,
+    };
+    compute_batched_ntt(device_id, gpu_data_in, lg_n_size, Ntt_Types::Direction::forward, cfg);
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
     long long microseconds = duration.count();

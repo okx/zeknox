@@ -1,4 +1,7 @@
-use cryptography_cuda::{intt, init_twiddle_factors_rs, intt_batch, ntt_batch, types::*, ntt,get_number_of_gpus_rs};
+use cryptography_cuda::{device::memory::HostOrDeviceSlice, device::stream::CudaStream};
+use cryptography_cuda::{
+    get_number_of_gpus_rs, init_twiddle_factors_rs, intt, intt_batch, ntt, ntt_batch, types::*,
+};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
@@ -14,7 +17,6 @@ fn random_fr() -> u64 {
 }
 
 const DEFAULT_GPU: usize = 0;
-
 
 #[test]
 fn test_ntt_intt_gl64_self_consistency() {
@@ -81,53 +83,50 @@ fn test_intt_gl64_consistency_with_plonky2() {
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
     let lg_domain_size: usize = 4;
     init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
-    // let domain_size = 1usize << lg_domain_size;
+    let domain_size = 1usize << lg_domain_size;
 
-    // let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-    // let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
-    // let mut gpu_buffer = v1.clone();
-    // gpu_buffer.extend(v2.iter());
-    // ntt_batch(
-    //     DEFAULT_GPU,
-    //     &mut gpu_buffer,
-    //     NTTInputOutputOrder::NN,
-    //     2,
-    //     lg_domain_size,
-    // );
+    let mut gpu_buffer = v1.clone();
+    gpu_buffer.extend(v2.iter());
 
-    // let plonky2_ntt_input1 = v1.clone();
-    // let coeffs1 = plonky2_ntt_input1
-    //     .iter()
-    //     .map(|i| GoldilocksField::from_canonical_u64(*i))
-    //     .collect::<Vec<GoldilocksField>>();
-    // let coefficients1 = PolynomialCoeffs { coeffs: coeffs1 };
-    // let points1 = fft(coefficients1.clone());
-    // let cpu_results1: Vec<u64> = points1
-    //     .values
-    //     .iter()
-    //     .map(|x| x.to_canonical_u64())
-    //     .collect();
+    let mut cfg = NTTConfig::default();
+    cfg.batches = 2;
+    ntt_batch(DEFAULT_GPU, gpu_buffer.as_mut_ptr(), lg_domain_size, cfg);
 
-    // assert_eq!(gpu_buffer[0..1 << lg_domain_size], cpu_results1);
+    let plonky2_ntt_input1 = v1.clone();
+    let coeffs1 = plonky2_ntt_input1
+        .iter()
+        .map(|i| GoldilocksField::from_canonical_u64(*i))
+        .collect::<Vec<GoldilocksField>>();
+    let coefficients1 = PolynomialCoeffs { coeffs: coeffs1 };
+    let points1 = fft(coefficients1.clone());
+    let cpu_results1: Vec<u64> = points1
+        .values
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect();
 
-    // let plonky2_ntt_input2 = v2.clone();
-    // let coeffs2 = plonky2_ntt_input2
-    //     .iter()
-    //     .map(|i| GoldilocksField::from_canonical_u64(*i))
-    //     .collect::<Vec<GoldilocksField>>();
-    // let coefficients2 = PolynomialCoeffs { coeffs: coeffs2 };
-    // let points2 = fft(coefficients2.clone());
-    // let cpu_results2: Vec<u64> = points2
-    //     .values
-    //     .iter()
-    //     .map(|x| x.to_canonical_u64())
-    //     .collect();
+    assert_eq!(gpu_buffer[0..1 << lg_domain_size], cpu_results1);
 
-    // assert_eq!(
-    //     gpu_buffer[1 << lg_domain_size..(1 << lg_domain_size) * 2],
-    //     cpu_results2
-    // );
+    let plonky2_ntt_input2 = v2.clone();
+    let coeffs2 = plonky2_ntt_input2
+        .iter()
+        .map(|i| GoldilocksField::from_canonical_u64(*i))
+        .collect::<Vec<GoldilocksField>>();
+    let coefficients2 = PolynomialCoeffs { coeffs: coeffs2 };
+    let points2 = fft(coefficients2.clone());
+    let cpu_results2: Vec<u64> = points2
+        .values
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect();
+
+    assert_eq!(
+        gpu_buffer[1 << lg_domain_size..(1 << lg_domain_size) * 2],
+        cpu_results2
+    );
 }
 
 #[test]
@@ -140,24 +139,22 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
     let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
     let mut gpu_buffer = v1.clone();
-    // gpu_buffer.extend(v2.iter());
+
+    let mut cfg = NTTConfig::default();
     ntt_batch(
         DEFAULT_GPU,
-        &mut gpu_buffer,
-        NTTInputOutputOrder::NN,
-        1,
+        gpu_buffer.as_mut_ptr(),
         lg_domain_size,
+        cfg.clone(),
     );
 
     intt_batch(
         DEFAULT_GPU,
-        &mut gpu_buffer,
-        NTTInputOutputOrder::NN,
-        1,
+        gpu_buffer.as_mut_ptr(),
         lg_domain_size,
+        cfg.clone(),
     );
     assert_eq!(v1, gpu_buffer);
-
 }
 
 #[test]
@@ -174,13 +171,9 @@ fn test_intt_batch_gl64_consistency_with_plonky2() {
     let mut gpu_buffer = input1.clone();
     gpu_buffer.extend(input2.iter());
 
-    intt_batch(
-        DEFAULT_GPU,
-        &mut gpu_buffer,
-        NTTInputOutputOrder::NN,
-        batches,
-        lg_domain_size,
-    );
+    let mut cfg = NTTConfig::default();
+    cfg.batches = batches;
+    intt_batch(DEFAULT_GPU, gpu_buffer.as_mut_ptr(), lg_domain_size, cfg);
 
     let plonky2_intt_input1 = input1.clone();
     let values1 = plonky2_intt_input1
@@ -214,4 +207,31 @@ fn test_intt_batch_gl64_consistency_with_plonky2() {
         gpu_buffer[1 << lg_domain_size..(1 << lg_domain_size) * 2],
         cpu_results2
     );
+}
+
+#[test]
+fn test_ntt_on_device() {
+    let lg_domain_size = 10;
+    let domain_size = 1usize << lg_domain_size;
+
+    init_twiddle_factors_rs(0, lg_domain_size);
+
+    let scalars: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+
+    let mut device_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(domain_size).unwrap();
+    let ret = device_data.copy_from_host(&scalars);
+
+    let mut cfg = NTTConfig::default();
+    cfg.are_inputs_on_device = true;
+    cfg.are_outputs_on_device = true;
+    ntt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
+    intt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
+
+    let mut host_output = vec![0; domain_size];
+    // println!("start copy to host");
+    device_data
+        .copy_to_host(host_output.as_mut_slice())
+        .unwrap();
+    assert_eq!(host_output, scalars.as_slice());
 }

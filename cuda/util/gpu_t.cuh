@@ -448,8 +448,10 @@ public:
     T *d_ptr;
 
 public:
-    int gpu_id;
+    // int gpu_id;
     char *name;
+    size_t n_elements;
+    stream_t& stream;
     bool manual_drop;
     dev_ptr_t(size_t nelems) : d_ptr(nullptr)
     {
@@ -459,24 +461,39 @@ public:
             CUDA_OK(cudaMalloc(&d_ptr, n * sizeof(T)));
         }
     }
-    dev_ptr_t(size_t nelems, stream_t &s, bool manual_drop = false) : d_ptr(nullptr), gpu_id(s.gpu_id), manual_drop(manual_drop)
+    dev_ptr_t(size_t nelems, stream_t &s, bool alloc,  bool manual_drop = false) : d_ptr(nullptr), stream(s), manual_drop(manual_drop)
     {
-        // printf("construct pointer named: %s, on device: %d\n", name, gpu_id);
+        // printf("construct pointer named: %s, on device: %d\n", name, s.gpu_id);
         // manual_drop=false;
         if (nelems)
         {
-            size_t n = (nelems + WARP_SZ - 1) & ((size_t)0 - WARP_SZ); // make n multiples of 32
-            CUDA_OK(cudaMallocAsync(&d_ptr, n * sizeof(T), s));
+            n_elements = (nelems + WARP_SZ - 1) & ((size_t)0 - WARP_SZ); // make n multiples of 32
+
+            if (alloc) {
+                this->alloc();
+            }
+        }
+
+    }
+    dev_ptr_t(const dev_ptr_t &r) = delete; // Copy constructor explicitly deleted
+    void set_device_ptr(T* ptr) {
+        d_ptr = ptr;
+    }
+    void alloc()
+    {
+        if (n_elements)
+        {
+            // printf("alloc %d elements \n", n_elements);
+            CUDA_OK(cudaMallocAsync(&d_ptr, n_elements * sizeof(T), stream));
         }
     }
-    dev_ptr_t(const dev_ptr_t &r) = delete;            // Copy constructor explicitly deleted
     dev_ptr_t &operator=(const dev_ptr_t &r) = delete; // Copy assignment operator explicitly deleted
     ~dev_ptr_t()
     {
 
         if (d_ptr && !manual_drop)
         {
-            // printf("drop device pointer, named: %s, on device: %d\n", name, gpu_id);
+            // printf("drop device pointer, named: %s, on device: %d\n", name, stream.gpu_id);
             cudaFree((void *)d_ptr);
         }
     }
