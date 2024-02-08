@@ -246,12 +246,12 @@ impl<'a, T> Drop for HostOrDeviceSlice<'a, T> {
                 if s.is_empty() {
                     return;
                 }
-                // CUDA code already free
-                // unsafe {
-                //     cudaFree(s.as_mut_ptr() as *mut c_void)
-                //         .wrap()
-                //         .unwrap();
-                // }
+                // free the cuda memory
+                unsafe {
+                    cudaFree(s.as_mut_ptr() as *mut c_void)
+                        .wrap()
+                        .unwrap();
+                }
             }
             Self::Host(_) => {}
         }
