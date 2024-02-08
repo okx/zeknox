@@ -1,6 +1,6 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{init_twiddle_factors_rust, ntt_batch, types::NTTInputOutputOrder, NTT};
+use cryptography_cuda::{init_twiddle_factors_rs, ntt_batch, types::NTTInputOutputOrder, ntt};
 use rand::random;
 
 const DEFAULT_GPU: usize = 0;
@@ -15,7 +15,7 @@ fn bench_gpu_ntt(c: &mut Criterion) {
     let mut group = c.benchmark_group("NTT");
 
     for log_n in LOG_NTT_SIZES.clone() {
-        init_twiddle_factors_rust(0, log_n as usize);
+        init_twiddle_factors_rs(0, log_n as usize);
     }
     for log_ntt_size in LOG_NTT_SIZES {
         let domain_size = 1usize << log_ntt_size;

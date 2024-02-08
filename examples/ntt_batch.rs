@@ -1,5 +1,5 @@
 extern crate criterion;
-use cryptography_cuda::{init_twiddle_factors_rust, ntt_batch, types::NTTInputOutputOrder};
+use cryptography_cuda::{init_twiddle_factors_rs, ntt_batch, types::NTTInputOutputOrder};
 use rand::random;
 
 const DEFAULT_GPU: usize = 0;
@@ -27,7 +27,7 @@ fn main() {
     let start = std::time::Instant::now();
     println!("total time spend init context: {:?}", start.elapsed());
     let log_ntt_size = 19;
-    init_twiddle_factors_rust(0, log_ntt_size);
+    init_twiddle_factors_rs(0, log_ntt_size);
 
     let batches = 10;
 

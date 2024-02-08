@@ -1,6 +1,6 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{types::NTTInputOutputOrder, NTT};
+use cryptography_cuda::{types::NTTInputOutputOrder, ntt};
 use rand::random;
 
 const DEFAULT_GPU: usize = 0;
@@ -19,7 +19,7 @@ fn bench_gpu_ntt(c: &mut Criterion) {
 
         group.sample_size(20).bench_function(
             &format!("GoldilocksField NTT of size 2^{}", log_ntt_size),
-            |b| b.iter(|| NTT(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN)),
+            |b| b.iter(|| ntt(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN)),
         );
     }
 }

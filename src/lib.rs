@@ -4,6 +4,8 @@ pub mod types;
 extern "C" {
 
     fn list_devices_info() -> error::Error;
+    fn cuda_available() -> bool;
+    fn get_number_of_gpus(ngpus: *mut usize) -> error::Error;
 
     fn compute_ntt(
         device_id: usize,
@@ -137,6 +139,16 @@ pub fn list_devices_info_rs()  {
     unsafe { list_devices_info(); }
 }
 
+pub fn get_number_of_gpus_rs() -> usize {
+    let mut nums = 0;
+    let err = unsafe { unsafe { get_number_of_gpus(&mut nums) } };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+    return nums;
+}
+
 pub fn ntt_batch<T>(
     device_id: usize,
     inout: &mut [T],
@@ -185,8 +197,7 @@ pub fn intt_batch<T>(
     }
 }
 
-
-pub fn init_twiddle_factors_rust(device_id: usize, lg_n: usize) {
+pub fn init_twiddle_factors_rs(device_id: usize, lg_n: usize) {
     let err = unsafe { init_twiddle_factors(device_id, lg_n) };
 
     if err.code != 0 {
@@ -195,7 +206,7 @@ pub fn init_twiddle_factors_rust(device_id: usize, lg_n: usize) {
 }
 
 #[allow(non_snake_case)]
-pub fn NTT<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
+pub fn ntt<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
     let len = inout.len();
     if (len & (len - 1)) != 0 {
         panic!("inout.len() is not power of 2");
@@ -218,7 +229,7 @@ pub fn NTT<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrd
 }
 
 #[allow(non_snake_case)]
-pub fn iNTT<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
+pub fn intt<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
     let len = inout.len();
     if (len & (len - 1)) != 0 {
         panic!("inout.len() is not power of 2");

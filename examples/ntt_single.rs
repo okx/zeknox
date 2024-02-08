@@ -1,4 +1,4 @@
-use cryptography_cuda::{iNTT, init_twiddle_factors_rust, ntt_batch, types::*, NTT};
+use cryptography_cuda::{intt, init_twiddle_factors_rs, ntt_batch, types::*, ntt};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{
     fft::fft,
@@ -34,7 +34,7 @@ fn gpu_fft(log_ntt_size: usize) {
     let v: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
     let mut gpu_buffer = v.clone();
     let start = std::time::Instant::now();
-    NTT(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
+    ntt(DEFAULT_GPU, &mut gpu_buffer, NTTInputOutputOrder::NN);
     println!("total time spend gpu: {:?}", start.elapsed());
 }
 
@@ -42,7 +42,7 @@ fn main() {
     let start = std::time::Instant::now();
     println!("total time spend init context: {:?}", start.elapsed());
     let log_ntt_size = 19;
-    init_twiddle_factors_rust(0, log_ntt_size);
+    init_twiddle_factors_rs(0, log_ntt_size);
 
     gpu_fft(2);
 
