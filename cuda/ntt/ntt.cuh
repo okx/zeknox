@@ -198,7 +198,7 @@ namespace ntt
     RustError InitTwiddleFactors(const gpu_t &gpu, size_t lg_domain_size)
     {
         gpu.select();
-        printf("start init twiddle factors \n");
+        // printf("start init twiddle factors \n");
         size_t size = (size_t)1 << lg_domain_size;
         dev_ptr_t<fr_t> twiddles_forward{size, gpu, true, true};
         dev_ptr_t<fr_t> twiddles_inverse{size, gpu, true, true};
@@ -265,7 +265,7 @@ namespace ntt
     // static
     RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, Direction direction, NTTConfig cfg)
     {
-        printf("inside batch ntt \n");
+        // printf("inside batch ntt \n");
         if (lg_domain_size == 0)
             return RustError{cudaSuccess};
 
