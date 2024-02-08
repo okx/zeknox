@@ -1,5 +1,6 @@
 pub mod error;
 pub mod types;
+pub mod device;
 
 extern "C" {
 
