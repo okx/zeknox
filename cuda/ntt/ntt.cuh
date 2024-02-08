@@ -290,15 +290,22 @@ namespace ntt
             size_t total_elements = size * cfg.batches;
             int input_size_bytes = total_elements * sizeof(fr_t);
 
-            dev_ptr_t<fr_t> d_input{total_elements, gpu, false, false};
-            if(cfg.are_inputs_on_device) {
+            dev_ptr_t<fr_t> d_input{
+                total_elements,
+                gpu,
+                cfg.are_inputs_on_device? false: true, // if inputs are already on device, no need to alloc input memory
+                cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
+            };
+            if (cfg.are_inputs_on_device)
+            {
                 d_input.set_device_ptr(inout);
-            } else {
+            }
+            else
+            {
                 d_input.alloc();
                 gpu.HtoD(&d_input[0], inout, total_elements);
             }
 
-            
             if (direction == Direction::inverse)
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);

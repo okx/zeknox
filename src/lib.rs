@@ -152,12 +152,9 @@ pub fn get_number_of_gpus_rs() -> usize {
 pub fn ntt_batch<T>(
     device_id: usize,
     inout: *mut T, // &mut [T],
-    order: types::NTTInputOutputOrder,
-    batch_size: u32,
     log_n_size: usize,
+    cfg: NTTConfig,
 ) {
-    let mut cfg = NTTConfig::default();
-    cfg.batches = batch_size;
     let err = unsafe {
         compute_batched_ntt(
             device_id,
@@ -176,17 +173,13 @@ pub fn ntt_batch<T>(
 
 pub fn intt_batch<T>(
     device_id: usize,
-    inout: *mut T, // &mut [T],
-    order: types::NTTInputOutputOrder,
-    batch_size: u32,
+    inout: *mut T,
     log_n_size: usize,
+    cfg: NTTConfig,
 ) {
-    let mut cfg = NTTConfig::default();
-    cfg.batches = batch_size;
     let err = unsafe {
         compute_batched_ntt(
             device_id,
-            // inout.as_mut_ptr() as *mut core::ffi::c_void,
             inout as *mut core::ffi::c_void,
             log_n_size,
             types::NTTDirection::Inverse,

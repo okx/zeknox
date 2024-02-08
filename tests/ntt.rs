@@ -89,12 +89,14 @@ fn test_ntt_batch_gl64_consistency_with_plonky2() {
 
     let mut gpu_buffer = v1.clone();
     gpu_buffer.extend(v2.iter());
+
+    let mut cfg = NTTConfig::default();
+    cfg.batches = 2;
     ntt_batch(
         DEFAULT_GPU,
         gpu_buffer.as_mut_ptr(),
-        NTTInputOutputOrder::NN,
-        2,
         lg_domain_size,
+        cfg
     );
 
     let plonky2_ntt_input1 = v1.clone();
@@ -141,21 +143,20 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
     let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
     let mut gpu_buffer = v1.clone();
-    // gpu_buffer.extend(v2.iter());
+
+    let mut cfg = NTTConfig::default();
     ntt_batch(
         DEFAULT_GPU,
         gpu_buffer.as_mut_ptr(),
-        NTTInputOutputOrder::NN,
-        1,
         lg_domain_size,
+        cfg.clone()
     );
 
     intt_batch(
         DEFAULT_GPU,
         gpu_buffer.as_mut_ptr(),
-        NTTInputOutputOrder::NN,
-        1,
         lg_domain_size,
+        cfg.clone()
     );
     assert_eq!(v1, gpu_buffer);
 }
@@ -174,12 +175,13 @@ fn test_intt_batch_gl64_consistency_with_plonky2() {
     let mut gpu_buffer = input1.clone();
     gpu_buffer.extend(input2.iter());
 
+    let mut cfg = NTTConfig::default();
+    cfg.batches = batches;
     intt_batch(
         DEFAULT_GPU,
         gpu_buffer.as_mut_ptr(),
-        NTTInputOutputOrder::NN,
-        batches,
         lg_domain_size,
+        cfg
     );
 
     let plonky2_intt_input1 = input1.clone();

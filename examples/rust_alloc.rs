@@ -41,13 +41,17 @@ fn main() {
     let mut device_data: HostOrDeviceSlice<'_, u64> = HostOrDeviceSlice::cuda_malloc(domain_size).unwrap();
     let ret = device_data.copy_from_host(&scalars);
 
-    ntt_batch(0, device_data.as_mut_ptr().into(), NTTInputOutputOrder::NN, 1, lg_domain_size);
+    let mut cfg = NTTConfig::default();
+    cfg.are_inputs_on_device = true;
+    cfg.are_outputs_on_device = true;
+    ntt_batch(0, device_data.as_mut_ptr().into(), lg_domain_size, cfg);
     // intt_batch(0, device_data.as_mut_ptr().into(), NTTInputOutputOrder::NN, 1, lg_domain_size);
 
     let mut output = vec![0;domain_size];
     println!("start copy to host");
     let host_result = device_data.copy_to_host(output.as_mut_slice()).unwrap();
-    println!("output: {:?}", output);
+    // println!("output: {:?}", output);
+    intt_batch(device_id, inout, order, batch_size, log_n_size)
     // assert_eq!(output, scalars.as_slice());
 
 

@@ -1,4 +1,6 @@
+
 #[repr(C)]
+#[derive(Debug, Clone)]
 pub enum NTTInputOutputOrder {
     NN = 0,
     NR = 1,
@@ -7,18 +9,21 @@ pub enum NTTInputOutputOrder {
 }
 
 #[repr(C)]
+#[derive(Debug, Clone)]
 pub enum NTTDirection {
     Forward = 0,
     Inverse = 1,
 }
 
 #[repr(C)]
+#[derive(Debug, Clone)]
 pub enum NTTType {
     Standard = 0,
     Coset = 1,
 }
 
 #[repr(C)]
+#[derive(Clone, Debug)]
 pub struct NTTConfig {
     pub batches: u32,
     /**< The number of NTTs to compute. Default value: 1. */
