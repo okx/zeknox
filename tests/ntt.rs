@@ -81,53 +81,53 @@ fn test_intt_gl64_consistency_with_plonky2() {
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
     let lg_domain_size: usize = 4;
     init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
-    // let domain_size = 1usize << lg_domain_size;
+    let domain_size = 1usize << lg_domain_size;
 
-    // let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-    // let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
-    // let mut gpu_buffer = v1.clone();
-    // gpu_buffer.extend(v2.iter());
-    // ntt_batch(
-    //     DEFAULT_GPU,
-    //     &mut gpu_buffer,
-    //     NTTInputOutputOrder::NN,
-    //     2,
-    //     lg_domain_size,
-    // );
+    let mut gpu_buffer = v1.clone();
+    gpu_buffer.extend(v2.iter());
+    ntt_batch(
+        DEFAULT_GPU,
+        &mut gpu_buffer,
+        NTTInputOutputOrder::NN,
+        2,
+        lg_domain_size,
+    );
 
-    // let plonky2_ntt_input1 = v1.clone();
-    // let coeffs1 = plonky2_ntt_input1
-    //     .iter()
-    //     .map(|i| GoldilocksField::from_canonical_u64(*i))
-    //     .collect::<Vec<GoldilocksField>>();
-    // let coefficients1 = PolynomialCoeffs { coeffs: coeffs1 };
-    // let points1 = fft(coefficients1.clone());
-    // let cpu_results1: Vec<u64> = points1
-    //     .values
-    //     .iter()
-    //     .map(|x| x.to_canonical_u64())
-    //     .collect();
+    let plonky2_ntt_input1 = v1.clone();
+    let coeffs1 = plonky2_ntt_input1
+        .iter()
+        .map(|i| GoldilocksField::from_canonical_u64(*i))
+        .collect::<Vec<GoldilocksField>>();
+    let coefficients1 = PolynomialCoeffs { coeffs: coeffs1 };
+    let points1 = fft(coefficients1.clone());
+    let cpu_results1: Vec<u64> = points1
+        .values
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect();
 
-    // assert_eq!(gpu_buffer[0..1 << lg_domain_size], cpu_results1);
+    assert_eq!(gpu_buffer[0..1 << lg_domain_size], cpu_results1);
 
-    // let plonky2_ntt_input2 = v2.clone();
-    // let coeffs2 = plonky2_ntt_input2
-    //     .iter()
-    //     .map(|i| GoldilocksField::from_canonical_u64(*i))
-    //     .collect::<Vec<GoldilocksField>>();
-    // let coefficients2 = PolynomialCoeffs { coeffs: coeffs2 };
-    // let points2 = fft(coefficients2.clone());
-    // let cpu_results2: Vec<u64> = points2
-    //     .values
-    //     .iter()
-    //     .map(|x| x.to_canonical_u64())
-    //     .collect();
+    let plonky2_ntt_input2 = v2.clone();
+    let coeffs2 = plonky2_ntt_input2
+        .iter()
+        .map(|i| GoldilocksField::from_canonical_u64(*i))
+        .collect::<Vec<GoldilocksField>>();
+    let coefficients2 = PolynomialCoeffs { coeffs: coeffs2 };
+    let points2 = fft(coefficients2.clone());
+    let cpu_results2: Vec<u64> = points2
+        .values
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect();
 
-    // assert_eq!(
-    //     gpu_buffer[1 << lg_domain_size..(1 << lg_domain_size) * 2],
-    //     cpu_results2
-    // );
+    assert_eq!(
+        gpu_buffer[1 << lg_domain_size..(1 << lg_domain_size) * 2],
+        cpu_results2
+    );
 }
 
 #[test]

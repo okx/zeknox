@@ -14,10 +14,13 @@ fn random_fr_n(n: usize) -> Vec<u64> {
 }
 
 fn main() {
-    let log_size = 10;
-    let size = 1 << log_size;
-    let scalars = HostOrDeviceSlice::Host(random_fr_n(size));
+    let log_ntt_size = 10;
+    let domain_size = 1usize << log_ntt_size;
 
-    let mut device_data: HostOrDeviceSlice<'_, u64> = HostOrDeviceSlice::cuda_malloc(size).unwrap();
-    // println!("device_data: {:?}", device_data);
+    let scalars: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    // let scalars = HostOrDeviceSlice::Host(random_fr_n(size));
+
+    let mut device_data: HostOrDeviceSlice<'_, u64> = HostOrDeviceSlice::cuda_malloc(domain_size).unwrap();
+    let ret = device_data.copy_from_host(&scalars);
+    println!("device_data: {:?}", ret);
 }

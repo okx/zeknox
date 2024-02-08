@@ -67,7 +67,7 @@ extern "C"
 {
     auto &gpu = select_gpu(device_id);
     return ntt::Batch(gpu, inout, lg_domain_size, batch_size,
-                      ntt_order, ntt_direction, ntt_type);
+                      ntt_order, ntt_direction, ntt_type, false);
 }
 
 #if defined(EXPOSE_C_INTERFACE)
