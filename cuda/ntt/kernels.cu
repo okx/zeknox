@@ -7,7 +7,7 @@
 #include <cooperative_groups.h>
 #include <util/sharedmem.cuh>
 
-__global__ void reverse_order_kernel(fr_t *arr, fr_t *arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
+__global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
     // printf("inside kernel, reverse_order_kernel \n");
     int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -16,8 +16,14 @@ __global__ void reverse_order_kernel(fr_t *arr, fr_t *arr_reversed, uint32_t n, 
         int idx = threadId % n;
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
-        // printf("index: %d, value: %lu \n", batch_idx * n + idx_reversed, arr_reversed[batch_idx * n + idx_reversed]);
-        arr_reversed[batch_idx * n + idx_reversed] = arr[batch_idx * n + idx];
+        //Check to ensure that the larger index swaps with the smaller one
+        if(idx > idx_reversed){
+            //Swap with temp
+            fr_t temp = arr[batch_idx * n + idx];
+            arr[batch_idx * n + idx] = arr[batch_idx * n + idx_reversed];
+            arr[batch_idx * n + idx_reversed] = temp;
+        }
+
     }
 }
 
@@ -49,7 +55,7 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
 {
 
     int task = blockIdx.x;
-    int chunks = n / (blockDim.x * 2);
+    int chunks = n / (blockDim.x * 2);  // how many chunks within one NTT
 
     if (task < max_task)
     {
@@ -59,10 +65,10 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
 
         if (l < loop_limit)
         {
-            uint32_t ntw_i = task % chunks;
+            uint32_t ntw_i = task % chunks; // chunk index of the current NTT
 
-            uint32_t shift_s = 1 << s;
-            uint32_t shift2_s = 1 << (s + 1);
+            uint32_t shift_s = 1 << s;  // offset to j, 
+            uint32_t shift2_s = 1 << (s + 1);  // num of continuous elements access
             uint32_t n_twiddles_div = n_twiddles >> (s + 1);
 
             l = ntw_i * blockDim.x + l; // to l from chunks to full
