@@ -77,6 +77,7 @@ fn main() {
     while i < domain_size {
         shifts.push(current);
         current = current * base;
+        i=i+1;
     }
     println!("total elapsted in shifts: {:?}, ", start.elapsed());
     let _ = pols.par_iter().map(|p| {
