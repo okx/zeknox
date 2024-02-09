@@ -77,16 +77,20 @@ fn main() {
     while i < domain_size {
         shifts.push(current);
         current = current * base;
-        i=i+1;
+        i = i + 1;
     }
     println!("total elapsted in shifts: {:?}, ", start.elapsed());
-    let _ = pols.par_iter().map(|p| {
-        let p_extended = p.lde(rate_bits);
-        let modified_poly: PolynomialCoeffs<GoldilocksField> =shifts.iter()
-            .zip(&p_extended.coeffs)
-            .map(|(&r, &c)| r * c)
-            .collect::<Vec<_>>()
-            .into();
-    }).collect::<Vec<()>>();
+    let _ = pols
+        .par_iter()
+        .map(|p| {
+            let p_extended = p.lde(rate_bits);
+            let modified_poly: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
+                .powers()
+                .zip(&p_extended.coeffs)
+                .map(|(r, &c)| r * c)
+                .collect::<Vec<_>>()
+                .into();
+        })
+        .collect::<Vec<()>>();
     println!("total data transform elapsted : {:?}, ", start.elapsed());
 }
