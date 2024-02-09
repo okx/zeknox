@@ -30,6 +30,14 @@ __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint3
     }
 }
 
+/**
+ * Fast transpose from NVIDIA. Takes nxm and returns mxn matrix.
+ * @param in_arr input array of type E (elements).
+ * @param out_arr output array of type E (elements).
+ * @param n column size of in_arr.
+ * @param batch_size row size of in_arr.
+ * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
+ */
 __global__ void transpose(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t batch_size, uint32_t blocks_per_row)
 {
     // We use blocks for coalesce memory efficiency improvement
@@ -41,7 +49,7 @@ __global__ void transpose(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t batc
 
     int i_idx_block = blockIdx.x / blocks_per_row;
     int i_idx = i_idx_block * BLOCK_DIM + threadIdx.y;
-    
+
 	// read the matrix tile into shared memory in its transposed position
     for(int i = 0; i < 8; i++){
         if((i_idx < batch_size) && (j_idx < n)){
