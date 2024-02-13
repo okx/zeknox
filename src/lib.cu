@@ -74,7 +74,17 @@ extern "C"
     init_twiddle_factors(size_t device_id, size_t lg_n)
 {
     auto &gpu = select_gpu(device_id);
-    return ntt::InitTwiddleFactors(gpu, lg_n);
+    return ntt::init_twiddle_factors(gpu, lg_n);
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+RustError init_coset(size_t device_id, size_t lg_n, fr_t coset_gen)
+{  
+    auto &gpu = select_gpu(device_id);
+    return ntt::init_coset(gpu, lg_n, coset_gen);
+
 }
 
 #endif

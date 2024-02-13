@@ -19,6 +19,8 @@ namespace ntt
     static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_forward_arr;
     static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_inverse_arr;
 
+    static fr_t *coset_ptr = nullptr;
+
 #ifndef __CUDA_ARCH__
     using namespace Ntt_Types;
 
@@ -195,7 +197,7 @@ namespace ntt
         return;
     }
 
-    RustError InitTwiddleFactors(const gpu_t &gpu, size_t lg_domain_size)
+    RustError init_twiddle_factors(const gpu_t &gpu, size_t lg_domain_size)
     {
         gpu.select();
         // printf("start init twiddle factors \n");
@@ -211,6 +213,20 @@ namespace ntt
 
         return RustError{cudaSuccess};
     }
+
+    RustError init_coset(const gpu_t &gpu, size_t lg_domain_size, fr_t coset_gen)
+    {
+        gpu.select();
+        // printf("start init coset \n");
+        size_t size = (size_t)1 << lg_domain_size;
+        dev_ptr_t<fr_t> d_coset{size, gpu, true, true};
+        fill_twiddle_factors_array(&d_coset[0], size, coset_gen, gpu);
+        coset_ptr = d_coset;
+        gpu.sync();
+
+        return RustError{cudaSuccess};
+    }
+
     /**
      * \param gpu, which gpu to use, default is 0
      * \param inout, input and output fr array
@@ -265,7 +281,7 @@ namespace ntt
     // static
     RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, Direction direction, NTTConfig cfg)
     {
-        // printf("inside batch ntt \n");
+        // printf("inside batch ntt with coset: %d\n", cfg.with_coset);
         if (lg_domain_size == 0)
             return RustError{cudaSuccess};
 
@@ -293,7 +309,7 @@ namespace ntt
             dev_ptr_t<fr_t> d_input{
                 total_elements,
                 gpu,
-                cfg.are_inputs_on_device? false: true, // if inputs are already on device, no need to alloc input memory
+                cfg.are_inputs_on_device ? false : true, // if inputs are already on device, no need to alloc input memory
                 cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
             };
             if (cfg.are_inputs_on_device)
@@ -310,7 +326,7 @@ namespace ntt
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, false, nullptr, gpu);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);

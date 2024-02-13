@@ -1,6 +1,9 @@
+use std::ops::Mul;
+
 use cryptography_cuda::{device::memory::HostOrDeviceSlice, device::stream::CudaStream};
 use cryptography_cuda::{
-    get_number_of_gpus_rs, init_twiddle_factors_rs, intt, intt_batch, ntt, ntt_batch, types::*,
+    get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, ntt,
+    ntt_batch, types::*,
 };
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
@@ -303,4 +306,67 @@ fn test_ntt_batch_on_device() {
         host_output[1 << lg_domain_size..(1 << lg_domain_size) * 2],
         cpu_results2
     );
+}
+
+#[test]
+fn test_ntt_batch_with_coset() {
+    let lg_domain_size = 4;
+    let domain_size = 1usize << lg_domain_size;
+    // let batches = 2;
+
+    init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
+    init_coset_rs(
+        DEFAULT_GPU,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+
+    let mut gpu_buffer = v1.clone();
+    gpu_buffer.extend(v2.iter());
+
+    let mut cfg = NTTConfig::default();
+    cfg.with_coset = true;
+    cfg.batches = 2;
+    ntt_batch(
+        DEFAULT_GPU,
+        gpu_buffer.as_mut_ptr(),
+        lg_domain_size,
+        cfg.clone(),
+    );
+
+    let mut cpu_buffer = v1.clone();
+
+    let modified_poly: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
+        .powers()
+        .zip(cpu_buffer)
+        .map(|(r, c)| GoldilocksField::from_canonical_u64(c).mul(r))
+        .collect::<Vec<_>>()
+        .into();
+    let ret = modified_poly
+        .fft_with_options(None, None)
+        .values
+        .iter()
+        .map(|v| v.to_canonical_u64())
+        .collect::<Vec<u64>>();
+
+    assert_eq!(gpu_buffer[0..domain_size], ret);
+
+    let mut cpu_buffer2 = v2.clone();
+    let modified_poly2: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
+        .powers()
+        .zip(cpu_buffer2)
+        .map(|(r, c)| GoldilocksField::from_canonical_u64(c).mul(r))
+        .collect::<Vec<_>>()
+        .into();
+    let ret2 = modified_poly2
+        .fft_with_options(None, None)
+        .values
+        .iter()
+        .map(|v| v.to_canonical_u64())
+        .collect::<Vec<u64>>();
+    assert_eq!(gpu_buffer[domain_size..2*domain_size], ret2);
+
 }

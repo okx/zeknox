@@ -108,7 +108,7 @@ TEST(gl64, fft_gpu_self_consistency)
     Ntt_Types::NTTConfig cfg{
         batches: 1,
         order: Ntt_Types::InputOutputOrder::NN,
-        type: Ntt_Types::Type::standard,
+        ntt_type: Ntt_Types::Type::standard,
     };
     compute_batched_ntt(device_id, gpu_data_in, lg_n_size, Ntt_Types::Direction::forward, cfg);
     auto end_time = std::chrono::high_resolution_clock::now();
