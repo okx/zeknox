@@ -4,10 +4,8 @@
 
 #ifndef __CRYPTO_FF_GL64_T_CUH__
 #define __CRYPTO_FF_GL64_T_CUH__
-#ifndef __DEBUG__PRINT__
-#define __DEBUG__PRINT__
-#include <cstdio>
-#endif
+#ifdef __NVCC__
+#include <functional>
 #include <cstdint>
 namespace gl64_device
 {
@@ -55,7 +53,17 @@ public:
         gl64_t ret;
         ret.val = 1;
         return ret;
+    }   
+     static inline const gl64_t zero()
+    {
+        gl64_t ret;
+        ret.val = 0;
+        return ret;
     }
+
+
+
+
 
     inline operator uint64_t() const
     {
@@ -181,7 +189,7 @@ public:
         //  printf("start exp, val: %llu, b: %llu \n", val, p);
         gl64_t sqr = *this;
         *this = csel(*this, one(), p & 1); // if p is odd, return *this, else return one
-        // printf("*this: %llu \n", val);
+                                           // printf("*this: %llu \n", val);
 #pragma unroll 1
         while (p >>= 1)
         {
@@ -193,7 +201,7 @@ public:
 
         return *this;
     }
-   
+
     friend inline gl64_t operator^(gl64_t a, uint32_t p)
     {
         return a ^= p;
@@ -204,22 +212,25 @@ public:
     }
 
     // raise to a constant power, e.g. x^7, to be unrolled at compile time
-    inline gl64_t& operator^=(int p)
+    inline gl64_t &operator^=(int p)
     {
         if (p < 2)
             asm("trap;");
 
         gl64_t sqr = *this;
-        if ((p&1) == 0) {
-            do {
+        if ((p & 1) == 0)
+        {
+            do
+            {
                 sqr.mul(sqr);
                 p >>= 1;
-            } while ((p&1) == 0);
+            } while ((p & 1) == 0);
             *this = sqr;
         }
-        for (p >>= 1; p; p >>= 1) {
+        for (p >>= 1; p; p >>= 1)
+        {
             sqr.mul(sqr);
-            if (p&1)
+            if (p & 1)
                 mul(sqr);
         }
         to();
@@ -227,9 +238,13 @@ public:
         return *this;
     }
     friend inline gl64_t operator^(gl64_t a, int p)
-    {   return a ^= p;   }
+    {
+        return a ^= p;
+    }
     inline gl64_t operator()(int p)
-    {   return *this^p;   }
+    {
+        return *this ^ p;
+    }
 
 public:
     inline gl64_t reciprocal() const
@@ -265,10 +280,11 @@ public:
         return *this *= a.reciprocal();
     }
 
-private:
+public:
     inline uint32_t lo() const { return (uint32_t)(val); }
     inline uint32_t hi() const { return (uint32_t)(val >> 32); }
 
+private:
     // multiply another gl64
     inline void mul(const gl64_t &b)
     {
@@ -357,6 +373,8 @@ private:
 
 #undef inline
 #undef asm
+#endif
+
 #endif
 
 #endif

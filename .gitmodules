@@ -1,0 +1,6 @@
+[submodule "depends/blst"]
+	path = depends/blst
+	url = git@github.com:supranational/blst.git
+[submodule "depends/ffiasm"]
+	path = depends/ffiasm
+	url = git@github.com:okx/ffiasm.git

@@ -5,7 +5,15 @@
 #ifndef __CRYPTO_NTT_PARAMETERS_CUH__
 #define __CRYPTO_NTT_PARAMETERS_CUH__
 
-#define MAX_LG_DOMAIN_SIZE 28
+#ifndef MAX_LG_DOMAIN_SIZE
+# if defined(FEATURE_BN254)
+#  define MAX_LG_DOMAIN_SIZE 28
+# elif defined(FEATURE_BABY_BEAR)
+#  define MAX_LG_DOMAIN_SIZE 27
+# else
+#  define MAX_LG_DOMAIN_SIZE 28 // tested only up to 2^31 for now
+# endif
+#endif
 #define LG_WINDOW_SIZE ((MAX_LG_DOMAIN_SIZE + 3) / 4)  // 7
 typedef unsigned int index_t;
 
@@ -19,6 +27,8 @@ __device__ __constant__ fr_t inverse_radix6_twiddles[32];
 #ifndef __CUDA_ARCH__
 # if defined(FEATURE_GOLDILOCKS)
 #  include "parameters/goldilocks.h"
+# elif defined(FEATURE_BN254)
+#  include "parameters/alt_bn254.h"
 # endif
 
 class NTTParameters {
@@ -37,8 +47,24 @@ public:
     */ 
     fr_t* radix6_twiddles, * radix7_twiddles, * radix8_twiddles,
         * radix9_twiddles, * radix10_twiddles;
+
+#if !defined(FEATURE_GOLDILOCKS)
+    fr_t* radix6_twiddles_6, * radix6_twiddles_12, * radix7_twiddles_7,
+        * radix8_twiddles_8, * radix9_twiddles_9;
+#endif
     
     fr_t (*partial_group_gen_powers)[WINDOW_SIZE]; // for LDE
+
+#if !defined(FEATURE_GOLDILOCKS)
+private:
+    fr_t* twiddles_X(int num_blocks, int block_size, const fr_t& root)
+    {
+        fr_t* ret = (fr_t*)gpu.Dmalloc(num_blocks * block_size * sizeof(fr_t));
+        generate_radixX_twiddles_X<<<16, block_size, 0, gpu>>>(ret, num_blocks, root);
+        CUDA_OK(cudaGetLastError());
+        return ret;
+    }
+#endif
 
 public:
     NTTParameters(const bool _inverse, int id): gpu(select_gpu(id)), inverse(_inverse)
@@ -76,6 +102,13 @@ public:
         CUDA_OK(cudaMemcpyAsync(radix6_twiddles, radix10_twiddles + 512,
                                 32 * sizeof(fr_t), cudaMemcpyDeviceToDevice,
                                 gpu));
+#if !defined(FEATURE_GOLDILOCKS)
+        radix6_twiddles_6 = twiddles_X(64, 64, roots[12]);
+        radix6_twiddles_12 = twiddles_X(4096, 64, roots[18]);
+        radix7_twiddles_7 = twiddles_X(128, 128, roots[14]);
+        radix8_twiddles_8 = twiddles_X(256, 256, roots[16]);
+        radix9_twiddles_9 = twiddles_X(512, 512, roots[18]);
+#endif
         const size_t partial_sz = WINDOW_NUM * WINDOW_SIZE;
 
         partial_twiddles = reinterpret_cast<decltype(partial_twiddles)>
@@ -97,7 +130,13 @@ public:
     ~NTTParameters()
     {
         gpu.Dfree(partial_twiddles);
-
+#if !defined(FEATURE_GOLDILOCKS)
+        gpu.Dfree(radix9_twiddles_9);
+        gpu.Dfree(radix8_twiddles_8);
+        gpu.Dfree(radix7_twiddles_7);
+        gpu.Dfree(radix6_twiddles_12);
+        gpu.Dfree(radix6_twiddles_6);
+#endif
         gpu.Dfree(radix7_twiddles);
     }
 
