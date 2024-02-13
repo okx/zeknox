@@ -26,14 +26,14 @@ libgpu: libmerkle-gpu.so
 clean:
 	rm -f *.o *.so *.exe
 
-libmerkle.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.h ../poseidon/poseidon_bn128.cu ../keccak/keccak.cu
+libmerkle.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.h ../poseidon/poseidon_bn128.cu ../poseidon/poseidon.cu ../keccak/keccak.cu
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_bn128.o
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak.o
 	$(CXX) -shared -o $@ poseidon.o poseidon_bn128.o keccak.o merkle.o -fopenmp
 
-libmerkle-gpu.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp merkle.cu
+libmerkle-gpu.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.cu merkle.cu
 	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak.o

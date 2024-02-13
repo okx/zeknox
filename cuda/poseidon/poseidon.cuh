@@ -31,26 +31,37 @@ class PoseidonPermutation
 #endif
 {
 public:
-    DEVICE inline static gl64_t reduce128(uint128_t x);
+    DEVICE static gl64_t reduce128(uint128_t x);
 
-    DEVICE inline static gl64_t from_noncanonical_u96(gl64_t n_lo, gl64_t n_hi);
+    DEVICE static gl64_t reduce_u160(uint128_t n_lo, uint32_t n_hi);
+
+    DEVICE static void add_u160_u128(u128 *x_lo, u32 *x_hi, u128 y);
+
+    DEVICE static gl64_t from_noncanonical_u96(gl64_t n_lo, gl64_t n_hi);
+
+    DEVICE static gl64_t from_noncanonical_u128(u128 n);
+
+    DEVICE void mds_partial_layer_fast(gl64_t *state, u32 r);
 
     DEVICE gl64_t mds_row_shf(u32 r, gl64_t *v);
 
     DEVICE void mds_layer(gl64_t *state, gl64_t *result);
 
-    DEVICE inline void constant_layer(gl64_t *state, u32 *round_ctr);
+    DEVICE void constant_layer(gl64_t *state, u32 *round_ctr);
 
-    DEVICE static inline gl64_t sbox_monomial(const gl64_t &x);
+    DEVICE static gl64_t sbox_monomial(const gl64_t &x);
 
-    DEVICE inline void sbox_layer(gl64_t *state);
+    DEVICE void sbox_layer(gl64_t *state);
 
-    DEVICE inline void full_rounds(gl64_t *state, u32 *round_ctr);
+    DEVICE void full_rounds(gl64_t *state, u32 *round_ctr);
 
     DEVICE void partial_rounds_naive(gl64_t *state, u32 *round_ctr);
 
-    // Arrys of size SPIONGE_WIDTH
+    DEVICE void partial_rounds(gl64_t *state, u32 *round_ctr);
+
     DEVICE gl64_t *poseidon_naive(gl64_t *input);
+
+    DEVICE gl64_t *poseidon(gl64_t *input);
 
     gl64_t state[SPONGE_WIDTH];
 
@@ -71,5 +82,16 @@ public:
 DEVICE void poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash);
 
 DEVICE void poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash);
+
+#ifdef DEBUG
+DEVICE  void print_perm(gl64_t *data, int cnt)
+    {
+        for (int i = 0; i < cnt; i++)
+        {
+            printf("%lu ", data[i].get_val());
+        }
+        printf("\n");
+    }
+#endif
 
 #endif // __POSEIDON_V2_CUH__

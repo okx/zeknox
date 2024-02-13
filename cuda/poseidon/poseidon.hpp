@@ -1492,7 +1492,7 @@ public:
         for (; i < size; i++)
         {
             elements[i] = GoldilocksField(src[i]);
-        }        
+        }
         for (; i < NUM_HASH_OUT_ELTS; i++)
         {
             elements[i] = GoldilocksField::Zero();
@@ -1517,11 +1517,12 @@ public:
 #ifdef DEBUG
     void print_perm(GoldilocksField *data, int cnt)
     {
+        printf("*[ ");
         for (int i = 0; i < cnt; i++)
         {
             printf("%lu ", data[i].get_val());
         }
-        printf("\n");
+        printf(" ]\n");
     }
 #endif
 
@@ -1592,14 +1593,8 @@ public:
         for (u32 k = 0; k < HALF_N_FULL_ROUNDS; k++)
         {
             constant_layer(inout, round_ctr);
-            // printf("Constant layer: ");
-            // print_perm(state, 12);
             sbox_layer(inout);
-            // printf("SBox layer: ");
-            // print_perm(state, 12);
             mds_layer(inout);
-            // printf("MDS layer: ");
-            // print_perm(state, 12);
             *round_ctr += 1;
         }
     }
@@ -1637,7 +1632,7 @@ public:
     {
         for (u32 i = 0; i < SPONGE_WIDTH; i++)
         {
-            state[i] = state[0].from_canonical_u64(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]);
+            state[i] = state[i] + state[i].from_canonical_u64(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]);
         }
     }
 
@@ -1645,24 +1640,16 @@ public:
     {
         GoldilocksField result[SPONGE_WIDTH] = {GoldilocksField::Zero()};
 
-        // Initial matrix has first row/column = [1, 0, ..., 0];
-
-        // c = 0
-        result[0] = state[0];
-
         for (u32 r = 1; r < SPONGE_WIDTH; r++)
         {
             for (u32 c = 1; c < SPONGE_WIDTH; c++)
             {
-                // NB: FAST_PARTIAL_ROUND_INITIAL_MATRIX is stored in
-                // row-major order so that this dot product is cache
-                // friendly.
                 GoldilocksField t = GoldilocksField::from_canonical_u64(
                     FAST_PARTIAL_ROUND_INITIAL_MATRIX[r - 1][c - 1]);
                 result[c] = result[c] + state[r] * t;
             }
         }
-        for (u32 i = 0; i < SPONGE_WIDTH; i++)
+        for (u32 i = 1; i < SPONGE_WIDTH; i++)
         {
             state[i] = result[i];
         }
@@ -1670,22 +1657,21 @@ public:
 
     static inline void add_u160_u128(u128 *x_lo, u32 *x_hi, u128 y)
     {
-        // u128 M = (u128)340282366920938463463374607431768211455;
-        u128 M = 0;
-        if (M - y > *x_lo)
+        u128 M = (u128)-1;
+        if (*x_lo > M - y)
         {
             *x_lo = *x_lo + y;
-            *x_hi = 1;
+            *x_hi = *x_hi + 1;
         }
         else
         {
-            x_lo += y;
+            *x_lo = *x_lo + y;
         }
     }
 
     static inline GoldilocksField reduce_u160(u128 n_lo, u32 n_hi)
     {
-        u64 n_lo_hi = (n_lo >> 64);
+        u64 n_lo_hi = (u64)(n_lo >> 64);
         u64 n_lo_lo = (u64)n_lo;
         u64 reduced_hi = GoldilocksField::from_noncanonical_u96(n_lo_hi, n_hi).to_noncanonical_u64();
         u128 reduced128 = (((u128)reduced_hi) << 64) + (u128)n_lo_lo;
@@ -1710,7 +1696,6 @@ public:
         add_u160_u128(&d_sum_lo, &d_sum_hi, s0 * mds0to0);
         GoldilocksField d = reduce_u160(d_sum_lo, d_sum_hi);
 
-        // result = [d] concat [state[0] * v + state[shift up by 1]]
         GoldilocksField result[SPONGE_WIDTH] = {GoldilocksField::Zero()};
         result[0] = d;
         for (u32 i = 1; i < SPONGE_WIDTH; i++)
@@ -1738,6 +1723,16 @@ public:
         *round_ctr += N_PARTIAL_ROUNDS;
     }
 
+    // Arrys of size SPIONGE_WIDTH
+    void poseidon(GoldilocksField *inout)
+    {
+        u32 round_ctr = 0;
+
+        full_rounds(inout, &round_ctr);
+        partial_rounds(inout, &round_ctr);
+        full_rounds(inout, &round_ctr);
+    }
+
     PoseidonPermutation()
     {
         for (u64 i = 0; i < WIDTH; i++)
@@ -1755,14 +1750,17 @@ public:
         }
     }
 
-    void get_state_as_canonical_u64(u64* out) {
+    void get_state_as_canonical_u64(u64 *out)
+    {
         assert(out != 0);
-        for (u32 i = 0; i < SPONGE_WIDTH; i++) {
+        for (u32 i = 0; i < SPONGE_WIDTH; i++)
+        {
             out[i] = state[i].to_noncanonical_u64();
-        }        
+        }
     }
 
-    void set_state(u32 idx, GoldilocksField val) {
+    void set_state(u32 idx, GoldilocksField val)
+    {
         assert(idx < SPONGE_WIDTH);
         state[idx] = val;
     }
@@ -1770,6 +1768,7 @@ public:
     void permute()
     {
         poseidon_naive(this->state);
+        // poseidon(this->state);
     }
 
     HashOut squeeze(u64 size)

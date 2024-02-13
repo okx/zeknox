@@ -5,7 +5,8 @@
 #ifndef __SPPARK_FF_GL64_T_CUH__
 #define __SPPARK_FF_GL64_T_CUH__
 
-# include <cstdint>
+#include <cstdint>
+#include <stdint.h>
 
 namespace gl64_device {
     static __device__ __constant__ /*const*/ uint32_t W = 0xffffffffU;
