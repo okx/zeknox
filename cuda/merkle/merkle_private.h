@@ -39,6 +39,14 @@ EXTERNC void fill_subtree_get_index(
 
 EXTERNC void init_gpu_functions(u64 hash_type);
 
+EXTERNC void init_gpu(
+    u64 digests_buf_size,
+    u64 cap_buf_size,
+    u64 leaves_buf_size,
+    u64 leaf_size);
+
+EXTERNC void free_gpu();
+
 #ifdef DEBUG
 
 #include <stdio.h>

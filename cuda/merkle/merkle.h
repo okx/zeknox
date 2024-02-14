@@ -37,6 +37,14 @@ EXTERNC void fill_digests_buf_in_rounds_in_c_on_gpu(
     uint64_t cap_height
 );
 
+EXTERNC void fill_digests_buf_in_rounds_in_c_on_gpu_nouploads(
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height
+);
+
 EXTERNC void fill_digests_buf_linear_cpu(
     uint64_t digests_buf_size,
     uint64_t cap_buf_size,
@@ -54,16 +62,16 @@ EXTERNC void fill_digests_buf_linear_gpu(
 );
 
 EXTERNC void fill_init(
-    uint64_t digests_count, 
-    uint64_t leaves_count, 
-    uint64_t caps_count, 
-    uint64_t leaf_size, 
+    uint64_t digests_count,
+    uint64_t leaves_count,
+    uint64_t caps_count,
+    uint64_t leaf_size,
     uint64_t hash_size,
     uint64_t hash_type
 );
 
 EXTERNC void fill_init_rounds(
-    uint64_t leaves_count, 
+    uint64_t leaves_count,
     uint64_t rounds
 );
 
@@ -76,5 +84,11 @@ EXTERNC uint64_t* get_digests_ptr();
 EXTERNC uint64_t* get_cap_ptr();
 
 EXTERNC uint64_t* get_leaves_ptr();
+
+EXTERNC uint64_t* get_digests_gpu_ptr();
+
+EXTERNC uint64_t* get_cap_gpu_ptr();
+
+EXTERNC uint64_t* get_leaves_gpu_ptr();
 
 #endif // __MERKEL_H__
