@@ -336,7 +336,7 @@ namespace ntt
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, false, coset_ptr, gpu);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
@@ -427,7 +427,7 @@ namespace ntt
             {
                 reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, true, coset_ptr, gpu);
+            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);

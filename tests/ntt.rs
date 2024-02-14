@@ -375,51 +375,70 @@ fn test_compute_batched_lde() {
     let lg_n: usize = 2;
     let rate_bits = 2;
     let lg_domain_size = lg_n + rate_bits;
+    let batches = 2;
     init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
-    init_coset_rs(DEFAULT_GPU, lg_domain_size, GoldilocksField::coset_shift().to_canonical_u64());
+    init_coset_rs(
+        DEFAULT_GPU,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
 
     let input_size = 1usize << lg_n;
-    let mut input: Vec<u64> = (0..input_size).map(|_| random_fr()).collect();
 
-    let cpu_buffer = input.clone();
-    let cpu_coeffs = cpu_buffer
+    let inputs = (0..batches)
+        .into_iter()
+        .map(|_| {
+            let cpu_buffer: Vec<u64> = (0..input_size).map(|_| random_fr()).collect();
+            let cpu_coeffs = cpu_buffer
+                .iter()
+                .map(|i| GoldilocksField::from_canonical_u64(*i))
+                .collect::<Vec<GoldilocksField>>();
+            let cpu_poly: PolynomialCoeffs<GoldilocksField> =
+                PolynomialCoeffs { coeffs: cpu_coeffs };
+            cpu_poly
+        })
+        .collect::<Vec<PolynomialCoeffs<GoldilocksField>>>();
+
+    let mut cpu_polys_coeffs: Vec<GoldilocksField> = inputs
         .iter()
-        .map(|i| GoldilocksField::from_canonical_u64(*i))
-        .collect::<Vec<GoldilocksField>>();
-    let cpu_poly: PolynomialCoeffs<GoldilocksField> = PolynomialCoeffs { coeffs: cpu_coeffs };
-    // println!("poly: {:?}", cpu_poly);
-    let poly_extend = cpu_poly.lde(rate_bits);
-    // println!("extended: {:?}", poly_extend);
-    let mut modified_poly: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
-        .powers()
-        .zip(&poly_extend.coeffs)
-        .map(|(r, &c)| r * c)
-        .collect::<Vec<_>>()
-        .into();
-    // println!("modified_poly: {:?}", modified_poly);
+        .flat_map(|p| {
+            let p_extended = p.lde(rate_bits);
+            let modified_poly: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
+                .powers()
+                .zip(&p_extended.coeffs)
+                .map(|(r, &c)| r * c)
+                .collect::<Vec<_>>()
+                .into();
+            modified_poly.coeffs
+        })
+        .collect();
 
-    let mut gpu_buffer = modified_poly.coeffs.iter().map(|x| x.to_canonical_u64()).collect::<Vec<u64>>();
-    let mut cfg_ntt = NTTConfig::default();
-    // println!("gpu ntt input: {:?}", gpu_buffer);
-    ntt_batch(DEFAULT_GPU, gpu_buffer.as_mut_ptr(), lg_domain_size, cfg_ntt);
+   
+    let mut cfg = NTTConfig::default();
+    cfg.batches = batches as u32;
+    // println!("ntt config {:?}", cfg);
+    ntt_batch(DEFAULT_GPU, cpu_polys_coeffs.as_mut_ptr(), lg_domain_size, cfg);
 
-    // println!("gpu ntt output: {:?}", gpu_buffer);
+ 
+    let cpu_outputs = cpu_polys_coeffs.iter().map(|x| x.to_canonical_u64()).collect::<Vec<u64>>();
 
+    // println!("inputs: {:?}", inputs);
+    let mut gpu_buffer: Vec<u64> = inputs.clone().into_iter().flat_map(|p| {
+       let coeffs =  p.coeffs.iter().map(|x| x.to_canonical_u64()).collect::<Vec<u64>>();
+       return coeffs;
+    }).collect();
     let mut cfg_lde = NTTConfig::default();
-    cfg_lde.batches = 1 as u32;
-    // cfg_lde.are_outputs_on_device = true;
+    cfg_lde.batches = batches as u32;
     cfg_lde.extension_rate_bits = rate_bits as u32;
     cfg_lde.with_coset = true;
 
-    let mut gpu_lde_buffer = input.clone();
-    let mut gpu_lde_output = vec![0; 1 << lg_domain_size];
+    let mut gpu_lde_output = vec![0; (1 << lg_domain_size)*batches];
     lde_batch(
         DEFAULT_GPU,
         gpu_lde_output.as_mut_ptr(),
-        gpu_lde_buffer.as_mut_ptr(),
+        gpu_buffer.as_mut_ptr(),
         lg_n,
         cfg_lde,
     );
-    // println!("gpu lde output, len: {:?}, {:?}", gpu_lde_output.len(), gpu_lde_output);
-    assert_eq!(gpu_lde_output, gpu_buffer);
+    assert_eq!(cpu_outputs, gpu_lde_output);
 }
