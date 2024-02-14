@@ -20,8 +20,8 @@
 #define N_ROUNDS 30
 #define MAX_WIDTH 12
 
-extern __device__ u32 GPU_MDS_MATRIX_CIRC[12];
-extern __device__ u32 GPU_MDS_MATRIX_DIAG[12];
+// extern __device__ u32 GPU_MDS_MATRIX_CIRC[12];
+// extern __device__ u32 GPU_MDS_MATRIX_DIAG[12];
 extern __device__ u64 GPU_ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS];
 
 #ifdef USE_CUDA
@@ -47,21 +47,21 @@ public:
 
     DEVICE void mds_layer(gl64_t *state, gl64_t *result);
 
-    DEVICE void constant_layer(gl64_t *state, u32 *round_ctr);
+    DEVICE void constant_layer(gl64_t *state, gl64_t* rconst, u32 *round_ctr);
 
     DEVICE static gl64_t sbox_monomial(const gl64_t &x);
 
     DEVICE void sbox_layer(gl64_t *state);
 
-    DEVICE void full_rounds(gl64_t *state, u32 *round_ctr);
+    DEVICE void full_rounds(gl64_t *state, gl64_t* rconst, u32 *round_ctr);
 
-    DEVICE void partial_rounds_naive(gl64_t *state, u32 *round_ctr);
+    DEVICE void partial_rounds_naive(gl64_t *state, gl64_t* rconst, u32 *round_ctr);
 
     DEVICE void partial_rounds(gl64_t *state, u32 *round_ctr);
 
-    DEVICE gl64_t *poseidon_naive(gl64_t *input);
+    DEVICE gl64_t *poseidon_naive(gl64_t *input, gl64_t* rconst);
 
-    DEVICE gl64_t *poseidon(gl64_t *input);
+    DEVICE gl64_t *poseidon(gl64_t *input, gl64_t* rconst);
 
     gl64_t state[SPONGE_WIDTH];
 
@@ -74,7 +74,7 @@ public:
 
     DEVICE void set_state(u32 idx, gl64_t val);
 
-    DEVICE void permute();
+    DEVICE void permute(gl64_t* rconst);
 
     DEVICE gl64_t *squeeze(u32 size);
 };
