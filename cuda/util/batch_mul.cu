@@ -15,8 +15,9 @@ __global__ void batchVectorMult(fr_t *scalar_vec, fr_t *element_vec, unsigned n_
   if (tid < n_scalars * batch_size)
   {
     int scalar_id = tid % n_scalars;
-    // printf("scalar: %lu, element: %lu \n", scalar_vec[scalar_id], element_vec[tid]);
+   
     element_vec[tid] = scalar_vec[scalar_id] * element_vec[tid];
+    //  printf("tid: %d, scalar: %lu, element: %lu, \n",tid, scalar_vec[scalar_id], element_vec[tid]);
   }
 }
 #endif

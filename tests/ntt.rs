@@ -2,8 +2,8 @@ use std::ops::Mul;
 
 use cryptography_cuda::{device::memory::HostOrDeviceSlice, device::stream::CudaStream};
 use cryptography_cuda::{
-    get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, ntt,
-    ntt_batch, types::*,
+    get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch,
+    ntt, ntt_batch, types::*,
 };
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
@@ -367,6 +367,59 @@ fn test_ntt_batch_with_coset() {
         .iter()
         .map(|v| v.to_canonical_u64())
         .collect::<Vec<u64>>();
-    assert_eq!(gpu_buffer[domain_size..2*domain_size], ret2);
+    assert_eq!(gpu_buffer[domain_size..2 * domain_size], ret2);
+}
 
+#[test]
+fn test_compute_batched_lde() {
+    let lg_n: usize = 2;
+    let rate_bits = 2;
+    let lg_domain_size = lg_n + rate_bits;
+    init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
+    init_coset_rs(DEFAULT_GPU, lg_domain_size, GoldilocksField::coset_shift().to_canonical_u64());
+
+    let input_size = 1usize << lg_n;
+    let mut input: Vec<u64> = (0..input_size).map(|_| random_fr()).collect();
+
+    let cpu_buffer = input.clone();
+    let cpu_coeffs = cpu_buffer
+        .iter()
+        .map(|i| GoldilocksField::from_canonical_u64(*i))
+        .collect::<Vec<GoldilocksField>>();
+    let cpu_poly: PolynomialCoeffs<GoldilocksField> = PolynomialCoeffs { coeffs: cpu_coeffs };
+    // println!("poly: {:?}", cpu_poly);
+    let poly_extend = cpu_poly.lde(rate_bits);
+    // println!("extended: {:?}", poly_extend);
+    let mut modified_poly: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
+        .powers()
+        .zip(&poly_extend.coeffs)
+        .map(|(r, &c)| r * c)
+        .collect::<Vec<_>>()
+        .into();
+    // println!("modified_poly: {:?}", modified_poly);
+
+    let mut gpu_buffer = modified_poly.coeffs.iter().map(|x| x.to_canonical_u64()).collect::<Vec<u64>>();
+    let mut cfg_ntt = NTTConfig::default();
+    // println!("gpu ntt input: {:?}", gpu_buffer);
+    ntt_batch(DEFAULT_GPU, gpu_buffer.as_mut_ptr(), lg_domain_size, cfg_ntt);
+
+    // println!("gpu ntt output: {:?}", gpu_buffer);
+
+    let mut cfg_lde = NTTConfig::default();
+    cfg_lde.batches = 1 as u32;
+    // cfg_lde.are_outputs_on_device = true;
+    cfg_lde.extension_rate_bits = rate_bits as u32;
+    cfg_lde.with_coset = true;
+
+    let mut gpu_lde_buffer = input.clone();
+    let mut gpu_lde_output = vec![0; 1 << lg_domain_size];
+    lde_batch(
+        DEFAULT_GPU,
+        gpu_lde_output.as_mut_ptr(),
+        gpu_lde_buffer.as_mut_ptr(),
+        lg_n,
+        cfg_lde,
+    );
+    // println!("gpu lde output, len: {:?}, {:?}", gpu_lde_output.len(), gpu_lde_output);
+    assert_eq!(gpu_lde_output, gpu_buffer);
 }

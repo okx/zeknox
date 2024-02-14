@@ -27,6 +27,34 @@ __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint3
     }
 }
 
+/**
+ *
+ * n, n before extension
+ * n_extended, n after extension
+ * logn, after extension
+ */
+__global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, uint32_t n_extend, uint32_t batch_size)
+{
+    int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (threadId < n_extend * batch_size)
+    {
+        int idx = threadId % n_extend;
+        int batch_idx = threadId / n_extend;
+
+        if (
+            idx < n)
+        {
+            
+            output[batch_idx * n_extend + idx] = input[batch_idx * n + idx];
+        }
+        else
+        {
+            output[batch_idx * n_extend + idx] = fr_t::zero();
+        }
+        // printf("index: %d, val: %lu \n", batch_idx * n_extend + idx, output[batch_idx * n_extend + idx]);
+    }
+}
+
 __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
 {
     for (uint32_t i = 0; i < n_twiddles; i++)

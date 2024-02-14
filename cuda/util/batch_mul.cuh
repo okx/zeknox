@@ -7,7 +7,7 @@
 #ifndef __CUDA_ARCH__
 int batch_vector_mult(fr_t *scalar_vec, fr_t *element_vec, unsigned n_scalars, unsigned batch_size, cudaStream_t stream)
 {
-  // Set the grid and block dimensions
+  // printf("mul coset \n");
   int NUM_THREADS = MAX_THREADS_PER_BLOCK;
   int NUM_BLOCKS = (n_scalars * batch_size + NUM_THREADS - 1) / NUM_THREADS;
   batchVectorMult<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(scalar_vec, element_vec, n_scalars, batch_size);

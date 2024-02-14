@@ -29,6 +29,15 @@ extern "C" {
         cfg: types::NTTConfig,
     ) -> error::Error;
 
+    fn compute_batched_lde(
+        device_id: usize,
+        output: *mut core::ffi::c_void,
+        input: *mut core::ffi::c_void,
+        lg_domain_size: usize,
+        ntt_direction: types::NTTDirection,
+        cfg: types::NTTConfig,
+    ) -> error::Error;
+
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -149,6 +158,29 @@ pub fn get_number_of_gpus_rs() -> usize {
         panic!("{}", String::from(err));
     }
     return nums;
+}
+
+pub fn lde_batch<T>(
+    device_id: usize,
+    output: *mut T, // &mut [T],
+    input: *mut T, // &mut [T],
+    log_n_size: usize,
+    cfg: NTTConfig,
+) {
+    let err = unsafe {
+        compute_batched_lde(
+            device_id,
+            output as *mut core::ffi::c_void,
+            input as *mut core::ffi::c_void,
+            log_n_size,
+            types::NTTDirection::Forward,
+            cfg,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
 }
 
 pub fn ntt_batch<T>(

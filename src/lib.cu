@@ -60,11 +60,22 @@ extern "C"
 extern "C"
 #endif
     RustError
-    compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,  
+    compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                         Ntt_Types::Direction ntt_direction, Ntt_Types::NTTConfig cfg)
 {
     auto &gpu = select_gpu(device_id);
     return ntt::Batch(gpu, inout, lg_domain_size, ntt_direction, cfg);
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif 
+RustError 
+compute_batched_lde(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_domain_size,
+                        Ntt_Types::Direction ntt_direction, Ntt_Types::NTTConfig cfg)
+{
+    auto &gpu = select_gpu(device_id);
+    return ntt::BatchLde(gpu, output, input, lg_domain_size, ntt_direction, cfg);
 }
 
 #if defined(EXPOSE_C_INTERFACE)
@@ -80,11 +91,11 @@ extern "C"
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
 #endif
-RustError init_coset(size_t device_id, size_t lg_n, fr_t coset_gen)
-{  
+    RustError
+    init_coset(size_t device_id, size_t lg_n, fr_t coset_gen)
+{
     auto &gpu = select_gpu(device_id);
     return ntt::init_coset(gpu, lg_n, coset_gen);
-
 }
 
 #endif

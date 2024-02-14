@@ -34,6 +34,7 @@ pub struct NTTConfig {
     pub are_inputs_on_device: bool, //**< True if inputs are on device and false if they're on host. Default value: false.
     pub are_outputs_on_device: bool, //**< If true, output is preserved on device, otherwise on host. Default value: false.
     pub with_coset: bool,
+    pub extension_rate_bits: u32,
 }
 
 impl Default for NTTConfig {
@@ -45,6 +46,7 @@ impl Default for NTTConfig {
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             with_coset: false,
+            extension_rate_bits: 0,
         }
     }
 }
