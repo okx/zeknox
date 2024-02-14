@@ -64,6 +64,28 @@ namespace ntt
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
     }
 
+    /**
+     * Transposes a matrix into a new matrix
+     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
+     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
+     * @param n length of `arr`. 
+     * @param batch_size the size of the batch.
+     */
+    void transpose_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t batch_size, stream_t &stream){
+        // This is the dimensions of the block, it is 64 rows and 8 cols however since each thread 
+        // transposes 8 elements, we consider the block size to be 64 x 64
+        int BLOCK_DIM = 64;
+        int blocks_per_row = (n + BLOCK_DIM - 1)/BLOCK_DIM; 
+
+        // Number of threads is max_threads and we create our 2d thread dimensions with 64x8 threads
+        // Which constraints to the max threads defined prior
+        int number_of_threads = MAX_THREADS_BATCH;
+        int threads_dim = dim3(BLOCK_DIM, (BLOCK_DIM / 8));
+        int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
+
+        transpose_kernel<<<number_of_blocks, threads_dim, 0, stream>>>(in_arr, out_arr, n, batch_size, blocks_per_row);
+    }
+
     void NTT_internal(fr_t *d_inout, uint32_t lg_domain_size,
                       InputOutputOrder order, Direction direction,
                       Type type, stream_t &stream,
