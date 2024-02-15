@@ -35,6 +35,7 @@ namespace Ntt_Types
         Type ntt_type;
         bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
         bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
+        bool are_outputs_transposed; /**< If true, output is transposed with the transpose function on the kernal, otherwise it is not. Default value: false. */
     };
 
 }

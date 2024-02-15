@@ -33,6 +33,7 @@ pub struct NTTConfig {
     pub ntt_type: NTTType,
     pub are_inputs_on_device: bool, //**< True if inputs are on device and false if they're on host. Default value: false.
     pub are_outputs_on_device: bool, //**< If true, output is preserved on device, otherwise on host. Default value: false.
+    pub are_outputs_transposed: bool, //**< If true, output is transposed with the transpose function on the kernal, otherwise it is not. Default value: false. 
 }
 
 impl Default for NTTConfig {
@@ -43,6 +44,7 @@ impl Default for NTTConfig {
             ntt_type: NTTType::Standard,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
+            are_outputs_transposed: false,
         }
     }
 }

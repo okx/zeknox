@@ -9,6 +9,7 @@ use plonky2_field::{
     polynomial::PolynomialCoeffs,
     types::{Field, PrimeField64},
 };
+
 use rand::random;
 
 fn random_fr() -> u64 {
@@ -303,4 +304,82 @@ fn test_ntt_batch_on_device() {
         host_output[1 << lg_domain_size..(1 << lg_domain_size) * 2],
         cpu_results2
     );
+}
+
+#[test]
+fn test_ntt_batch_transposed_on_device() {
+    let lg_domain_size = 4;
+    let domain_size = 1usize << lg_domain_size;
+    let batches = 2;
+
+    init_twiddle_factors_rs(0, lg_domain_size);
+
+    let total_elements = domain_size * batches;
+    // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
+
+    let mut input1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let mut input2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+
+    let mut cpu_buffer = input1.clone();
+    cpu_buffer.extend(input2.iter());
+
+    let mut device_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+    device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
+    device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
+    // let ret = device_data.copy_from_host(&scalars);
+
+    let mut cfg = NTTConfig::default();
+    cfg.are_inputs_on_device = true;
+    cfg.are_outputs_on_device = true;
+    cfg.are_outputs_transposed = true;
+    cfg.batches = batches as u32;
+    // println!("device data len: {:?}", device_data.len());
+    ntt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
+
+    let mut host_output = vec![0; total_elements];
+    // println!("start copy to host");
+    device_data
+        .copy_to_host(host_output.as_mut_slice(), total_elements)
+        .unwrap();
+    // println!("host output: {:?}", host_output);
+
+    let coeffs1 = cpu_buffer[0..domain_size]
+        .iter()
+        .map(|i| GoldilocksField::from_canonical_u64(*i))
+        .collect::<Vec<GoldilocksField>>();
+    let coefficients1 = PolynomialCoeffs { coeffs: coeffs1 };
+    let points1 = fft(coefficients1.clone());
+    let cpu_results1: Vec<u64> = points1
+        .values
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect();
+
+    let coeffs2 = cpu_buffer[domain_size..total_elements]
+        .iter()
+        .map(|i| GoldilocksField::from_canonical_u64(*i))
+        .collect::<Vec<GoldilocksField>>();
+    let coefficients2 = PolynomialCoeffs { coeffs: coeffs2 };
+    let points2 = fft(coefficients2.clone());
+    let cpu_results2: Vec<u64> = points2
+        .values
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect();
+
+    let cpu_results_matrix = [cpu_results1, cpu_results2];
+    let cpu_results_tranposed = transpose(&cpu_results_matrix);
+    let cpu_results = cpu_results_tranposed.into_iter().flatten().collect();
+
+    assert_eq!(host_output, cpu_results);
+
+}
+
+pub fn transpose<T: Send + Sync + Copy>(matrix: &[Vec<T>]) -> Vec<Vec<T>> {
+    let len = matrix[0].len();
+    (0..len)
+        .into_par_iter()
+        .map(|i| matrix.iter().map(|row| row[i]).collect())
+        .collect()
 }

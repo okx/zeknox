@@ -310,7 +310,6 @@ namespace ntt
             }
 
             size_t total_elements = size * cfg.batches;
-            int input_size_bytes = total_elements * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{
                 total_elements,
@@ -318,6 +317,7 @@ namespace ntt
                 cfg.are_inputs_on_device? false: true, // if inputs are already on device, no need to alloc input memory
                 cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
             };
+
             if (cfg.are_inputs_on_device)
             {
                 d_input.set_device_ptr(inout);
@@ -337,9 +337,26 @@ namespace ntt
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
+            if(cfg.are_outputs_transposed){
+                dev_ptr_t<fr_t> d_output{
+                    total_elements,
+                    gpu,
+                    true, // need to alloc input memory
+                    cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
+                };
+
+                // Allocate memory for the transposed array
+                d_output.alloc();
+
+                transpose_batch(d_input, d_output, size, cfg.batches, gpu)
+            }
             if (!cfg.are_outputs_on_device)
             {
-                gpu.DtoH(inout, &d_input[0], total_elements);
+                if(cfg.are_outputs_transposed){
+                    gpu.DtoH(inout, &d_output[0], total_elements);
+                }else{
+                    gpu.DtoH(inout, &d_input[0], total_elements);
+                }
             }
             gpu.sync();
         }

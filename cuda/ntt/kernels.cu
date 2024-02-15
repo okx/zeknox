@@ -31,7 +31,7 @@ __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint3
 }
 
 /**
- * Fast transpose from NVIDIA. Takes nxm and returns mxn matrix.
+ * Fast transpose from NVIDIA. Takes array and returns its transpose
  * @param in_arr input array of type E (elements).
  * @param out_arr output array of type E (elements).
  * @param n column size of in_arr.
@@ -43,17 +43,19 @@ __global__ void transpose_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32
     // We use shared memory 'cache' blocks for coalesce memory efficiency improvement
 	__shared__ fr_t block[BLOCK_DIM][BLOCK_DIM+1];
 
-    // Get indexes
+    // Get indexes 
     int j_idx_block = blockIdx.x % blocks_per_row;
     int j_idx = j_idx_block * BLOCK_DIM + (threadIdx.y*8);
 
     int i_idx_block = blockIdx.x / blocks_per_row;
     int i_idx = i_idx_block * BLOCK_DIM + threadIdx.x;
 
+    int idx = i_idx*n + j_idx;
+
 	// read the matrix tile into shared memory in its transposed position
     for(int i = 0; i < 8; i++){
         if((i_idx < batch_size) && (j_idx < n)){
-            block[(8 * threadIdx.y) + i][threadIdx.x] = in_arr[i_idx][j_idx+i];
+            block[(8 * threadIdx.y) + i][threadIdx.x] = in_arr[idx + i];
         }
     }
 
@@ -63,7 +65,7 @@ __global__ void transpose_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32
 	// write the transposed matrix tile to global memory (out_arr) in linear order
 	for(int i = 0; i < 8; i++){
         if((i_idx < n) && (j_idx < batch_size)){
-            out_arr[i_idx][j_idx + i] = block[threadIdx.x][(8*threadIdx.y)+i];
+            out_arr[idx + i] = block[threadIdx.x][(8*threadIdx.y)+i];
         }
     }
 }
