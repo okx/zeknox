@@ -74,13 +74,12 @@ namespace ntt
     void transpose_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t batch_size, stream_t &stream){
         // This is the dimensions of the block, it is 64 rows and 8 cols however since each thread 
         // transposes 8 elements, we consider the block size to be 64 x 64
-        int BLOCK_DIM = 64;
         int blocks_per_row = (n + BLOCK_DIM - 1)/BLOCK_DIM; 
 
         // Number of threads is max_threads and we create our 2d thread dimensions with 64x8 threads
         // Which constraints to the max threads defined prior
         int number_of_threads = MAX_THREADS_BATCH;
-        int threads_dim = dim3(BLOCK_DIM, (BLOCK_DIM / 8));
+        dim3 threads_dim = dim3(BLOCK_DIM, (BLOCK_DIM / 8));
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
 
         transpose_kernel<<<number_of_blocks, threads_dim, 0, stream>>>(in_arr, out_arr, n, batch_size, blocks_per_row);
@@ -338,6 +337,7 @@ namespace ntt
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
             if(cfg.are_outputs_transposed){
+                // Allocate memory for the transposed array
                 dev_ptr_t<fr_t> d_output{
                     total_elements,
                     gpu,
@@ -345,18 +345,17 @@ namespace ntt
                     cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
                 };
 
-                // Allocate memory for the transposed array
                 d_output.alloc();
 
-                transpose_batch(d_input, d_output, size, cfg.batches, gpu)
-            }
-            if (!cfg.are_outputs_on_device)
-            {
-                if(cfg.are_outputs_transposed){
+                transpose_batch(d_input, d_output, size, cfg.batches, gpu);
+
+                if(!cfg.are_outputs_on_device){
                     gpu.DtoH(inout, &d_output[0], total_elements);
-                }else{
-                    gpu.DtoH(inout, &d_input[0], total_elements);
                 }
+            }
+            if (!cfg.are_outputs_on_device && !cfg.are_outputs_transposed)
+            {
+                gpu.DtoH(inout, &d_input[0], total_elements);
             }
             gpu.sync();
         }
