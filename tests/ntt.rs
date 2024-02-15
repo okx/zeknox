@@ -413,26 +413,40 @@ fn test_compute_batched_lde() {
         })
         .collect();
 
-   
     let mut cfg = NTTConfig::default();
     cfg.batches = batches as u32;
     // println!("ntt config {:?}", cfg);
-    ntt_batch(DEFAULT_GPU, cpu_polys_coeffs.as_mut_ptr(), lg_domain_size, cfg);
+    ntt_batch(
+        DEFAULT_GPU,
+        cpu_polys_coeffs.as_mut_ptr(),
+        lg_domain_size,
+        cfg,
+    );
 
- 
-    let cpu_outputs = cpu_polys_coeffs.iter().map(|x| x.to_canonical_u64()).collect::<Vec<u64>>();
+    let cpu_outputs = cpu_polys_coeffs
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect::<Vec<u64>>();
 
     // println!("inputs: {:?}", inputs);
-    let mut gpu_buffer: Vec<u64> = inputs.clone().into_iter().flat_map(|p| {
-       let coeffs =  p.coeffs.iter().map(|x| x.to_canonical_u64()).collect::<Vec<u64>>();
-       return coeffs;
-    }).collect();
+    let mut gpu_buffer: Vec<u64> = inputs
+        .clone()
+        .into_iter()
+        .flat_map(|p| {
+            let coeffs = p
+                .coeffs
+                .iter()
+                .map(|x| x.to_canonical_u64())
+                .collect::<Vec<u64>>();
+            return coeffs;
+        })
+        .collect();
     let mut cfg_lde = NTTConfig::default();
     cfg_lde.batches = batches as u32;
     cfg_lde.extension_rate_bits = rate_bits as u32;
     cfg_lde.with_coset = true;
 
-    let mut gpu_lde_output = vec![0; (1 << lg_domain_size)*batches];
+    let mut gpu_lde_output = vec![0; (1 << lg_domain_size) * batches];
     lde_batch(
         DEFAULT_GPU,
         gpu_lde_output.as_mut_ptr(),
@@ -441,4 +455,87 @@ fn test_compute_batched_lde() {
         cfg_lde,
     );
     assert_eq!(cpu_outputs, gpu_lde_output);
+}
+
+// todo
+#[test]
+fn test_compute_batched_lde_data_on_device() {
+    let lg_n: usize = 2;
+    let rate_bits = 2;
+    let lg_domain_size = lg_n + rate_bits;
+    let input_domain_size = 1usize << lg_n;
+    let output_domain_size = 1usize << (lg_n + rate_bits);
+    let batches = 2;
+
+    init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
+    init_coset_rs(
+        DEFAULT_GPU,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    let total_num_input_elements = input_domain_size * batches;
+    let total_num_output_elements = output_domain_size * batches;
+
+    let mut input1: Vec<u64> = (0..input_domain_size).map(|_| random_fr()).collect();
+    let mut input2: Vec<u64> = (0..input_domain_size).map(|_| random_fr()).collect();
+
+
+    let mut device_input_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc((total_num_input_elements)).unwrap();
+    device_input_data.copy_from_host_offset(input1.as_mut_slice(), 0, input_domain_size);
+    device_input_data.copy_from_host_offset(
+        input2.as_mut_slice(),
+        input_domain_size,
+        input_domain_size,
+    );
+
+    let mut device_output_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(total_num_output_elements).unwrap();
+
+
+    let mut cfg_lde = NTTConfig::default();
+    cfg_lde.batches = batches as u32;
+    cfg_lde.extension_rate_bits = rate_bits as u32;
+    cfg_lde.with_coset = true;
+    cfg_lde.are_inputs_on_device = true;
+    cfg_lde.are_outputs_on_device = true;
+
+    lde_batch(
+        DEFAULT_GPU,
+        device_output_data.as_mut_ptr(),
+        device_input_data.as_mut_ptr(),
+        lg_n,
+        cfg_lde,
+    );
+
+    let mut host_output1 = vec![0; output_domain_size];
+    let mut host_output2 = vec![0; output_domain_size];
+
+    device_output_data.copy_to_host_offset(host_output1.as_mut_slice(), 0, output_domain_size);
+    device_output_data.copy_to_host_offset(host_output2.as_mut_slice() , output_domain_size, output_domain_size);
+
+    // println!("host_output1: {:?}", host_output1);
+    // println!("host_output2: {:?}", host_output2);
+
+    // lde copy data
+    let mut cfg_lde_copy = NTTConfig::default();
+    cfg_lde_copy.batches = batches as u32;
+    cfg_lde_copy.extension_rate_bits = rate_bits as u32;
+    cfg_lde_copy.with_coset = true;
+
+    let mut gpu_lde_output_copy = vec![0; total_num_output_elements];
+    let mut lde_copy_buffer = input1.clone();
+    lde_copy_buffer.extend(input2.iter());
+    lde_batch(
+        DEFAULT_GPU,
+        gpu_lde_output_copy.as_mut_ptr(),
+        lde_copy_buffer.as_mut_ptr(),
+        lg_n,
+        cfg_lde_copy,
+    );
+    // println!("gpu_lde_output_copy: {:?}", gpu_lde_output_copy);
+    assert_eq!(gpu_lde_output_copy[0..output_domain_size], host_output1);
+    assert_eq!(gpu_lde_output_copy[output_domain_size..output_domain_size*2], host_output2);
+
 }

@@ -159,17 +159,35 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
             Self::Device(_) => {}
             Self::Host(_) => panic!("Need device memory to copy from, and not host"),
         };
-        // println!("self.len: {:?}, src len {:?}", self.len(), val.len());
-        // assert!(
-        //     self.len() == val.len(),
-        //     "destination and source slices have different lengths"
-        // );
         let size = size_of::<T>() * counts;
         if size != 0 {
             unsafe {
                 cudaMemcpy(
                     val.as_mut_ptr() as *mut c_void,
                     self.as_ptr() as *const c_void,
+                    size,
+                    cudaMemcpyKind::cudaMemcpyDeviceToHost,
+                )
+                .wrap()?
+            }
+        }
+        Ok(())
+    }
+
+
+    ///
+    /// offset: the offset to device
+    pub fn copy_to_host_offset(&self, val: &mut [T],  offset: usize, counts: usize) -> CudaResult<()> {
+        match self {
+            Self::Device(_) => {}
+            Self::Host(_) => panic!("Need device memory to copy from, and not host"),
+        };
+        let size = size_of::<T>() * counts;
+        if size != 0 {
+            unsafe {
+                cudaMemcpy(
+                    val.as_mut_ptr() as *mut c_void,
+                    self.as_ptr().add(offset) as *const c_void,
                     size,
                     cudaMemcpyKind::cudaMemcpyDeviceToHost,
                 )

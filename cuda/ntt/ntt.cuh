@@ -66,7 +66,7 @@ namespace ntt
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
     }
 
-    //TODO: combine extends, transpose, bit permutation reverse
+    // TODO: combine extends, transpose, bit permutation reverse
     void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
     {
         int number_of_threads = MAX_THREADS_BATCH;
@@ -366,11 +366,11 @@ namespace ntt
     RustError BatchLde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, Direction direction, NTTConfig cfg)
     {
 
-        if (lg_n == 0 || cfg.extension_rate_bits < 1){
-        // printf("invalid input : %d\n", cfg.with_coset);
-        return RustError{cudaErrorInvalidValue};
+        if (lg_n == 0 || cfg.extension_rate_bits < 1)
+        {
+            // printf("invalid input : %d\n", cfg.with_coset);
+            return RustError{cudaErrorInvalidValue};
         }
-
 
         try
         {
@@ -399,16 +399,8 @@ namespace ntt
                 total_input_elements,
                 gpu,
                 cfg.are_inputs_on_device ? false : true, // new device input has to be allocated
-                false                                    // if keep output on device; let the user drop the pointer
+                cfg.are_inputs_on_device ? true : false  // if keep output on device; let the user drop the pointer
             };
-
-            size_t total_output_elements = size * cfg.batches;
-            int input_output_bytes = total_output_elements * sizeof(fr_t);
-            dev_ptr_t<fr_t> d_output{
-                total_output_elements,
-                gpu,
-                true,
-                cfg.are_outputs_on_device ? true : false};
 
             if (cfg.are_inputs_on_device)
             {
@@ -418,15 +410,31 @@ namespace ntt
             {
                 d_input.alloc();
                 gpu.HtoD(&d_input[0], input, total_input_elements);
-                // printf("start extend \n");
-                extend_inputs_batch(&d_output[0], &d_input[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
-                // printf("end extend \n");
             }
+
+            size_t total_output_elements = size * cfg.batches;
+            int input_output_bytes = total_output_elements * sizeof(fr_t);
+            dev_ptr_t<fr_t> d_output{
+                total_output_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true, cfg.are_outputs_on_device ? true : false};
+
+            if (cfg.are_outputs_on_device)
+            {
+                d_output.set_device_ptr(output);
+            }
+            else
+            {
+                d_output.alloc();
+            }
+
+            extend_inputs_batch(&d_output[0], &d_input[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
 
             if (direction == Direction::inverse)
             {
                 reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
             }
+            // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
             ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
             if (direction == Direction::forward)
             {
