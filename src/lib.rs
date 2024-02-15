@@ -163,7 +163,7 @@ pub fn get_number_of_gpus_rs() -> usize {
 pub fn lde_batch<T>(
     device_id: usize,
     output: *mut T, // &mut [T],
-    input: *mut T, // &mut [T],
+    input: *const T, // &mut [T],
     log_n_size: usize,
     cfg: NTTConfig,
 ) {

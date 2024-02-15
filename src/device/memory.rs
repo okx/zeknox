@@ -136,7 +136,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         Ok(())
     }
     pub fn copy_from_host_offset(
-        &mut self,
+        &self,
         src: &[T],
         offset: usize,
         count: usize,
@@ -144,7 +144,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         unsafe {
             // println!("ptr value: {:?}", self.as_mut_ptr().add(offset));
             cudaMemcpy(
-                self.as_mut_ptr().add(offset) as *mut c_void,
+                self.as_ptr().add(offset) as *mut c_void,
                 src.as_ptr() as *const c_void,
                 count * size_of::<T>(),
                 cudaMemcpyKind::cudaMemcpyHostToDevice,
@@ -175,7 +175,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
     }
 
 
-    ///
+    /// val: host data pointer
     /// offset: the offset to device
     pub fn copy_to_host_offset(&self, val: &mut [T],  offset: usize, counts: usize) -> CudaResult<()> {
         match self {
