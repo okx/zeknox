@@ -26,6 +26,10 @@ harness = false
 name = "gpu_fft_batch"
 harness = false
 
+[[bench]]
+name = "transpose"
+harness = false
+
 [dependencies] 
 blst = "~0.3.11"
 bitflags = "1.3"

@@ -308,7 +308,7 @@ fn test_ntt_batch_on_device() {
 
 #[test]
 fn test_ntt_batch_transposed_on_device() {
-    let lg_domain_size = 4;
+    let lg_domain_size = 12;
     let domain_size = 1usize << lg_domain_size;
     let batches = 2;
 
@@ -382,3 +382,4 @@ pub fn transpose<T: Send + Sync + Copy>(matrix: &[Vec<T>]) -> Vec<Vec<T>> {
         .map(|i| matrix.iter().map(|row| row[i]).collect())
         .collect()
 }
+
