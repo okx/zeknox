@@ -239,7 +239,7 @@ fn test_ntt_on_device() {
 
 #[test]
 fn test_ntt_batch_on_device() {
-    let lg_domain_size = 4;
+    let lg_domain_size = 10;
     let domain_size = 1usize << lg_domain_size;
     let batches = 2;
 
@@ -370,8 +370,7 @@ fn test_ntt_batch_transposed_on_device() {
 
     let cpu_results_matrix = [cpu_results1, cpu_results2];
     let cpu_results_tranposed = transpose(&cpu_results_matrix);
-    let cpu_results = cpu_results_tranposed.into_iter().flatten().collect();
-
+    let cpu_results: Vec<u64> = cpu_results_tranposed.into_iter().flatten().collect();
     assert_eq!(host_output, cpu_results);
 
 }
@@ -379,7 +378,7 @@ fn test_ntt_batch_transposed_on_device() {
 pub fn transpose<T: Send + Sync + Copy>(matrix: &[Vec<T>]) -> Vec<Vec<T>> {
     let len = matrix[0].len();
     (0..len)
-        .into_par_iter()
+        .into_iter()
         .map(|i| matrix.iter().map(|row| row[i]).collect())
         .collect()
 }

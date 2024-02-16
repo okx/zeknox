@@ -75,14 +75,14 @@ namespace ntt
         // This is the dimensions of the block, it is 64 rows and 8 cols however since each thread 
         // transposes 8 elements, we consider the block size to be 64 x 64
         int blocks_per_row = (n + BLOCK_DIM - 1)/BLOCK_DIM; 
+        int blocks_per_col = (batch_size + BLOCK_DIM - 1)/ BLOCK_DIM;
 
         // Number of threads is max_threads and we create our 2d thread dimensions with 64x8 threads
         // Which constraints to the max threads defined prior
         int number_of_threads = MAX_THREADS_BATCH;
-        dim3 threads_dim = dim3(BLOCK_DIM, (BLOCK_DIM / 8));
-        int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
-
-        transpose_kernel<<<number_of_blocks, threads_dim, 0, stream>>>(in_arr, out_arr, n, batch_size, blocks_per_row);
+        dim3 threads_dim = dim3(BLOCK_DIM, 8);
+        dim3 blocks_dim = dim3(blocks_per_col, blocks_per_row);
+        transpose_kernel<<<blocks_dim, threads_dim, 0, stream>>>(in_arr, out_arr, n, batch_size);
     }
 
     void NTT_internal(fr_t *d_inout, uint32_t lg_domain_size,
@@ -337,23 +337,9 @@ namespace ntt
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
             if(cfg.are_outputs_transposed){
-                // Allocate memory for the transposed array
-                dev_ptr_t<fr_t> d_output{
-                    total_elements,
-                    gpu,
-                    true, // need to alloc input memory
-                    cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
-                };
-
-                d_output.alloc();
-
-                transpose_batch(d_input, d_output, size, cfg.batches, gpu);
-
-                if(!cfg.are_outputs_on_device){
-                    gpu.DtoH(inout, &d_output[0], total_elements);
-                }
+                transpose_batch(d_input, inout, size, cfg.batches, gpu);
             }
-            if (!cfg.are_outputs_on_device && !cfg.are_outputs_transposed)
+            if (!cfg.are_outputs_on_device)
             {
                 gpu.DtoH(inout, &d_input[0], total_elements);
             }
