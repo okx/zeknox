@@ -19,6 +19,8 @@ namespace ntt
     static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_forward_arr;
     static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_inverse_arr;
 
+    static fr_t *coset_ptr = nullptr;
+
 #ifndef __CUDA_ARCH__
     using namespace Ntt_Types;
 
@@ -62,6 +64,15 @@ namespace ntt
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
+    }
+
+    // TODO: combine extends, transpose, bit permutation reverse
+    void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
+    {
+        int number_of_threads = MAX_THREADS_BATCH;
+        uint32_t n_extend = 1 << (logn + extension_rate_bits);
+        int number_of_blocks = (n_extend * batch_size + number_of_threads - 1) / number_of_threads;
+        degree_extension_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(output, arr, n, n_extend, batch_size);
     }
 
     void NTT_internal(fr_t *d_inout, uint32_t lg_domain_size,
@@ -195,7 +206,7 @@ namespace ntt
         return;
     }
 
-    RustError InitTwiddleFactors(const gpu_t &gpu, size_t lg_domain_size)
+    RustError init_twiddle_factors(const gpu_t &gpu, size_t lg_domain_size)
     {
         gpu.select();
         // printf("start init twiddle factors \n");
@@ -211,6 +222,20 @@ namespace ntt
 
         return RustError{cudaSuccess};
     }
+
+    RustError init_coset(const gpu_t &gpu, size_t lg_domain_size, fr_t coset_gen)
+    {
+        gpu.select();
+        // printf("start init coset \n");
+        size_t size = (size_t)1 << lg_domain_size;
+        dev_ptr_t<fr_t> d_coset{size, gpu, true, true};
+        fill_twiddle_factors_array(&d_coset[0], size, coset_gen, gpu);
+        coset_ptr = d_coset;
+        gpu.sync();
+
+        return RustError{cudaSuccess};
+    }
+
     /**
      * \param gpu, which gpu to use, default is 0
      * \param inout, input and output fr array
@@ -253,6 +278,7 @@ namespace ntt
     }
 
     /**
+     * assume without coset
      * \param gpu, which gpu to use, default is 0
      * \param inout, input and output fr array
      * \param lg_domain_size 2^{lg_domain_size} = N, where N is size of input array
@@ -265,9 +291,9 @@ namespace ntt
     // static
     RustError Batch(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, Direction direction, NTTConfig cfg)
     {
-        // printf("inside batch ntt \n");
+        // printf("inside batch ntt with coset: %d\n", cfg.with_coset);
         if (lg_domain_size == 0)
-            return RustError{cudaSuccess};
+            return RustError{cudaErrorInvalidValue};
 
         try
         {
@@ -293,7 +319,7 @@ namespace ntt
             dev_ptr_t<fr_t> d_input{
                 total_elements,
                 gpu,
-                cfg.are_inputs_on_device? false: true, // if inputs are already on device, no need to alloc input memory
+                cfg.are_inputs_on_device ? false : true, // if inputs are already on device, no need to alloc input memory
                 cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
             };
             if (cfg.are_inputs_on_device)
@@ -310,7 +336,7 @@ namespace ntt
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, false, nullptr, gpu);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
@@ -318,6 +344,105 @@ namespace ntt
             if (!cfg.are_outputs_on_device)
             {
                 gpu.DtoH(inout, &d_input[0], total_elements);
+            }
+            gpu.sync();
+        }
+        catch (const cuda_error &e)
+        {
+#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+            return RustError{e.code(), e.what()};
+#else
+            return RustError{e.code()};
+#endif
+        }
+
+        return RustError{cudaSuccess};
+    }
+
+    /**
+     * assume with coset
+     * \param lg_n , logn before extension
+     */
+    RustError BatchLde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, Direction direction, NTTConfig cfg)
+    {
+
+        if (lg_n == 0 || cfg.extension_rate_bits < 1)
+        {
+            // printf("invalid input : %d\n", cfg.with_coset);
+            return RustError{cudaErrorInvalidValue};
+        }
+
+        try
+        {
+
+            gpu.select();
+            // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d\n", lg_n, cfg.extension_rate_bits);
+
+            uint32_t lg_domain_size = lg_n + cfg.extension_rate_bits;
+            size_t size = (size_t)1 << lg_domain_size;
+            uint32_t n_twiddles = size;
+
+            fr_t *d_twiddle;
+            if (direction == Direction::inverse)
+            {
+                d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_domain_size);
+            }
+            else
+            {
+                d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
+            }
+
+            size_t total_input_elements = (1 << lg_n) * cfg.batches;
+            int input_size_bytes = total_input_elements * sizeof(fr_t);
+
+            dev_ptr_t<fr_t> d_input{
+                total_input_elements,
+                gpu,
+                cfg.are_inputs_on_device ? false : true, // new device input has to be allocated
+                cfg.are_inputs_on_device ? true : false  // if keep output on device; let the user drop the pointer
+            };
+
+            if (cfg.are_inputs_on_device)
+            {
+                d_input.set_device_ptr(input);
+            }
+            else
+            {
+                d_input.alloc();
+                gpu.HtoD(&d_input[0], input, total_input_elements);
+            }
+
+            size_t total_output_elements = size * cfg.batches;
+            int input_output_bytes = total_output_elements * sizeof(fr_t);
+            dev_ptr_t<fr_t> d_output{
+                total_output_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true, cfg.are_outputs_on_device ? true : false};
+
+            if (cfg.are_outputs_on_device)
+            {
+                d_output.set_device_ptr(output);
+            }
+            else
+            {
+                d_output.alloc();
+            }
+
+            extend_inputs_batch(&d_output[0], &d_input[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
+
+            if (direction == Direction::inverse)
+            {
+                reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
+            }
+            // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
+            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
+            if (direction == Direction::forward)
+            {
+                reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
+            }
+            if (!cfg.are_outputs_on_device)
+            {
+                gpu.DtoH(output, &d_output[0], total_output_elements);
             }
             gpu.sync();
         }
