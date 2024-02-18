@@ -12,14 +12,15 @@
 #include <vector>
 #include <iostream>
 
+#define MAX_NUM_OF_GPUS 16
+
 namespace ntt
 {
     // TODO: to remove this hard code, 16 is enough for most machines
     // TODO: add a method to drop the memory, as it is not auto dropped
-    static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_forward_arr;
-    static std::array<std::array<fr_t *, 32>, 16> all_gpus_twiddle_inverse_arr;
-
-    static fr_t *coset_ptr = nullptr;
+    static std::array<std::array<fr_t *, 32>, MAX_NUM_OF_GPUS> all_gpus_twiddle_forward_arr;
+    static std::array<std::array<fr_t *, 32>, MAX_NUM_OF_GPUS> all_gpus_twiddle_inverse_arr;
+    static std::array<fr_t *, MAX_NUM_OF_GPUS> coset_ptr_arr;
 
 #ifndef __CUDA_ARCH__
     using namespace Ntt_Types;
@@ -61,6 +62,7 @@ namespace ntt
      */
     void reverse_order_batch(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
     {
+        // printf("reverse_order_batch stream: %d \n", stream.stream);
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
@@ -153,12 +155,14 @@ namespace ntt
         fr_t *coset,
         stream_t &stream)
     {
+        // printf("inside ntt_inplace_batch_template, batch_size: %d \n", batch_size);
         const int logn = int(log(n) / log(2));
         bool is_shared_mem_enabled = sizeof(fr_t) <= MAX_SHARED_MEM_ELEMENT_SIZE;
         const int log2_shmem_elems = is_shared_mem_enabled ? int(log(int(MAX_SHARED_MEM / sizeof(fr_t))) / log(2)) : logn;
         int num_threads = max(min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1)), 1);
         const int chunks = max(int((n / 2) / num_threads), 1);
         const int total_tasks = batch_size * chunks;
+        // printf("total tasks: %d \n", total_tasks);
         int num_blocks = total_tasks;
         const int shared_mem = 2 * num_threads * sizeof(fr_t); // TODO: calculator, as shared mem size may be more efficient less
                                                                // then max to allow more concurrent blocks on SM
@@ -226,11 +230,12 @@ namespace ntt
     RustError init_coset(const gpu_t &gpu, size_t lg_domain_size, fr_t coset_gen)
     {
         gpu.select();
-        // printf("start init coset \n");
+        // printf("start init coset gpu id : %d\n", gpu.id());
         size_t size = (size_t)1 << lg_domain_size;
         dev_ptr_t<fr_t> d_coset{size, gpu, true, true};
         fill_twiddle_factors_array(&d_coset[0], size, coset_gen, gpu);
-        coset_ptr = d_coset;
+        coset_ptr_arr[gpu.id()] = d_coset;
+        //  printf("end init coset \n");
         gpu.sync();
 
         return RustError{cudaSuccess};
@@ -336,7 +341,7 @@ namespace ntt
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[gpu.id()], gpu);
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
@@ -376,20 +381,22 @@ namespace ntt
         {
 
             gpu.select();
-            // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d\n", lg_n, cfg.extension_rate_bits);
+            // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d, direction: %d, batches: %d, are_outputs_on_device: %d, are_inputs_on_device: %d\n", lg_n, cfg.extension_rate_bits, direction,
+            //        cfg.batches,
+            //        cfg.are_outputs_on_device, cfg.are_inputs_on_device);
 
-            uint32_t lg_domain_size = lg_n + cfg.extension_rate_bits;
-            size_t size = (size_t)1 << lg_domain_size;
+            uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
+            size_t size = (size_t)1 << lg_output_domain_size;
             uint32_t n_twiddles = size;
 
             fr_t *d_twiddle;
             if (direction == Direction::inverse)
             {
-                d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_domain_size);
+                d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_output_domain_size);
             }
             else
             {
-                d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
+                d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_output_domain_size);
             }
 
             size_t total_input_elements = (1 << lg_n) * cfg.batches;
@@ -404,6 +411,7 @@ namespace ntt
 
             if (cfg.are_inputs_on_device)
             {
+                // printf("set input device pointer: %x\n", input);
                 d_input.set_device_ptr(input);
             }
             else
@@ -421,6 +429,7 @@ namespace ntt
 
             if (cfg.are_outputs_on_device)
             {
+                // printf("set output device pointer: %x\n", output);
                 d_output.set_device_ptr(output);
             }
             else
@@ -432,19 +441,24 @@ namespace ntt
 
             if (direction == Direction::inverse)
             {
-                reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
+                reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
             }
             // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
-            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
+            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[gpu.id()], gpu);
+            // printf("end inplace batch template, with coset: %d \n", cfg.with_coset);
             if (direction == Direction::forward)
             {
-                reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
+                reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
             }
+            // printf("after reverse order batch \n");
             if (!cfg.are_outputs_on_device)
             {
+                // printf("start copy device to host \n");
                 gpu.DtoH(output, &d_output[0], total_output_elements);
             }
+            // printf("start sync \n");
             gpu.sync();
+            // printf("end sync \n");
         }
         catch (const cuda_error &e)
         {
