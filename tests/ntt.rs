@@ -456,7 +456,6 @@ fn test_compute_batched_lde() {
     assert_eq!(cpu_outputs, gpu_lde_output);
 }
 
-// todo
 #[test]
 fn test_compute_batched_lde_data_on_device() {
     let lg_n: usize = 17;
@@ -464,7 +463,7 @@ fn test_compute_batched_lde_data_on_device() {
     let lg_domain_size = lg_n + rate_bits;
     let input_domain_size = 1usize << lg_n;
     let output_domain_size = 1usize << (lg_n + rate_bits);
-    let batches = 87;
+    let batches = 2;
 
     init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
     init_coset_rs(
@@ -485,8 +484,6 @@ fn test_compute_batched_lde_data_on_device() {
         HostOrDeviceSlice::cuda_malloc((total_num_input_elements)).unwrap();
 
     host_inputs.iter().enumerate().for_each(|(i, p)| {
-        // println!("copy for index: {:?}", i);
-        // let _guard = device_input_data.read().unwrap();
         device_input_data.copy_from_host_offset(
             p.as_slice(),
             input_domain_size * i,
@@ -494,13 +491,7 @@ fn test_compute_batched_lde_data_on_device() {
         );
     });
 
-    // device_input_data.copy_from_host_offset(input1.as_mut_slice(), 0, input_domain_size);
-    // device_input_data.copy_from_host_offset(
-    //     input2.as_mut_slice(),
-    //     input_domain_size,
-    //     input_domain_size,
-    // );
-
+    // lde rust allocate to gpu prior to api call
     let mut device_output_data: HostOrDeviceSlice<'_, u64> =
         HostOrDeviceSlice::cuda_malloc(total_num_output_elements).unwrap();
 
@@ -519,32 +510,29 @@ fn test_compute_batched_lde_data_on_device() {
         cfg_lde,
     );
 
-    let mut host_output1 = vec![0; output_domain_size];
-    let mut host_output2 = vec![0; output_domain_size];
+    let mut host_output_first = vec![0; output_domain_size];
+    let mut host_output_last = vec![0; output_domain_size];
 
-    device_output_data.copy_to_host_offset(host_output1.as_mut_slice(), 0, output_domain_size);
-    device_output_data.copy_to_host_offset(host_output2.as_mut_slice() , output_domain_size*(batches-1), output_domain_size);
+    device_output_data.copy_to_host_offset(host_output_first.as_mut_slice(), 0, output_domain_size);
+    device_output_data.copy_to_host_offset(host_output_last.as_mut_slice() , output_domain_size*(batches-1), output_domain_size);
 
-    // // println!("host_output1: {:?}", host_output1);
-    // // println!("host_output2: {:?}", host_output2);
+    // lde gpu copy from host during api call
+    let mut cfg_lde_copy = NTTConfig::default();
+    cfg_lde_copy.batches = batches as u32;
+    cfg_lde_copy.extension_rate_bits = rate_bits as u32;
+    cfg_lde_copy.with_coset = true;
 
-    // // lde copy data
-    // let mut cfg_lde_copy = NTTConfig::default();
-    // cfg_lde_copy.batches = batches as u32;
-    // cfg_lde_copy.extension_rate_bits = rate_bits as u32;
-    // cfg_lde_copy.with_coset = true;
-
-    // let mut gpu_lde_output_copy = vec![0; total_num_output_elements];
-    // let mut lde_copy_buffer = input1.clone();
-    // lde_copy_buffer.extend(input2.iter());
-    // lde_batch(
-    //     DEFAULT_GPU,
-    //     gpu_lde_output_copy.as_mut_ptr(),
-    //     lde_copy_buffer.as_mut_ptr(),
-    //     lg_n,
-    //     cfg_lde_copy,
-    // );
-    // // println!("gpu_lde_output_copy: {:?}", gpu_lde_output_copy);
-    // assert_eq!(gpu_lde_output_copy[0..output_domain_size], host_output1);
-    // assert_eq!(gpu_lde_output_copy[output_domain_size..output_domain_size*2], host_output2);
+    let mut gpu_lde_output_copy = vec![0; total_num_output_elements];
+    let mut lde_copy_buffer = host_inputs.into_iter().flat_map(|p| {
+        p
+    }).collect::<Vec<u64>>();
+    lde_batch(
+        DEFAULT_GPU,
+        gpu_lde_output_copy.as_mut_ptr(),
+        lde_copy_buffer.as_mut_ptr(),
+        lg_n,
+        cfg_lde_copy,
+    );
+    assert_eq!(gpu_lde_output_copy[0..output_domain_size], host_output_first);
+    assert_eq!(gpu_lde_output_copy[output_domain_size*(batches-1)..output_domain_size*batches], host_output_last);
 }
