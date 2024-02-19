@@ -333,8 +333,6 @@ fn test_ntt_batch_transposed_on_device() {
     // let ret = device_data.copy_from_host(&scalars);
 
     let mut cfg = NTTConfig::default();
-    cfg.are_inputs_on_device = true;
-    cfg.are_outputs_on_device = true;
     cfg.are_outputs_transposed = true;
     cfg.batches = batches as u32;
     // println!("device data len: {:?}", device_data.len());
@@ -386,6 +384,7 @@ pub fn transpose<T: Send + Sync + Copy>(matrix: &[Vec<T>]) -> Vec<Vec<T>> {
         .collect()
 }
 
+#[test]
 fn test_ntt_batch_with_coset() {
     let lg_domain_size = 4;
     let domain_size = 1usize << lg_domain_size;
@@ -491,6 +490,7 @@ fn test_compute_batched_lde() {
         .collect();
 
     let mut cfg = NTTConfig::default();
+    cfg.are_outputs_transposed = true;
     cfg.batches = batches as u32;
     // println!("ntt config {:?}", cfg);
     ntt_batch(
@@ -505,6 +505,7 @@ fn test_compute_batched_lde() {
         .map(|x| x.to_canonical_u64())
         .collect::<Vec<u64>>();
 
+    
     // println!("inputs: {:?}", inputs);
     let mut gpu_buffer: Vec<u64> = inputs
         .clone()
@@ -522,6 +523,7 @@ fn test_compute_batched_lde() {
     cfg_lde.batches = batches as u32;
     cfg_lde.extension_rate_bits = rate_bits as u32;
     cfg_lde.with_coset = true;
+    cfg_lde.are_outputs_transposed = true;
 
     let mut gpu_lde_output = vec![0; (1 << lg_domain_size) * batches];
     lde_batch(

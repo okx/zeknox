@@ -363,13 +363,38 @@ namespace ntt
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            if(cfg.are_outputs_transposed){
-                transpose_batch(d_input, inout, size, cfg.batches, gpu);
+
+           dev_ptr_t<fr_t> d_transpose_output{
+                total_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true, 
+                cfg.are_outputs_on_device ? true : false
+            };
+
+            if(cfg.are_outputs_transposed) 
+            {
+                transpose_batch(d_input, d_transpose_output, size, cfg.batches, gpu);
             }
+
             if (!cfg.are_outputs_on_device)
             {
-                gpu.DtoH(inout, &d_input[0], total_elements);
+                if(cfg.are_outputs_transposed) 
+                {
+                    gpu.DtoH(inout, &d_transpose_output[0], total_elements);
+                }
+                else
+                {
+                    gpu.DtoH(inout, &d_input[0], total_elements);
+                }
             }
+
+            // if(cfg.are_outputs_transposed){
+            //     transpose_batch(d_input, inout, size, cfg.batches, gpu);
+            // }
+            // if (!cfg.are_outputs_on_device)
+            // {
+            //     gpu.DtoH(inout, &d_input[0], total_elements);
+            // }
             gpu.sync();
         }
         catch (const cuda_error &e)
@@ -465,9 +490,29 @@ namespace ntt
             {
                 reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
             }
+
+            dev_ptr_t<fr_t> d_transpose_output{
+                total_output_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true, 
+                cfg.are_outputs_on_device ? true : false
+            };
+
+            if(cfg.are_outputs_transposed) 
+            {
+                transpose_batch(d_output, d_transpose_output, size, cfg.batches, gpu);
+            }
+
             if (!cfg.are_outputs_on_device)
             {
-                gpu.DtoH(output, &d_output[0], total_output_elements);
+                if(cfg.are_outputs_transposed) 
+                {
+                    gpu.DtoH(output, &d_transpose_output[0], total_output_elements);
+                }
+                else
+                {
+                    gpu.DtoH(output, &d_output[0], total_output_elements);
+                }
             }
             gpu.sync();
         }
