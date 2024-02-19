@@ -143,9 +143,20 @@ void list_all_gpus_prop()
      for (const gpu_t* gpu : gpus) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, gpu->id());
-        std::cout << "Device " << gpu->id() << " - " << prop.name << "\n";
-        std::cout << "CUDA multi processor count: " << prop.multiProcessorCount << "   CUDA Cores: " << prop.multiProcessorCount * _ConvertSMVer2Cores(prop.major, prop.minor) << "\n\n";
+        std::cout << "Device " << gpu->id() << " - " << prop.name << std::endl;
+        std::cout << "CUDA multi processor count: " << prop.multiProcessorCount << "   CUDA Cores: " << prop.multiProcessorCount * _ConvertSMVer2Cores(prop.major, prop.minor) << std::endl;
+        std::cout << "Major: " << prop.major << ", Minor: " << prop.minor << std::endl;
+   
   
+        int* canAccessPeer = new int;
+        int device = gpu->id();
+        int peerDevice = (device+1) % gpus.size();
+        cudaSetDevice(device);
+        cudaDeviceEnablePeerAccess(peerDevice, 0);
+        cudaDeviceCanAccessPeer( canAccessPeer, device, peerDevice);
+        std::cout << "device: " << device << ", peer: " << peerDevice << ", can access: "  << *canAccessPeer << std::endl;
+
+        std::cout << std::endl;
     }
 }
 
