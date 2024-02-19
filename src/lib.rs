@@ -1,3 +1,6 @@
+use types::NTTConfig;
+
+pub mod device;
 pub mod error;
 pub mod types;
 
@@ -6,6 +9,9 @@ extern "C" {
     fn list_devices_info() -> error::Error;
     fn cuda_available() -> bool;
     fn get_number_of_gpus(ngpus: *mut usize) -> error::Error;
+
+    fn init_twiddle_factors(device_id: usize, lg_n: usize) -> error::Error;
+    fn init_coset(device_id: usize, lg_n: usize, coset_gen: u64) -> error::Error;
 
     fn compute_ntt(
         device_id: usize,
@@ -20,13 +26,19 @@ extern "C" {
         device_id: usize,
         inout: *mut core::ffi::c_void,
         lg_domain_size: usize,
-        batch_size: u32,
-        ntt_order: types::NTTInputOutputOrder,
         ntt_direction: types::NTTDirection,
-        ntt_type: types::NTTType,
+        cfg: types::NTTConfig,
     ) -> error::Error;
 
-    fn init_twiddle_factors(device_id: usize, lg_n: usize) -> error::Error;
+    fn compute_batched_lde(
+        device_id: usize,
+        output: *mut core::ffi::c_void,
+        input: *mut core::ffi::c_void,
+        lg_domain_size: usize,
+        ntt_direction: types::NTTDirection,
+        cfg: types::NTTConfig,
+    ) -> error::Error;
+
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -149,22 +161,43 @@ pub fn get_number_of_gpus_rs() -> usize {
     return nums;
 }
 
+pub fn lde_batch<T>(
+    device_id: usize,
+    output: *mut T, // &mut [T],
+    input: *const T, // &mut [T],
+    log_n_size: usize,
+    cfg: NTTConfig,
+) {
+    let err = unsafe {
+        compute_batched_lde(
+            device_id,
+            output as *mut core::ffi::c_void,
+            input as *mut core::ffi::c_void,
+            log_n_size,
+            types::NTTDirection::Forward,
+            cfg,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
 pub fn ntt_batch<T>(
     device_id: usize,
-    inout: &mut [T],
-    order: types::NTTInputOutputOrder,
-    batch_size: u32,
+    inout: *mut T, // &mut [T],
     log_n_size: usize,
+    cfg: NTTConfig,
 ) {
     let err = unsafe {
         compute_batched_ntt(
             device_id,
-            inout.as_mut_ptr() as *mut core::ffi::c_void,
+            // inout.as_mut_ptr() as *mut core::ffi::c_void,
+            inout as *mut core::ffi::c_void,
             log_n_size,
-            batch_size,
-            order,
             types::NTTDirection::Forward,
-            types::NTTType::Standard,
+            cfg,
         )
     };
 
@@ -175,20 +208,17 @@ pub fn ntt_batch<T>(
 
 pub fn intt_batch<T>(
     device_id: usize,
-    inout: &mut [T],
-    order: types::NTTInputOutputOrder,
-    batch_size: u32,
+    inout: *mut T,
     log_n_size: usize,
+    cfg: NTTConfig,
 ) {
     let err = unsafe {
         compute_batched_ntt(
             device_id,
-            inout.as_mut_ptr() as *mut core::ffi::c_void,
+            inout as *mut core::ffi::c_void,
             log_n_size,
-            batch_size,
-            order,
             types::NTTDirection::Inverse,
-            types::NTTType::Standard,
+            cfg,
         )
     };
 
@@ -199,6 +229,14 @@ pub fn intt_batch<T>(
 
 pub fn init_twiddle_factors_rs(device_id: usize, lg_n: usize) {
     let err = unsafe { init_twiddle_factors(device_id, lg_n) };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+pub fn init_coset_rs(device_id: usize, lg_n: usize, coset_gen: u64) {
+    let err = unsafe { init_coset(device_id, lg_n, coset_gen) };
 
     if err.code != 0 {
         panic!("{}", String::from(err));

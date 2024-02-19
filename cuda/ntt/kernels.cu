@@ -9,21 +9,55 @@
 
 __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
-    // printf("inside kernel, reverse_order_kernel \n");
     int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (threadId < n * batch_size)
     {
         int idx = threadId % n;
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
-        //Check to ensure that the larger index swaps with the smaller one
-        if(idx > idx_reversed){
-            //Swap with temp
+
+        // if (threadId == 0 || threadId == n * batch_size - 1)
+        // {
+        //     printf("inside kernel, reverse_order_kernel n: %d, logn: %d, batch_size: %d \n", n, logn, batch_size);
+        //     printf("a: %d, b: %d \n", batch_idx * n + idx, batch_idx * n + idx_reversed);
+        // }
+
+        // Check to ensure that the larger index swaps with the smaller one
+        if (idx > idx_reversed)
+        {
+            // Swap with temp
             fr_t temp = arr[batch_idx * n + idx];
             arr[batch_idx * n + idx] = arr[batch_idx * n + idx_reversed];
             arr[batch_idx * n + idx_reversed] = temp;
         }
+    }
+}
 
+/**
+ *
+ * n, n before extension
+ * n_extended, n after extension
+ * logn, after extension
+ */
+__global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, uint32_t n_extend, uint32_t batch_size)
+{
+    int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (threadId < n_extend * batch_size)
+    {
+        int idx = threadId % n_extend;
+        int batch_idx = threadId / n_extend;
+
+        if (
+            idx < n)
+        {
+
+            output[batch_idx * n_extend + idx] = input[batch_idx * n + idx];
+        }
+        else
+        {
+            output[batch_idx * n_extend + idx] = fr_t::zero();
+        }
+        // printf("index: %d, val: %lu \n", batch_idx * n_extend + idx, output[batch_idx * n_extend + idx]);
     }
 }
 
@@ -53,9 +87,13 @@ __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr
 __global__ void
 ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, bool rev)
 {
+    // if (threadIdx.x == 0 && blockIdx.x == 0)
+    // {
+        // printf("inside ntt_template_kernel blk.idx: %d, thread.idx: %d\n", blockIdx.x, threadIdx.x );
+    // }
 
     int task = blockIdx.x;
-    int chunks = n / (blockDim.x * 2);  // how many chunks within one NTT
+    int chunks = n / (blockDim.x * 2); // how many chunks within one NTT
 
     if (task < max_task)
     {
@@ -67,8 +105,8 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
         {
             uint32_t ntw_i = task % chunks; // chunk index of the current NTT
 
-            uint32_t shift_s = 1 << s;  // offset to j, 
-            uint32_t shift2_s = 1 << (s + 1);  // num of continuous elements access
+            uint32_t shift_s = 1 << s;        // offset to j,
+            uint32_t shift2_s = 1 << (s + 1); // num of continuous elements access
             uint32_t n_twiddles_div = n_twiddles >> (s + 1);
 
             l = ntw_i * blockDim.x + l; // to l from chunks to full
@@ -125,23 +163,23 @@ __global__ void template_normalize_kernel(fr_t *arr, uint32_t n, fr_t n_inv)
  * @param max_task max count of parallel tasks.
  * @param s log2(n) loop index.
  */
-// template <typename E, typename S>
 __global__ void ntt_template_kernel_shared_rev(
-    fr_t *__restrict__ arr_g,
+    fr_t *arr_g,
     uint32_t n,
-    const fr_t *__restrict__ r_twiddles,
+    const fr_t *r_twiddles,
     uint32_t n_twiddles,
     uint32_t max_task,
     uint32_t ss,
     uint32_t logn,
-    int gpu_id
-)
+    int gpu_id)
 {
-  
+    // if (threadIdx.x == 0 && blockIdx.x == 0)
+    // {
+    //     printf("inside ntt_template_kernel_shared_rev, before smGetPointer gpu_id: %d>>>>>\n", gpu_id);
+    // }
     SharedMemory<fr_t> smem;
-    //   printf("inside ntt_template_kernel_shared_rev, before smGetPointer gpu_id: %d>>>>>\n", gpu_id);
     fr_t *arr = smem.getPointer();
- 
+
     uint32_t task = blockIdx.x;
     uint32_t loop_limit = blockDim.x;
     uint32_t chunks = n / (loop_limit * 2);
@@ -153,7 +191,7 @@ __global__ void ntt_template_kernel_shared_rev(
 
         if (l < loop_limit)
         {
- 
+
 #pragma unroll
             for (; ss < logn; ss++)
             {
@@ -179,7 +217,7 @@ __global__ void ntt_template_kernel_shared_rev(
                 // printf("twiddle of: %d, is: %lu, gpu_id: %d\n", j * n_twiddles_div, tw, gpu_id);
                 fr_t u = is_beginning ? arr_g[offset + oij] : arr[oij];
                 fr_t v = is_beginning ? arr_g[offset + k] : arr[k];
-                
+
                 if (is_end)
                 {
                     arr_g[offset + oij] = u + v;
