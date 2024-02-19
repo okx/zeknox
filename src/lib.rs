@@ -6,6 +6,7 @@ pub mod types;
 
 extern "C" {
 
+    fn list_devices_info() -> error::Error;
     fn cuda_available() -> bool;
     fn get_number_of_gpus(ngpus: *mut usize) -> error::Error;
 
@@ -146,8 +147,8 @@ pub fn goldilocks_exp_rust(a: &mut u64, r: &mut u32) -> u64 {
     result
 }
 
-pub fn check_cuda_available() -> bool {
-    unsafe { cuda_available() }
+pub fn list_devices_info_rs()  {
+    unsafe { list_devices_info(); }
 }
 
 pub fn get_number_of_gpus_rs() -> usize {
