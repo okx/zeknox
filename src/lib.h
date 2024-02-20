@@ -1,7 +1,7 @@
 #pragma once
 #include <util/rusterror.h>
 #include <ntt/ntt.h>
-#include <ff/goldilocks.hpp>
+// #include <ff/goldilocks.hpp>
 #include <util/device_context.cuh>
 
 #ifndef FEATURE_GOLDILOCKS
