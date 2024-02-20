@@ -257,8 +257,8 @@ fn test_ntt_batch_on_device() {
 
     let mut device_data: HostOrDeviceSlice<'_, u64> =
         HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
-    device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
-    device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
+    let _ = device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
+    let _ = device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
     // let ret = device_data.copy_from_host(&scalars);
 
     let mut cfg = NTTConfig::default();
@@ -484,7 +484,7 @@ fn test_compute_batched_lde_data_on_device() {
         HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_num_input_elements).unwrap();
 
     host_inputs.iter().enumerate().for_each(|(i, p)| {
-        device_input_data.copy_from_host_offset(
+        let _= device_input_data.copy_from_host_offset(
             p.as_slice(),
             input_domain_size * i,
             input_domain_size,
@@ -513,8 +513,8 @@ fn test_compute_batched_lde_data_on_device() {
     let mut host_output_first = vec![0; output_domain_size];
     let mut host_output_last = vec![0; output_domain_size];
 
-    device_output_data.copy_to_host_offset(host_output_first.as_mut_slice(), 0, output_domain_size);
-    device_output_data.copy_to_host_offset(host_output_last.as_mut_slice() , output_domain_size*(batches-1), output_domain_size);
+    let _ = device_output_data.copy_to_host_offset(host_output_first.as_mut_slice(), 0, output_domain_size);
+    let _ = device_output_data.copy_to_host_offset(host_output_last.as_mut_slice() , output_domain_size*(batches-1), output_domain_size);
 
     // lde gpu copy from host during api call
     let mut cfg_lde_copy = NTTConfig::default();

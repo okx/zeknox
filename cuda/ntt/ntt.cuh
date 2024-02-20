@@ -82,28 +82,31 @@ namespace ntt
                       Type type, stream_t &stream,
                       bool coset_ext_pow = false)
     {
+#if defined(CUDA_DEBUG)
+        printf("type%d, coset_ext_pow: %d\n",type, coset_ext_pow);
+#endif
         const bool intt = direction == Direction::inverse;
         const auto &ntt_parameters = *NTTParameters::all(intt)[stream];
-        bool bitrev;
+        // bool bitrev;
         Algorithm algorithm;
 
         switch (order)
         {
         case InputOutputOrder::NN:
             bit_rev(d_inout, d_inout, lg_domain_size, stream);
-            bitrev = true;
+            // bitrev = true;
             algorithm = Algorithm::CT;
             break;
         case InputOutputOrder::NR:
-            bitrev = false;
+            // bitrev = false;
             algorithm = Algorithm::GS;
             break;
         case InputOutputOrder::RN:
-            bitrev = true;
+            // bitrev = true;
             algorithm = Algorithm::CT;
             break;
         case InputOutputOrder::RR:
-            bitrev = true;
+            // bitrev = true;
             algorithm = Algorithm::GS;
             break;
         default:
