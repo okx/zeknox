@@ -4,7 +4,7 @@ use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{
     fft::fft,
     polynomial::PolynomialCoeffs,
-    types::{Field, PrimeField64},
+    types::{Field},
 };
 use rand::random;
 
@@ -20,7 +20,7 @@ fn bench_cpu_ntt(c: &mut Criterion) {
     for log_ntt_size in LOG_NTT_SIZES {
         let domain_size = 1usize << log_ntt_size;
 
-        let mut gpu_buffer: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+        let gpu_buffer: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
         let coeffs = gpu_buffer
             .iter()
             .map(|i| GoldilocksField::from_canonical_u64(*i))

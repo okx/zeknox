@@ -1,10 +1,10 @@
 use std::ops::Mul;
 
 use cryptography_cuda::device::memory::HostOrDeviceSlice;
-use cryptography_cuda::device::stream::CudaStream;
+
 use cryptography_cuda::types::*;
 use cryptography_cuda::{
-    get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch,
+    init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch,
     ntt, ntt_batch,
 };
 use plonky2_field::fft::{fft, ifft};
@@ -138,11 +138,11 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-    let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let _v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
     let mut gpu_buffer = v1.clone();
 
-    let mut cfg = NTTConfig::default();
+    let cfg = NTTConfig::default();
     ntt_batch(
         DEFAULT_GPU as usize,
         gpu_buffer.as_mut_ptr(),
@@ -222,7 +222,7 @@ fn test_ntt_on_device() {
 
     let mut device_data: HostOrDeviceSlice<'_, u64> =
         HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, domain_size).unwrap();
-    let ret = device_data.copy_from_host(&scalars);
+    let _ret = device_data.copy_from_host(&scalars);
 
     let mut cfg = NTTConfig::default();
     cfg.are_inputs_on_device = true;
@@ -336,7 +336,7 @@ fn test_ntt_batch_with_coset() {
         cfg.clone(),
     );
 
-    let mut cpu_buffer = v1.clone();
+    let cpu_buffer = v1.clone();
 
     let modified_poly: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
         .powers()
@@ -353,7 +353,7 @@ fn test_ntt_batch_with_coset() {
 
     assert_eq!(gpu_buffer[0..domain_size], ret);
 
-    let mut cpu_buffer2 = v2.clone();
+    let cpu_buffer2 = v2.clone();
     let modified_poly2: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
         .powers()
         .zip(cpu_buffer2)
@@ -481,7 +481,7 @@ fn test_compute_batched_lde_data_on_device() {
         .collect::<Vec<Vec<u64>>>();
 
     let mut device_input_data: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, (total_num_input_elements)).unwrap();
+        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_num_input_elements).unwrap();
 
     host_inputs.iter().enumerate().for_each(|(i, p)| {
         device_input_data.copy_from_host_offset(
