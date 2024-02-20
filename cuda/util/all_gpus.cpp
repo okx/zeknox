@@ -146,7 +146,7 @@ void list_all_gpus_prop()
         std::cout << "Device " << gpu->id() << " - " << prop.name << std::endl;
         std::cout << "CUDA multi processor count: " << prop.multiProcessorCount << "   CUDA Cores: " << prop.multiProcessorCount * _ConvertSMVer2Cores(prop.major, prop.minor) << std::endl;
         std::cout << "Major: " << prop.major << ", Minor: " << prop.minor << std::endl;
-   
+        std::cout << "Integrated: " << prop.integrated << ", canMapHostMemory: " << prop.canMapHostMemory << std::endl;
   
         int* canAccessPeer = new int;
         int device = gpu->id();
