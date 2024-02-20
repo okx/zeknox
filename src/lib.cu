@@ -36,7 +36,7 @@ RustError list_devices_info(){
 #error "no FEATURE"
 #endif
 
-#include <arithmetic/arithmetic.hpp>
+// #include <arithmetic/arithmetic.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
 
