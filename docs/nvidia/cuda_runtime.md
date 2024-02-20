@@ -1,0 +1,2 @@
+- p2p memory access
+- p2p memory copy
