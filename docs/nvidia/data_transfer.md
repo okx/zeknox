@@ -1,6 +1,8 @@
 # gdr
 https://developer.nvidia.com/gdrcopy
 
+# pinned pageable memory
+https://developer.nvidia.com/blog/how-optimize-data-transfers-cuda-cc/
 
 # nvlink command
 ```
