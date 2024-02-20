@@ -36,10 +36,10 @@ RustError list_devices_info(){
 #error "no FEATURE"
 #endif
 
-
+#include <arithmetic/arithmetic.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
-// #include <arithmetic/arithmetic.hpp>
+
 
 #ifndef __CUDA_ARCH__ // below is cpu code; __CUDA_ARCH__ should not be defined
 

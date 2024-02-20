@@ -85,6 +85,7 @@ struct fr_t : public fr_mont
     using mem_t = fr_t;
     __device__ __forceinline__ fr_t() {}
     __device__ __forceinline__ fr_t(const fr_mont &a) : fr_mont(a) {}
+    __device__ __forceinline__ static fr_t zero() { return one(); }
 };
 #endif
 
@@ -147,25 +148,28 @@ struct fr_t : public fr_mont
     inline fr_t() {}
     inline fr_t(const fr_mont &a) : fr_mont(a) {}
 
+    //**********************************************************
     /**
      * TODO: below are placeholder for making compile pass. need to be put with the real value
-    */
+     */
     static inline fr_t omega(uint32_t logn)
     {
-
         return one();
     }
     static inline fr_t omega_inv(uint32_t logn)
     {
         return one();
     }
-
     static inline const fr_t inv_log_size(uint32_t logn)
     {
         return one();
     }
-
-    static inline const fr_t zero() { return one(); }
+    static inline const fr_t zero()
+    {
+        fr_t zero = fr_t();
+        return zero;
+    }
+    //**********************************************************
 };
 
 #if defined(__GNUC__) && !defined(__clang__)
