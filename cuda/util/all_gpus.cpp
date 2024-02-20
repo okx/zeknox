@@ -147,7 +147,18 @@ void list_all_gpus_prop()
         std::cout << "CUDA multi processor count: " << prop.multiProcessorCount << "   CUDA Cores: " << prop.multiProcessorCount * _ConvertSMVer2Cores(prop.major, prop.minor) << std::endl;
         std::cout << "Major: " << prop.major << ", Minor: " << prop.minor << std::endl;
         std::cout << "Integrated: " << prop.integrated << ", canMapHostMemory: " << prop.canMapHostMemory << std::endl;
-  
+        std::cout << "unifiedAddressing: " << prop.unifiedAddressing << std::endl;
+        std::cout << "maxThreadsPerMultiProcessor: " << prop.maxThreadsPerMultiProcessor << std::endl;
+        std::cout << "sharedMemPerMultiprocessor: " << prop.sharedMemPerMultiprocessor << std::endl;
+        std::cout << "managedMemory: " << prop.managedMemory << std::endl;
+        std::cout << "isMultiGpuBoard: " << prop.isMultiGpuBoard << std::endl;
+        std::cout << "pageableMemoryAccess: " << prop.pageableMemoryAccess << std::endl;
+        std::cout << "canUseHostPointerForRegisteredMem: " << prop.canUseHostPointerForRegisteredMem << std::endl;
+        std::cout << "directManagedMemAccessFromHost: " << prop.directManagedMemAccessFromHost << std::endl;
+        std::cout << "memoryPoolsSupported: " << prop.memoryPoolsSupported << std::endl;
+        std::cout << "gpuDirectRDMASupported: " << prop.gpuDirectRDMASupported << std::endl;
+        std::cout << "clusterLaunch: " << prop.clusterLaunch << std::endl;
+
         int* canAccessPeer = new int;
         int device = gpu->id();
         int peerDevice = (device+1) % gpus.size();
