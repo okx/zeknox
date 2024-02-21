@@ -160,6 +160,19 @@ __global__ void compute_internal_hashes_per_round(u64 *digests_buf, u32 round_si
     gpu_hash_two_ptr((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
 }
 
+__global__ void compute_caps_hashes_per_round(u64 *caps_buf, u64 *digests_buf, u32 round_size, u32 round_idx, u32 max_round_size, HashTask *internal_index)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= round_size)
+        return;
+
+    HashTask *ht = &internal_index[round_idx * max_round_size + tid];
+    u64 *dptr = caps_buf + (ht->target_index * HASH_SIZE_U64);
+    u64 *sptr1 = digests_buf + (ht->left_index * HASH_SIZE_U64);
+    u64 *sptr2 = digests_buf + (ht->right_index * HASH_SIZE_U64);
+    gpu_hash_two_ptr((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
+}
+
 /*
  * Compute internal Merkle tree hashes in linear structure. Only one round.
  */
@@ -198,6 +211,99 @@ __global__ void compute_internal_hashes_linear(u64 *digests_buf, u32 round_size,
 
 // CPU functions
 void fill_digests_buf_in_rounds_in_c_on_gpu(
+    u64 digests_buf_size,
+    u64 cap_buf_size,
+    u64 leaves_buf_size,
+    u64 leaf_size,
+    u64 cap_height)
+{
+    u64 *gpu_leaves;
+    u64 *gpu_digests;
+    u64 *gpu_caps;
+    u32 *gpu_indexes;
+    u32 *gpu_round_size;
+    HashTask *gpu_internal_indexes;
+
+    u32 leaves_size_bytes = leaves_buf_size * leaf_size * 8;
+    CHECKCUDAERR(cudaMalloc(&gpu_leaves, leaves_size_bytes));
+    CHECKCUDAERR(cudaMemcpyAsync(gpu_leaves, global_leaves_buf, leaves_size_bytes, cudaMemcpyHostToDevice));
+
+    if (cap_buf_size == leaves_buf_size)
+    {
+        u32 digests_size_bytes = cap_buf_size * HASH_SIZE_U64 * sizeof(u64);
+        CHECKCUDAERR(cudaMalloc(&gpu_digests, digests_size_bytes));
+        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>(gpu_leaves, leaves_buf_size, leaf_size, gpu_digests);
+        CHECKCUDAERR(cudaMemcpy(global_cap_buf, gpu_digests, digests_size_bytes, cudaMemcpyDeviceToHost));
+
+        // free
+        cudaFree(gpu_digests);
+        cudaFree(gpu_leaves);
+
+        return;
+    }
+
+    // 1.1 copy leaves from CPU to GPU
+    // 1.2 (in parallel) run fill_tree_get_index on CPU
+    // 2.1 compute leaf hashes on GPU
+    // 2.2 (in parallel) copy task index data to GPU
+    // 3. compute internal hashes on GPU
+    // 4. copy data from GPU to CPU
+    // 5. compute cap hashes on CPU
+
+    u64 subtree_digests_len = digests_buf_size >> cap_height;
+    u64 subtree_leaves_len = leaves_buf_size >> cap_height;
+    u64 digests_chunks = digests_buf_size / subtree_digests_len;
+    u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;
+    assert(digests_chunks == cap_buf_size);
+    assert(digests_chunks == leaves_chunks);
+
+    // 1.2 (in parallel) run fill_tree_get_index on CPU
+    for (u64 k = 0; k < cap_buf_size; k++)
+    {
+        fill_subtree_get_index(k, k * subtree_digests_len, subtree_digests_len, k * subtree_leaves_len, subtree_leaves_len, leaf_size, 0);
+    }
+
+    u32 digests_size_bytes = digests_buf_size * HASH_SIZE_U64 * sizeof(u64);
+    u32 caps_size_bytes = cap_buf_size * HASH_SIZE_U64 * sizeof(u64);
+    CHECKCUDAERR(cudaMalloc(&gpu_digests, digests_size_bytes));
+    CHECKCUDAERR(cudaMalloc(&gpu_caps, caps_size_bytes));
+    CHECKCUDAERR(cudaMalloc(&gpu_indexes, leaves_buf_size * sizeof(u32)));
+    CHECKCUDAERR(cudaMalloc(&gpu_internal_indexes, (global_max_round + 1) * global_max_round_size * sizeof(HashTask)));
+    CHECKCUDAERR(cudaMalloc(&gpu_round_size, (global_max_round + 1) * sizeof(u32)));
+
+    // 2.1 compute leaf hashes on GPU
+    CHECKCUDAERR(cudaMemcpyAsync(gpu_indexes, global_leaf_index, leaves_buf_size * sizeof(u32), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpyAsync(gpu_round_size, global_round_size, (global_max_round + 1) * sizeof(u32), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpyAsync((void *)gpu_internal_indexes, (void *)global_internal_index, (global_max_round + 1) * global_max_round_size * sizeof(HashTask), cudaMemcpyHostToDevice));
+    compute_leaves_hashes<<<leaves_buf_size / TPB + 1, TPB>>>(gpu_leaves, leaves_buf_size, leaf_size, gpu_digests, gpu_indexes);
+
+    int r = global_max_round;
+    for (; global_round_size[r] > TPB; r--)
+    {
+        compute_internal_hashes_per_round<<<global_round_size[r] / TPB, TPB>>>(gpu_digests, global_round_size[r], r, global_max_round_size, gpu_internal_indexes);
+    }
+
+    for (; r > 0; r--)
+    {
+        compute_internal_hashes_per_round<<<1, global_round_size[r]>>>(gpu_digests, global_round_size[r], r, global_max_round_size, gpu_internal_indexes);
+    }
+
+    CHECKCUDAERR(cudaMemcpyAsync(global_digests_buf, gpu_digests, digests_size_bytes, cudaMemcpyDeviceToHost));
+
+    compute_caps_hashes_per_round<<<1, global_round_size[0]>>>(gpu_caps, gpu_digests, global_round_size[0], 0, global_max_round_size, gpu_internal_indexes);
+
+    CHECKCUDAERR(cudaMemcpy(global_cap_buf, gpu_caps, caps_size_bytes, cudaMemcpyDeviceToHost));
+
+    // free
+    cudaFree(gpu_digests);
+    cudaFree(gpu_caps);
+    cudaFree(gpu_indexes);
+    cudaFree(gpu_leaves);
+    cudaFree(gpu_internal_indexes);
+    cudaFree(gpu_round_size);
+}
+
+void fill_digests_buf_in_rounds_in_c_on_gpu_v1(
     u64 digests_buf_size,
     u64 cap_buf_size,
     u64 leaves_buf_size,
@@ -252,21 +358,21 @@ void fill_digests_buf_in_rounds_in_c_on_gpu(
     u32 digests_size_bytes = digests_buf_size * HASH_SIZE_U64 * sizeof(u64);
     CHECKCUDAERR(cudaMalloc(&gpu_digests, digests_size_bytes));
     CHECKCUDAERR(cudaMalloc(&gpu_indexes, leaves_buf_size * sizeof(u32)));
-    CHECKCUDAERR(cudaMalloc(&gpu_internal_indexes, (max_round + 1) * max_round_size * sizeof(HashTask)));
-    CHECKCUDAERR(cudaMalloc(&gpu_round_size, (max_round + 1) * sizeof(u32)));
+    CHECKCUDAERR(cudaMalloc(&gpu_internal_indexes, (global_max_round + 1) * global_max_round_size * sizeof(HashTask)));
+    CHECKCUDAERR(cudaMalloc(&gpu_round_size, (global_max_round + 1) * sizeof(u32)));
 
     // 2.1 compute leaf hashes on GPU
-    CHECKCUDAERR(cudaMemcpyAsync(gpu_indexes, leaf_index, leaves_buf_size * sizeof(u32), cudaMemcpyHostToDevice));
-    CHECKCUDAERR(cudaMemcpyAsync(gpu_round_size, round_size, (max_round + 1) * sizeof(u32), cudaMemcpyHostToDevice));
-    CHECKCUDAERR(cudaMemcpyAsync((void *)gpu_internal_indexes, (void *)internal_index, (max_round + 1) * max_round_size * sizeof(HashTask), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpyAsync(gpu_indexes, global_leaf_index, leaves_buf_size * sizeof(u32), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpyAsync(gpu_round_size, global_round_size, (global_max_round + 1) * sizeof(u32), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpyAsync((void *)gpu_internal_indexes, (void *)global_internal_index, (global_max_round + 1) * global_max_round_size * sizeof(HashTask), cudaMemcpyHostToDevice));
     compute_leaves_hashes<<<leaves_buf_size / TPB + 1, TPB>>>(gpu_leaves, leaves_buf_size, leaf_size, gpu_digests, gpu_indexes);
 
     // compute_internal_hashes<<<max_round_size / TPB, TPB>>>(gpu_digests, max_round, max_round_size, gpu_round_size, gpu_internal_indexes, TPB);
 
-    int r = max_round;
-    for (; round_size[r] > TPB; r--)
+    int r = global_max_round;
+    for (; global_round_size[r] > TPB; r--)
     {
-        compute_internal_hashes_per_round<<<round_size[r] / TPB, TPB>>>(gpu_digests, round_size[r], r, max_round_size, gpu_internal_indexes);
+        compute_internal_hashes_per_round<<<global_round_size[r] / TPB, TPB>>>(gpu_digests, global_round_size[r], r, global_max_round_size, gpu_internal_indexes);
     }
 
     CHECKCUDAERR(cudaMemcpy(global_digests_buf, gpu_digests, digests_size_bytes, cudaMemcpyDeviceToHost));
@@ -276,17 +382,17 @@ void fill_digests_buf_in_rounds_in_c_on_gpu(
 
     for (; r > 0; r--)
     {
-        for (int i = 0; i < round_size[r]; i++)
+        for (int i = 0; i < global_round_size[r]; i++)
         {
-            HashTask *ht = &internal_index[r * max_round_size + i];
+            HashTask *ht = &global_internal_index[r * global_max_round_size + i];
             cpu_hash_two_ptr(global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64), global_digests_buf + (ht->target_index * HASH_SIZE_U64));
         }
     }
 
     // cap buffer (on CPU)
-    for (int i = 0; i < round_size[0]; i++)
+    for (int i = 0; i < global_round_size[0]; i++)
     {
-        HashTask *ht = &internal_index[i];
+        HashTask *ht = &global_internal_index[i];
         cpu_hash_two_ptr(global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64), global_cap_buf + (ht->target_index * HASH_SIZE_U64));
     }
 
@@ -552,6 +658,75 @@ void fill_digests_buf_linear_gpu_v1(
     cudaFree(gpu_leaves);
 }
 
+void fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
+    void *digests_buf_gpu_ptr,
+    void *cap_buf_gpu_ptr,
+    void *leaves_buf_gpu_ptr,
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height
+)
+{
+    if (cap_buf_size == leaves_buf_size)
+    {
+        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)digests_buf_gpu_ptr);
+        return;
+    }
+
+    // 1. run fill_tree_get_index on CPU
+    // 2.1 compute leaf hashes on GPU
+    // 2.2 (in parallel) copy task index data to GPU
+    // 3. compute internal hashes on GPU
+    // 4. compute cap hashes on GPU
+
+    u64 subtree_digests_len = digests_buf_size >> cap_height;
+    u64 subtree_leaves_len = leaves_buf_size >> cap_height;
+    u64 digests_chunks = digests_buf_size / subtree_digests_len;
+    u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;
+    assert(digests_chunks == cap_buf_size);
+    assert(digests_chunks == leaves_chunks);
+
+    // 1. run fill_tree_get_index on CPU
+    for (u64 k = 0; k < cap_buf_size; k++)
+    {
+        fill_subtree_get_index(k, k * subtree_digests_len, subtree_digests_len, k * subtree_leaves_len, subtree_leaves_len, leaf_size, 0);
+    }
+
+    u32 *gpu_indexes;
+    u32 *gpu_round_size;
+    HashTask *gpu_internal_indexes;
+
+    CHECKCUDAERR(cudaMalloc(&gpu_indexes, leaves_buf_size * sizeof(u32)));
+    CHECKCUDAERR(cudaMalloc(&gpu_internal_indexes, (global_max_round + 1) * global_max_round_size * sizeof(HashTask)));
+    CHECKCUDAERR(cudaMalloc(&gpu_round_size, (global_max_round + 1) * sizeof(u32)));
+
+    // 2.1 and 2.2
+    CHECKCUDAERR(cudaMemcpyAsync(gpu_indexes, global_leaf_index, leaves_buf_size * sizeof(u32), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpyAsync(gpu_round_size, global_round_size, (global_max_round + 1) * sizeof(u32), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpyAsync((void *)gpu_internal_indexes, (void *)global_internal_index, (global_max_round + 1) * global_max_round_size * sizeof(HashTask), cudaMemcpyHostToDevice));
+    compute_leaves_hashes<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)digests_buf_gpu_ptr, gpu_indexes);
+
+    // 3.
+    int r = global_max_round;
+    for (; global_round_size[r] > TPB; r--)
+    {
+        compute_internal_hashes_per_round<<<global_round_size[r] / TPB, TPB>>>((u64*)digests_buf_gpu_ptr, global_round_size[r], r, global_max_round_size, gpu_internal_indexes);
+    }
+    for (; r > 0; r--)
+    {
+        compute_internal_hashes_per_round<<<1, global_round_size[r]>>>((u64*)digests_buf_gpu_ptr, global_round_size[r], r, global_max_round_size, gpu_internal_indexes);
+    }
+
+    // 4.
+    compute_internal_hashes_per_round<<<1, global_round_size[r]>>>((u64*)cap_buf_gpu_ptr, global_round_size[0], 0, global_max_round_size, gpu_internal_indexes);
+
+    // free
+    cudaFree(gpu_indexes);
+    cudaFree(gpu_internal_indexes);
+    cudaFree(gpu_round_size);
+}
 
 //#define TESTING
 #ifdef TESTING

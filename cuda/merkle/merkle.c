@@ -3,9 +3,6 @@
 #include <omp.h>
 #include <math.h>
 
-// TODO - remove
-#include <stdio.h>
-
 #include "int_types.h"
 #include "merkle.h"
 #include "merkle_private.h"
@@ -21,14 +18,15 @@ u64 *global_digests_buf_end = NULL;
 u64 *global_leaves_buf_end = NULL;
 u64 *global_cap_buf_end = NULL;
 
+int *global_leaf_index = NULL;
+HashTask *global_internal_index = NULL;
+int *global_round_size = NULL;
+int global_max_round = 0;
+int global_max_round_size = 0;
+
+// CPU hash function pointers (can point to Poseidon or Keccak)
 void (*cpu_hash_one_ptr)(u64 *input, u32 size, u64 *data);
 void (*cpu_hash_two_ptr)(u64 *hash1, u64 *hash2, u64 *hash);
-
-int *leaf_index = NULL;
-HashTask *internal_index = NULL;
-int *round_size = NULL;
-int max_round = 0;
-int max_round_size = 0;
 
 /**
  * Version 1 - Fill in a recursive way (the same as in Plonky2 Rust code)
@@ -140,7 +138,7 @@ void fill_subtree_get_index(int target_index, int digests_offset, int digests_co
 {
     if (digests_count == 0)
     {
-        leaf_index[leaves_offset] = target_index;
+        global_leaf_index[leaves_offset] = target_index;
     }
     else
     {
@@ -156,14 +154,14 @@ void fill_subtree_get_index(int target_index, int digests_offset, int digests_co
         int new_leaves_count = mid;
         fill_subtree_get_index(left_digest_index, left_digests_offset, new_digests_count, left_leaves_offset, new_leaves_count, leaf_size, round + 1);
         fill_subtree_get_index(right_digest_index, right_digests_offset, new_digests_count, right_leaves_offset, new_leaves_count, leaf_size, round + 1);
-        HashTask *ht = &internal_index[round * max_round_size + round_size[round]];
+        HashTask *ht = &global_internal_index[round * global_max_round_size + global_round_size[round]];
         ht->target_index = target_index;
         ht->left_index = left_digest_index;
         ht->right_index = right_digest_index;
-        round_size[round]++;
-        if (round > max_round)
+        global_round_size[round]++;
+        if (round > global_max_round)
         {
-            max_round = round;
+            global_max_round = round;
         }
     }
 }
@@ -177,16 +175,16 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size)
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_or_noop(global_digests_buf + (leaf_index[i] * HASH_SIZE_U64), global_leaves_buf + (i * leaf_size), leaf_size);
 #else
-        cpu_hash_one_ptr(global_leaves_buf + (i * leaf_size), leaf_size, global_digests_buf + (leaf_index[i] * HASH_SIZE_U64));
+        cpu_hash_one_ptr(global_leaves_buf + (i * leaf_size), leaf_size, global_digests_buf + (global_leaf_index[i] * HASH_SIZE_U64));
 #endif
     }
     // internal rounds on digest buffer
-    for (int r = max_round; r > 0; r--)
+    for (int r = global_max_round; r > 0; r--)
     {
 #pragma omp parallel for
-        for (int i = 0; i < round_size[r]; i++)
+        for (int i = 0; i < global_round_size[r]; i++)
         {
-            HashTask *ht = &internal_index[r * max_round_size + i];
+            HashTask *ht = &global_internal_index[r * global_max_round_size + i];
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_of_two(global_digests_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
@@ -196,9 +194,9 @@ void fill_subtree_in_rounds(int leaves_count, int leaf_size)
     }
     // cap buffer
     // #pragma omp parallel for
-    for (int i = 0; i < round_size[0]; i++)
+    for (int i = 0; i < global_round_size[0]; i++)
     {
-        HashTask *ht = &internal_index[i];
+        HashTask *ht = &global_internal_index[i];
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_of_two(global_cap_buf + (ht->target_index * HASH_SIZE_U64), global_digests_buf + (ht->left_index * HASH_SIZE_U64), global_digests_buf + (ht->right_index * HASH_SIZE_U64));
 #else
@@ -400,20 +398,20 @@ void fill_delete()
 
 void fill_init_rounds(u64 leaves_count, u64 rounds)
 {
-    max_round_size = leaves_count / 2;
-    leaf_index = (int *)malloc(leaves_count * sizeof(int));
-    internal_index = (HashTask *)malloc(rounds * max_round_size * sizeof(HashTask));
-    memset(internal_index, 0, rounds * max_round_size * sizeof(HashTask));
-    round_size = (int *)malloc(rounds * sizeof(int));
-    memset(round_size, 0, rounds * sizeof(int));
-    max_round = 0;
+    global_max_round_size = leaves_count / 2;
+    global_leaf_index = (int *)malloc(leaves_count * sizeof(int));
+    global_internal_index = (HashTask *)malloc(rounds * global_max_round_size * sizeof(HashTask));
+    memset(global_internal_index, 0, rounds * global_max_round_size * sizeof(HashTask));
+    global_round_size = (int *)malloc(rounds * sizeof(int));
+    memset(global_round_size, 0, rounds * sizeof(int));
+    global_max_round = 0;
 }
 
 void fill_delete_rounds()
 {
-    free(internal_index);
-    free(leaf_index);
-    free(round_size);
+    free(global_internal_index);
+    free(global_leaf_index);
+    free(global_round_size);
 }
 
 u64 *get_digests_ptr()
