@@ -82,7 +82,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
 
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
-            cudaSetDevice(device_id);
+            let _ = cudaSetDevice(device_id);
             cudaMalloc(device_ptr.as_mut_ptr(), size).wrap()?;
             Ok(Self::Device(device_id, from_raw_parts_mut(
                 device_ptr.assume_init() as *mut T,
@@ -99,7 +99,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
 
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
-            cudaSetDevice(device_id);
+            let _ = cudaSetDevice(device_id);
             cudaMallocAsync(
                 device_ptr.as_mut_ptr(),
                 size,
@@ -126,7 +126,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         if size != 0 {
             // println!("start copy to device");
             unsafe {
-                cudaSetDevice(device_id);
+                let _ = cudaSetDevice(device_id);
                 cudaMemcpy(
                     self.as_mut_ptr() as *mut c_void,
                     val.as_ptr() as *const c_void,
@@ -150,7 +150,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         };
         unsafe {
             // println!("ptr value: {:?}", self.as_mut_ptr().add(offset));
-            cudaSetDevice(device_id);
+            let _ = cudaSetDevice(device_id);
             cudaMemcpy(
                 self.as_ptr().add(offset) as *mut c_void,
                 src.as_ptr() as *const c_void,
@@ -170,7 +170,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         let size = size_of::<T>() * counts;
         if size != 0 {
             unsafe {
-                cudaSetDevice(device_id);
+                let _ = cudaSetDevice(device_id);
                 cudaMemcpy(
                     val.as_mut_ptr() as *mut c_void,
                     self.as_ptr() as *const c_void,
@@ -195,7 +195,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         let size = size_of::<T>() * counts;
         if size != 0 {
             unsafe {
-                cudaSetDevice(device_id);
+                let _ = cudaSetDevice(device_id);
                 cudaMemcpy(
                     val.as_mut_ptr() as *mut c_void,
                     self.as_ptr().add(offset) as *const c_void,
@@ -220,7 +220,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         let size = size_of::<T>() * self.len();
         if size != 0 {
             unsafe {
-                cudaSetDevice(device_id);
+                let _ = cudaSetDevice(device_id);
                 cudaMemcpyAsync(
                     self.as_mut_ptr() as *mut c_void,
                     val.as_ptr() as *const c_void,
@@ -246,7 +246,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         let size = size_of::<T>() * self.len();
         if size != 0 {
             unsafe {
-                cudaSetDevice(device_id);
+                let _ = cudaSetDevice(device_id);
                 cudaMemcpyAsync(
                     val.as_mut_ptr() as *mut c_void,
                     self.as_ptr() as *const c_void,
@@ -306,7 +306,7 @@ impl<'a, T> Drop for HostOrDeviceSlice<'a, T> {
                 }
                 // free the cuda memory
                 unsafe {
-                    cudaSetDevice(*device_id);
+                    let _ = cudaSetDevice(*device_id);
                     cudaFree(s.as_mut_ptr() as *mut c_void).wrap().unwrap();
                 }
             }

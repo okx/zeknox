@@ -2,8 +2,6 @@
 #define XSTR(x) STR(x)
 #define STR(x) #x
 
-#include <cuda.h>
-
 #ifdef NDEBUG
 #define CUDA_DEBUG false
 #else
@@ -11,8 +9,24 @@
 #include <cstdio>
 #endif
 
+
 #pragma message "The value of CUDA_DEBUG: " XSTR(CUDA_DEBUG)
 #pragma message "The value of __CUDA_ARCH__: " XSTR(__CUDA_ARCH__)
+
+#include <cuda.h>
+#include <util/gpu_t.cuh>
+#include <util/cuda_available.hpp>
+#include <util/all_gpus.cpp>
+#include "lib.h"
+
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+RustError list_devices_info(){
+    list_all_gpus_prop();
+    return RustError{cudaSuccess};
+}
 
 #if defined(FEATURE_GOLDILOCKS)
 #include <ff/goldilocks.hpp>
@@ -22,12 +36,10 @@
 #error "no FEATURE"
 #endif
 
-#include "lib.h"
-#include <util/gpu_t.cuh>
-#include <util/cuda_available.hpp>
+// #include <arithmetic/arithmetic.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
-// #include <arithmetic/arithmetic.hpp>
+
 
 #ifndef __CUDA_ARCH__ // below is cpu code; __CUDA_ARCH__ should not be defined
 

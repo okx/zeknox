@@ -171,7 +171,7 @@ public:
   inline gl64_t &operator*=(gl64_t b) { return *this; }
   inline gl64_t &operator^=(int p) { return *this; }
   inline gl64_t &sqr() { return *this; }
-  inline gl64_t reciprocal() const {}
+  inline gl64_t reciprocal() const {return 1/(*this);}
   // inline void zero()                  { val = 0;      }
   inline uint32_t lo() const { return (uint32_t)(val); }
   inline uint32_t hi() const { return (uint32_t)(val >> 32); }

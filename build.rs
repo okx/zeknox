@@ -118,7 +118,7 @@ fn build_cuda() {
     println!("feature: {:?}", fr);
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let mut base_dir = manifest_dir.join("cuda");
+    let base_dir = manifest_dir.join("cuda");
 
     // pass DEP_CRYPTOGRAPHY_CUDA_* variables to dependents
     println!("cargo:ROOT={}", base_dir.to_string_lossy());
