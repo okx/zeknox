@@ -38,6 +38,22 @@ extern "C" {
         cfg: types::NTTConfig,
     ) -> error::Error;
 
+    fn compute_transpose_rev(
+        device_id: usize,
+        output: *mut core::ffi::c_void,
+        input: *mut core::ffi::c_void,
+        lg_n: usize,
+        cfg: types::NTTConfig,
+    ) -> error::Error;
+
+    fn compute_naive_transpose_rev(
+        device_id: usize,
+        output: *mut core::ffi::c_void,
+        input: *mut core::ffi::c_void,
+        lg_n: usize,
+        cfg: types::NTTConfig,
+    ) -> error::Error;
+
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -217,6 +233,50 @@ pub fn intt_batch<T>(
             inout as *mut core::ffi::c_void,
             log_n_size,
             types::NTTDirection::Inverse,
+            cfg,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+pub fn transpose_rev_batch<T>(
+    device_id: usize,
+    output: *mut T, // &mut [T],
+    input: *const T, // &mut [T],
+    log_n_size: usize,
+    cfg: NTTConfig,
+){
+    let err = unsafe {
+        compute_transpose_rev(
+            device_id,
+            output as *mut core::ffi::c_void,
+            input as *mut core::ffi::c_void,
+            log_n_size,
+            cfg,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+pub fn naive_transpose_rev_batch<T>(
+    device_id: usize,
+    output: *mut T, // &mut [T],
+    input: *const T, // &mut [T],
+    log_n_size: usize,
+    cfg: NTTConfig,
+){
+    let err = unsafe {
+        compute_naive_transpose_rev(
+            device_id,
+            output as *mut core::ffi::c_void,
+            input as *mut core::ffi::c_void,
+            log_n_size,
             cfg,
         )
     };

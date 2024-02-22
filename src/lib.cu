@@ -80,6 +80,28 @@ compute_batched_lde(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_dom
 
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
+#endif 
+RustError 
+compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
+                        Ntt_Types::NTTConfig cfg)
+{
+    auto &gpu = select_gpu(device_id);
+    return ntt::ComputeTransposeRev(gpu, output, input, lg_n, cfg);
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif 
+RustError 
+compute_naive_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
+                        Ntt_Types::NTTConfig cfg)
+{
+    auto &gpu = select_gpu(device_id);
+    return ntt::ComputeNaiveTransposeRev(gpu, output, input, lg_n, cfg);
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
 #endif
     RustError
     init_twiddle_factors(size_t device_id, size_t lg_n)

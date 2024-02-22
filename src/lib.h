@@ -49,6 +49,12 @@ extern "C" RustError compute_batched_lde(size_t device_id, fr_t *output, fr_t *i
                                          Ntt_Types::Direction ntt_direction,
                                          Ntt_Types::NTTConfig cfg);
 
+extern "C" RustError compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
+                                         Ntt_Types::NTTConfig cfg);
+                            
+extern "C" RustError compute_naive_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
+                                         Ntt_Types::NTTConfig cfg);
+
 extern "C" RustError init_twiddle_factors(size_t device_id, size_t lg_n);
 
 extern "C" RustError init_coset(size_t device_id, size_t lg_domain_size, fr_t coset_gen);

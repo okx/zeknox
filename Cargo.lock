@@ -59,6 +59,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bit_reverse"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d78b86ba824b619427560b75bb1f78e4a208cca669758143d951b81495f61e67"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -264,6 +270,7 @@ name = "cryptography_cuda"
 version = "0.1.0"
 dependencies = [
  "bindgen",
+ "bit_reverse",
  "bitflags 1.3.2",
  "blst",
  "cc",

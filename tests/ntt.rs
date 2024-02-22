@@ -1,8 +1,8 @@
 use std::ops::Mul;
 
-use cryptography_cuda::{device::memory::HostOrDeviceSlice, device::stream::CudaStream};
+use cryptography_cuda::{device::memory::HostOrDeviceSlice};
 use cryptography_cuda::{
-    get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch,
+    naive_transpose_rev_batch, transpose_rev_batch, init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch,
     ntt, ntt_batch, types::*,
 };
 use plonky2_field::goldilocks_field::GoldilocksField;
@@ -12,6 +12,10 @@ use plonky2_field::{
     polynomial::PolynomialCoeffs,
     types::{Field, PrimeField64},
 };
+
+use bit_reverse:: ParallelReverse;
+
+
 
 use rand::random;
 
@@ -310,8 +314,90 @@ fn test_ntt_batch_on_device() {
 }
 
 #[test]
+fn test_naive_transpose_rev(){
+    let lg_domain_size = 2;
+    let domain_size = 1usize << lg_domain_size;
+    let batches = 2;
+
+    let total_elements = domain_size * batches;
+    // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
+
+    let mut input1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let mut input2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+
+    let mut cpu_buffer: Vec<Vec<u64>> = Vec::new();
+    cpu_buffer.push(input1.clone());
+    cpu_buffer.push(input2.clone());
+
+    let mut device_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+    let mut device_data2: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+    let _ = device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
+    let _ = device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
+
+
+    let mut cfg = NTTConfig::default();
+    cfg.are_outputs_transposed = true;
+    cfg.batches = batches as u32;
+    // println!("device data len: {:?}", device_data.len());
+    naive_transpose_rev_batch(DEFAULT_GPU, device_data2.as_mut_ptr(), device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
+
+    let mut host_output = vec![0; total_elements];
+    // println!("start copy to host");
+    device_data2
+        .copy_to_host(host_output.as_mut_slice(), total_elements)
+        .unwrap();
+
+    let cpu_results_tranposed = transpose_and_rev(&cpu_buffer, lg_domain_size);
+    let cpu_results: Vec<u64> = cpu_results_tranposed.into_iter().flatten().collect();
+    assert_eq!(host_output, cpu_results);
+}
+
+#[test]
+fn test_transpose_rev(){
+    let lg_domain_size = 10;
+    let domain_size = 1usize << lg_domain_size;
+    let batches = 2;
+
+    let total_elements = domain_size * batches;
+    // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
+
+    let mut input1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let mut input2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+
+    let mut cpu_buffer: Vec<Vec<u64>> = Vec::new();
+    cpu_buffer.push(input1.clone());
+    cpu_buffer.push(input2.clone());
+
+    let mut device_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+    let mut device_data2: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+    device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
+    device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
+
+
+    let mut cfg = NTTConfig::default();
+    cfg.are_outputs_transposed = true;
+    cfg.batches = batches as u32;
+    // println!("device data len: {:?}", device_data.len());
+    transpose_rev_batch(DEFAULT_GPU, device_data2.as_mut_ptr(), device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
+
+    let mut host_output = vec![0; total_elements];
+    // println!("start copy to host");
+    device_data2
+        .copy_to_host(host_output.as_mut_slice(), total_elements)
+        .unwrap();
+
+    let cpu_results_tranposed = transpose_and_rev(&cpu_buffer, lg_domain_size);
+    let cpu_results: Vec<u64> = cpu_results_tranposed.into_iter().flatten().collect();
+    assert_eq!(host_output, cpu_results);
+}
+
+#[test]
 fn test_ntt_batch_transposed_on_device() {
-    let lg_domain_size = 12;
+    let lg_domain_size = 10;
     let domain_size = 1usize << lg_domain_size;
     let batches = 2;
 
@@ -370,7 +456,7 @@ fn test_ntt_batch_transposed_on_device() {
         .collect();
 
     let cpu_results_matrix = [cpu_results1, cpu_results2];
-    let cpu_results_tranposed = transpose(&cpu_results_matrix);
+    let cpu_results_tranposed = transpose_and_rev(&cpu_results_matrix, lg_domain_size);
     let cpu_results: Vec<u64> = cpu_results_tranposed.into_iter().flatten().collect();
     assert_eq!(host_output, cpu_results);
 
@@ -382,6 +468,21 @@ pub fn transpose<T: Send + Sync + Copy>(matrix: &[Vec<T>]) -> Vec<Vec<T>> {
         .into_iter()
         .map(|i| matrix.iter().map(|row| row[i]).collect())
         .collect()
+}
+
+pub fn transpose_and_rev<T: Send + Sync + Copy>(matrix: &[Vec<T>], lg_n: usize) -> Vec<Vec<T>> {
+    let mut transposed = transpose(matrix);
+    let length = transposed.len();
+    for i in 0..length{
+        let inversed = i.swap_bits() >> (64 - lg_n);
+        if inversed > i {
+            let inv = transposed[inversed].clone();
+            let got = std::mem::replace(&mut transposed[i], inv);
+            transposed[inversed] = got;
+
+        }
+    }  
+    transposed
 }
 
 #[test]
@@ -448,8 +549,8 @@ fn test_ntt_batch_with_coset() {
 
 #[test]
 fn test_compute_batched_lde() {
-    let lg_n: usize = 2;
-    let rate_bits = 2;
+    let lg_n: usize = 1;
+    let rate_bits = 1;
     let lg_domain_size = lg_n + rate_bits;
     let batches = 2;
     init_twiddle_factors_rs(DEFAULT_GPU, lg_domain_size);
@@ -490,8 +591,8 @@ fn test_compute_batched_lde() {
         .collect();
 
     let mut cfg = NTTConfig::default();
-    cfg.are_outputs_transposed = true;
     cfg.batches = batches as u32;
+    cfg.are_outputs_transposed = true;
     // println!("ntt config {:?}", cfg);
     ntt_batch(
         DEFAULT_GPU,
@@ -505,7 +606,6 @@ fn test_compute_batched_lde() {
         .map(|x| x.to_canonical_u64())
         .collect::<Vec<u64>>();
 
-    
     // println!("inputs: {:?}", inputs);
     let mut gpu_buffer: Vec<u64> = inputs
         .clone()
@@ -523,7 +623,6 @@ fn test_compute_batched_lde() {
     cfg_lde.batches = batches as u32;
     cfg_lde.extension_rate_bits = rate_bits as u32;
     cfg_lde.with_coset = true;
-    cfg_lde.are_outputs_transposed = true;
 
     let mut gpu_lde_output = vec![0; (1 << lg_domain_size) * batches];
     lde_batch(
@@ -536,7 +635,6 @@ fn test_compute_batched_lde() {
     assert_eq!(cpu_outputs, gpu_lde_output);
 }
 
-// todo
 #[test]
 fn test_compute_batched_lde_data_on_device() {
     let lg_n: usize = 2;
@@ -561,9 +659,9 @@ fn test_compute_batched_lde_data_on_device() {
 
 
     let mut device_input_data: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc((total_num_input_elements)).unwrap();
-    device_input_data.copy_from_host_offset(input1.as_mut_slice(), 0, input_domain_size);
-    device_input_data.copy_from_host_offset(
+        HostOrDeviceSlice::cuda_malloc(total_num_input_elements).unwrap();
+    let _ = device_input_data.copy_from_host_offset(input1.as_mut_slice(), 0, input_domain_size);
+    let _ = device_input_data.copy_from_host_offset(
         input2.as_mut_slice(),
         input_domain_size,
         input_domain_size,

@@ -12,7 +12,7 @@ fn random_fr() -> u64 {
 
 fn bench_gpu_ntt_batch(c: &mut Criterion) {
     let mut group = c.benchmark_group("NTT");
-    let LOG_NTT_SIZES: Vec<usize> = (8..=12).collect();
+    let LOG_NTT_SIZES: Vec<usize> = (10..=14).collect();
 
     for log_ntt_size in LOG_NTT_SIZES {
         let domain_size = 1usize << log_ntt_size;

@@ -7,7 +7,7 @@
 #include <cooperative_groups.h>
 #include <util/sharedmem.cuh>
 
-#define BLOCK_DIM 64
+#define BLOCK_DIM 32
 
 
 __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
@@ -66,21 +66,21 @@ __global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, u
  * @param batch_size row size of in_arr.
  * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
  */
-__global__ void transpose_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t batch_size)
+__global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
 {
     // We use shared memory 'cache' blocks for coalesce memory efficiency improvement
 	__shared__ fr_t block[BLOCK_DIM][BLOCK_DIM+1];
 
     // Get indexes 
-    int j_idx = blockIdx.y * BLOCK_DIM + (8*threadIdx.y);
+    int j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.y);
     int i_idx = blockIdx.x * BLOCK_DIM + threadIdx.x;
 
     int idx = i_idx * n + j_idx;
 
 	// read the matrix tile into shared memory in its transposed position
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 4; i++){
         if((i_idx < batch_size) && ((j_idx+i) < n)){
-            block[(8 * threadIdx.y) + i][threadIdx.x] = in_arr[idx + i];
+            block[(4 * threadIdx.y) + i][threadIdx.x] = in_arr[idx + i];
         }
     } 
 
@@ -88,18 +88,44 @@ __global__ void transpose_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32
 	__syncthreads();
 
     // calculated transposed indexes
-    j_idx = blockIdx.x * BLOCK_DIM + (8*threadIdx.y);
+    j_idx = blockIdx.x * BLOCK_DIM + (4*threadIdx.y);
     i_idx = blockIdx.y * BLOCK_DIM + threadIdx.x;
 
-    idx = i_idx * batch_size + j_idx;
+    int i_idx_rev = __brev(i_idx) >> (32 - lg_n);
+
+    idx = i_idx_rev * batch_size + j_idx;
 
 	// write the transposed matrix tile to global memory (out_arr) in linear order
-	for(int i = 0; i < 8; i++){
+	for(int i = 0; i < 4; i++){
         if((i_idx < n) && ((j_idx+i) < batch_size)){
-            out_arr[idx+ i] = block[threadIdx.x][(8 * threadIdx.y) + i];
+            out_arr[idx+ i] = block[threadIdx.x][(4 * threadIdx.y) + i];
         }
     }
 }
+
+/**
+ * Fast transpose from NVIDIA. Takes array and returns its transpose
+ * @param in_arr input array of type E (elements).
+ * @param out_arr output array of type E (elements).
+ * @param n column size of in_arr.
+ * @param batch_size row size of in_arr.
+ * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
+ */
+ __global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
+ {
+     // Get indexes 
+     int threadId = blockIdx.x * blockDim.x + threadIdx.x;
+     if (threadId < n * batch_size)
+     {
+        int j_idx = threadId % n;
+        int i_idx = threadId / n;
+    
+        j_idx = __brev(j_idx) >> (32 - lg_n);
+        int idx_swapped = j_idx * batch_size + i_idx;
+
+        out_arr[idx_swapped] = in_arr[threadId];
+     }
+ }
 
 __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
 {
