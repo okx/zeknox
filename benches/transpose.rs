@@ -89,6 +89,31 @@ fn bench_naive_transpose_gpu(c: &mut Criterion){
     }
 }
 
+fn bench_transpose_cpu(c: &mut Criterion){
+    let mut group = c.benchmark_group("Transpose");
+    let LOG_NTT_SIZES: Vec<usize> = (15..=19).collect();
+
+    for log_ntt_size in LOG_NTT_SIZES {
+        let domain_size = 1usize << log_ntt_size;
+        let batches = 200;
+
+        // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
+        
+        let mut cpu_buffer: Vec<Vec<u64>> = Vec::new();
+        
+        
+        let input: Vec<u64> = (0..batches*domain_size).map(|_| random_fr()).collect();
+        cpu_buffer.push(input);
+
+       
+
+        group.sample_size(20).bench_function(
+            &format!("Naive GPU transpose with n of size 2^{}", log_ntt_size),
+            |b| b.iter(||  transpose(&cpu_buffer, domain_size))
+        );
+    }
+}
+
 pub fn transpose<T: Send + Sync + Copy>(matrix: &Vec<Vec<T>>, len: usize) -> Vec<Vec<T>> {
     (0..len)
         .into_par_iter()
@@ -96,5 +121,6 @@ pub fn transpose<T: Send + Sync + Copy>(matrix: &Vec<Vec<T>>, len: usize) -> Vec
         .collect()
 }
 
-criterion_group!(ntt_benches, bench_transpose_gpu, bench_naive_transpose_gpu);
+
+criterion_group!(ntt_benches, bench_transpose_gpu, bench_naive_transpose_gpu, bench_transpose_cpu);
 criterion_main!(ntt_benches);
