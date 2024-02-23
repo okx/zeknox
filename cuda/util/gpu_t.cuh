@@ -69,6 +69,7 @@ struct launch_params_t
 
 class stream_t
 {
+public:
     cudaStream_t stream;
 
 public:
@@ -217,7 +218,7 @@ public:
 
     inline void sync() const
     {
-        // printf("sync stream: %d\n", stream);
+        // printf("sync stream: %d, gpu_id: %d\n", stream, gpu_id);
         CUDA_OK(cudaStreamSynchronize(stream));
     }
 
@@ -461,9 +462,10 @@ public:
             CUDA_OK(cudaMalloc(&d_ptr, n * sizeof(T)));
         }
     }
+    // TODO: `manual_drop` and `alloc` can be reduced to one flag
     dev_ptr_t(size_t nelems, stream_t &s, bool alloc,  bool manual_drop = false) : d_ptr(nullptr), stream(s), manual_drop(manual_drop)
     {
-        // printf("construct pointer named: %s, on device: %d\n", name, s.gpu_id);
+        // printf("construct pointer on device: %d, nelems: %d, alloc: %d, manual_drop:%d\n",s.gpu_id, nelems, alloc, manual_drop);
         // manual_drop=false;
         if (nelems)
         {

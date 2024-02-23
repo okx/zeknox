@@ -582,7 +582,7 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 [[package]]
 name = "plonky2_field"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git#40d3c6dd0d53fdaa5359cf31c1239ba92a028d30"
+source = "git+https://github.com/okx/plonky2.git#f3f7433c29a3e12db5d13ff1ff9f09c48b3ef441"
 dependencies = [
  "anyhow",
  "itertools 0.11.0",
@@ -597,7 +597,7 @@ dependencies = [
 [[package]]
 name = "plonky2_util"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git#40d3c6dd0d53fdaa5359cf31c1239ba92a028d30"
+source = "git+https://github.com/okx/plonky2.git#f3f7433c29a3e12db5d13ff1ff9f09c48b3ef441"
 
 [[package]]
 name = "plotters"

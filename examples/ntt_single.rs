@@ -1,9 +1,9 @@
-use cryptography_cuda::{intt, init_twiddle_factors_rs, ntt_batch, types::*, ntt};
+use cryptography_cuda::{init_twiddle_factors_rs, types::*, ntt};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{
     fft::fft,
     polynomial::PolynomialCoeffs,
-    types::{Field, PrimeField64},
+    types::{Field},
 };
 use rand::random;
 
@@ -17,7 +17,7 @@ const DEFAULT_GPU: usize = 0;
 fn cpu_fft(log_ntt_size: usize) {
     let domain_size = 1usize << log_ntt_size;
 
-    let mut gpu_buffer: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+    let gpu_buffer: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
     let coeffs = gpu_buffer
         .iter()
         .map(|i| GoldilocksField::from_canonical_u64(*i))
@@ -48,7 +48,7 @@ fn main() {
 
     println!("after warm up");
     let mut i = 0;
-    while (i < 5) {
+    while i < 5 {
         gpu_fft(log_ntt_size);
         i = i + 1;
     }
