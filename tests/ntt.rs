@@ -324,9 +324,9 @@ fn test_naive_transpose_rev(){
     cpu_buffer.push(input2.clone());
 
     let mut device_data: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
     let mut device_data2: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
     let _ = device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
     let _ = device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
 
@@ -364,9 +364,9 @@ fn test_transpose_rev(){
     cpu_buffer.push(input2.clone());
 
     let mut device_data: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
     let mut device_data2: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
     let _ = device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
     let _ = device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
 

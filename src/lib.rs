@@ -39,7 +39,7 @@ extern "C" {
     ) -> error::Error;
 
     fn compute_transpose_rev(
-        device_id: usize,
+        device_id: i32,
         output: *mut core::ffi::c_void,
         input: *mut core::ffi::c_void,
         lg_n: usize,
@@ -47,7 +47,7 @@ extern "C" {
     ) -> error::Error;
 
     fn compute_naive_transpose_rev(
-        device_id: usize,
+        device_id: i32,
         output: *mut core::ffi::c_void,
         input: *mut core::ffi::c_void,
         lg_n: usize,
@@ -243,7 +243,7 @@ pub fn intt_batch<T>(
 }
 
 pub fn transpose_rev_batch<T>(
-    device_id: usize,
+    device_id: i32,
     output: *mut T, // &mut [T],
     input: *const T, // &mut [T],
     log_n_size: usize,
@@ -265,7 +265,7 @@ pub fn transpose_rev_batch<T>(
 }
 
 pub fn naive_transpose_rev_batch<T>(
-    device_id: usize,
+    device_id: i32,
     output: *mut T, // &mut [T],
     input: *const T, // &mut [T],
     log_n_size: usize,
