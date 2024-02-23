@@ -34,7 +34,6 @@ pub struct NTTConfig {
     pub extension_rate_bits: u32,
     pub are_inputs_on_device: bool, //**< True if inputs are on device and false if they're on host. Default value: false.
     pub are_outputs_on_device: bool, //**< If true, output is preserved on device, otherwise on host. Default value: false.
-    pub are_outputs_transposed: bool, //**< If true, output is transposed with the transpose function on the kernal, otherwise it is not. Default value: false. 
     pub with_coset: bool,
 }
 
@@ -47,7 +46,6 @@ impl Default for NTTConfig {
             extension_rate_bits: 0,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
-            are_outputs_transposed: false,
             with_coset: false,
         }
     }

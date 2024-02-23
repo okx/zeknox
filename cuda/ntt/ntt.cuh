@@ -519,38 +519,9 @@ namespace ntt
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
 
-            dev_ptr_t<fr_t> d_transpose_output{
-                total_elements,
-                gpu,
-                cfg.are_outputs_on_device ? false : true,
-                cfg.are_outputs_on_device ? true : false
-            };
-
-            if (cfg.are_outputs_on_device)
-            {
-                d_transpose_output.set_device_ptr(inout);
-            }
-            else
-            {
-                d_transpose_output.alloc();
-            }
-
-            if(cfg.are_outputs_transposed) 
-            {
-                transpose_rev_batch(d_input, d_transpose_output, size, lg_domain_size, cfg.batches, gpu);
-
-            }
-
             if (!cfg.are_outputs_on_device)
             {
-                if(cfg.are_outputs_transposed) 
-                {
-                    gpu.DtoH(inout, &d_transpose_output[0], total_elements);
-                }
-                else
-                {
-                    gpu.DtoH(inout, &d_input[0], total_elements);
-                }
+                gpu.DtoH(inout, &d_input[0], total_elements);
             }
 
             gpu.sync();
@@ -571,122 +542,102 @@ namespace ntt
      * assume with coset
      * \param lg_n , logn before extension
      */
-     RustError BatchLde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, Direction direction, NTTConfig cfg)
-     {
+    RustError BatchLde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, Direction direction, NTTConfig cfg)
+    {
  
-         if (lg_n == 0 || cfg.extension_rate_bits < 1)
-         {
-             // printf("invalid input : %d\n", cfg.with_coset);
-             return RustError{cudaErrorInvalidValue};
-         }
- 
-         try
-         {
- 
-             gpu.select();
-             // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d\n", lg_n, cfg.extension_rate_bits);
- 
-             uint32_t lg_domain_size = lg_n + cfg.extension_rate_bits;
-             size_t size = (size_t)1 << lg_domain_size;
-             uint32_t n_twiddles = size;
- 
-             fr_t *d_twiddle;
-             if (direction == Direction::inverse)
-             {
-                 d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_domain_size);
-             }
-             else
-             {
-                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
-             }
- 
-             size_t total_input_elements = (1 << lg_n) * cfg.batches;
-             int input_size_bytes = total_input_elements * sizeof(fr_t);
- 
-             dev_ptr_t<fr_t> d_input{
-                 total_input_elements,
-                 gpu,
-                 cfg.are_inputs_on_device ? false : true, // new device input has to be allocated
-                 cfg.are_inputs_on_device ? true : false  // if keep output on device; let the user drop the pointer
-             };
- 
-             if (cfg.are_inputs_on_device)
-             {
-                 d_input.set_device_ptr(input);
-             }
-             else
-             {
-                 d_input.alloc();
-                 gpu.HtoD(&d_input[0], input, total_input_elements);
-             }
- 
-             size_t total_output_elements = size * cfg.batches;
-             int input_output_bytes = total_output_elements * sizeof(fr_t);
-             dev_ptr_t<fr_t> d_output{
-                 total_output_elements,
-                 gpu,
-                 cfg.are_outputs_on_device ? false : true, cfg.are_outputs_on_device ? true : false};
- 
-             if (cfg.are_outputs_on_device)
-             {
-                 d_output.set_device_ptr(output);
-             }
-             else
-             {
-                 d_output.alloc();
-             }
- 
-             extend_inputs_batch(&d_output[0], &d_input[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
- 
-             if (direction == Direction::inverse)
-             {
-                 reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
-             }
-             // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
-             ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
-             if (direction == Direction::forward)
-             {
-                 reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
-             }
+        if (lg_n == 0 || cfg.extension_rate_bits < 1)
+        {
+            // printf("invalid input : %d\n", cfg.with_coset);
+            return RustError{cudaErrorInvalidValue};
+        }
 
-             dev_ptr_t<fr_t> d_transpose_output{
-                total_output_elements,
-                gpu,
-                cfg.are_outputs_on_device ? false : true,
-                cfg.are_outputs_on_device ? true : false
-            };
+        try
+        {
+ 
+            gpu.select();
+            // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d\n", lg_n, cfg.extension_rate_bits);
 
-            if (cfg.are_outputs_on_device)
+            uint32_t lg_domain_size = lg_n + cfg.extension_rate_bits;
+            size_t size = (size_t)1 << lg_domain_size;
+        uint32_t n_twiddles = size;
+
+            fr_t *d_twiddle;
+            if (direction == Direction::inverse)
             {
-                d_transpose_output.set_device_ptr(output);
+                d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_domain_size);
             }
             else
             {
-                d_transpose_output.alloc();
+                d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
             }
-            
-            transpose_rev_batch(d_output, d_transpose_output, size, lg_domain_size, cfg.batches, gpu);
+ 
+            size_t total_input_elements = (1 << lg_n) * cfg.batches;
+            int input_size_bytes = total_input_elements * sizeof(fr_t);
+
+            dev_ptr_t<fr_t> d_input{
+                total_input_elements,
+                gpu,
+                cfg.are_inputs_on_device ? false : true, // new device input has to be allocated
+                cfg.are_inputs_on_device ? true : false  // if keep output on device; let the user drop the pointer
+            };
+
+            if (cfg.are_inputs_on_device)
+            {
+                d_input.set_device_ptr(input);
+            }
+            else
+            {
+                d_input.alloc();
+                gpu.HtoD(&d_input[0], input, total_input_elements);
+            }
+
+            size_t total_output_elements = size * cfg.batches;
+            int input_output_bytes = total_output_elements * sizeof(fr_t);
+            dev_ptr_t<fr_t> d_output{
+                total_output_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true, cfg.are_outputs_on_device ? true : false};
+
+            if (cfg.are_outputs_on_device)
+            {
+                d_output.set_device_ptr(output);
+            }
+            else
+            {
+                d_output.alloc();
+            }
+
+            extend_inputs_batch(&d_output[0], &d_input[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
+
+            if (direction == Direction::inverse)
+            {
+                reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
+            }
+            // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
+            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr, gpu);
+            if (direction == Direction::forward)
+            {
+                reverse_order_batch(d_output, size, lg_domain_size, cfg.batches, gpu);
+            }
             
             if (!cfg.are_outputs_on_device)
             {
-                
-                gpu.DtoH(output, &d_transpose_output[0], total_output_elements);
-                
+                gpu.DtoH(output, &d_output[0], total_output_elements);
             }
 
              gpu.sync();
-         }
-         catch (const cuda_error &e)
-         {
+        }
+        catch (const cuda_error &e)
+        {
  #ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
              return RustError{e.code(), e.what()};
  #else
              return RustError{e.code()};
  #endif
-         }
+        }
  
-         return RustError{cudaSuccess};
-     }
+        return RustError{cudaSuccess};
+    }
  #endif
  }
  #endif

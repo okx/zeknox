@@ -1,7 +1,6 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, naive_transpose_rev_batch, transpose_rev_batch, types::NTTConfig};
-use plonky2_field::{fft::fft, goldilocks_field::GoldilocksField, polynomial::PolynomialCoeffs, types::{Field, PrimeField64}};
+use cryptography_cuda::{device::memory::HostOrDeviceSlice, naive_transpose_rev_batch, transpose_rev_batch, types::NTTConfig};
 use rand::random;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -13,7 +12,7 @@ fn random_fr() -> u64 {
 
 fn bench_transpose_gpu(c: &mut Criterion){
     let mut group = c.benchmark_group("Transpose");
-    let LOG_NTT_SIZES: Vec<usize> = (15..=19).collect();
+    let LOG_NTT_SIZES: Vec<usize> = (20..=20).collect();
 
     for log_ntt_size in LOG_NTT_SIZES {
         let domain_size = 1usize << log_ntt_size;
@@ -35,10 +34,9 @@ fn bench_transpose_gpu(c: &mut Criterion){
         let mut cfg = NTTConfig::default();
         cfg.are_inputs_on_device = true;
         cfg.are_outputs_on_device = true;
-        cfg.are_outputs_transposed = true;
         cfg.batches = batches as u32;
 
-        group.sample_size(20).bench_function(
+        group.sample_size(10).bench_function(
             &format!("Shared-Mem GPU transpose with n of size 2^{}", log_ntt_size),
             |b| b.iter(||  transpose_rev_batch(
                 DEFAULT_GPU,
@@ -52,7 +50,7 @@ fn bench_transpose_gpu(c: &mut Criterion){
 
 fn bench_naive_transpose_gpu(c: &mut Criterion){
     let mut group = c.benchmark_group("Transpose");
-    let LOG_NTT_SIZES: Vec<usize> = (15..=19).collect();
+    let LOG_NTT_SIZES: Vec<usize> = (20..=20).collect();
 
     for log_ntt_size in LOG_NTT_SIZES {
         let domain_size = 1usize << log_ntt_size;
@@ -74,10 +72,9 @@ fn bench_naive_transpose_gpu(c: &mut Criterion){
         let mut cfg = NTTConfig::default();
         cfg.are_inputs_on_device = true;
         cfg.are_outputs_on_device = true;
-        cfg.are_outputs_transposed = true;
         cfg.batches = batches as u32;
 
-        group.sample_size(20).bench_function(
+        group.sample_size(10).bench_function(
             &format!("Naive GPU transpose with n of size 2^{}", log_ntt_size),
             |b| b.iter(||  naive_transpose_rev_batch(
                 DEFAULT_GPU,
@@ -91,7 +88,7 @@ fn bench_naive_transpose_gpu(c: &mut Criterion){
 
 fn bench_transpose_cpu(c: &mut Criterion){
     let mut group = c.benchmark_group("Transpose");
-    let LOG_NTT_SIZES: Vec<usize> = (15..=19).collect();
+    let LOG_NTT_SIZES: Vec<usize> = (19..=21).collect();
 
     for log_ntt_size in LOG_NTT_SIZES {
         let domain_size = 1usize << log_ntt_size;
@@ -107,8 +104,8 @@ fn bench_transpose_cpu(c: &mut Criterion){
 
        
 
-        group.sample_size(20).bench_function(
-            &format!("Naive GPU transpose with n of size 2^{}", log_ntt_size),
+        group.sample_size(10).bench_function(
+            &format!("CPU transpose with n of size 2^{}", log_ntt_size),
             |b| b.iter(||  transpose(&cpu_buffer, domain_size))
         );
     }
@@ -122,5 +119,5 @@ pub fn transpose<T: Send + Sync + Copy>(matrix: &Vec<Vec<T>>, len: usize) -> Vec
 }
 
 
-criterion_group!(ntt_benches, bench_transpose_gpu, bench_naive_transpose_gpu, bench_transpose_cpu);
+criterion_group!(ntt_benches, bench_transpose_gpu, bench_naive_transpose_gpu);
 criterion_main!(ntt_benches);
