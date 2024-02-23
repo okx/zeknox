@@ -6,14 +6,14 @@ CXX := g++
 NVCC := /usr/local/cuda/bin/nvcc
 
 # for release
-#CFLAGS := -I../types -I../poseidon -I../keccak -Wall -Werror -O3 -march=native
-#CXXFLAGS := -I../types -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
-#NVCCFLAGS := -I../types -I../poseidon -I../keccak -I../util -I.
+CFLAGS := -I../types -I../poseidon -I../keccak -Wall -Werror -O3 -march=native
+CXXFLAGS := -I../types -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
+NVCCFLAGS := -I../types -I../poseidon -I../keccak -I../util -I.
 
 # for debug
-CFLAGS := -I../types -I../poseidon -I../keccak -Wall -Werror -g
-CXXFLAGS := -I../types -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -g
-NVCCFLAGS := -I../types -I../poseidon -I../keccak -I../util -I. -g
+#CFLAGS := -I../types -I../poseidon -I../keccak -Wall -Werror -g
+#CXXFLAGS := -I../types -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -g
+#NVCCFLAGS := -I../types -I../poseidon -I../keccak -I../util -I. -g
 
 all: libgpu
 
