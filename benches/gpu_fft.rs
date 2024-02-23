@@ -24,5 +24,5 @@ fn bench_gpu_ntt(c: &mut Criterion) {
     }
 }
 
-criterion_group!(ntt_benches, bench_gpu_ntt);
-criterion_main!(ntt_benches);
+criterion_group!(benches, bench_gpu_ntt);
+criterion_main!(benches);

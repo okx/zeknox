@@ -12,6 +12,7 @@
 #include <vector>
 #include <iostream>
 
+#define TRANSPOSE_BLOCK_DIM 32
 #define MAX_NUM_OF_GPUS 16
 
 namespace ntt
@@ -67,6 +68,42 @@ namespace ntt
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
     }
+
+    /**
+     * Transposes a matrix into a new matrix
+     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
+     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
+     * @param n length of `arr`. 
+     * @param batch_size the size of the batch.
+     */
+    void transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
+    {
+        // This is the dimensions of the block, it is 64 rows and 8 cols however since each thread 
+        // transposes 8 elements, we consider the block size to be 64 x 64
+        int blocks_per_row = (n + TRANSPOSE_BLOCK_DIM - 1)/TRANSPOSE_BLOCK_DIM; 
+        int blocks_per_col = (batch_size + TRANSPOSE_BLOCK_DIM - 1)/ TRANSPOSE_BLOCK_DIM;
+
+        // Number of threads is max_threads and we create our 2d thread dimensions with 64x8 threads
+        // Which constraints to the max threads defined prior
+        int number_of_threads = MAX_NUM_THREADS;
+        dim3 threads_dim = dim3(32, 8);
+        dim3 blocks_dim = dim3(blocks_per_col, blocks_per_row);
+        transpose_rev_kernel<<<blocks_dim, threads_dim, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
+    } 
+
+    /**
+     * Transposes a matrix into a new matrix and performs a bit rev on the new matrix
+     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
+     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
+     * @param n length of `arr`. 
+     * @param batch_size the size of the batch.
+     */
+     void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
+     {
+        int number_of_threads = MAX_THREADS_BATCH;
+        int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
+        naive_transpose_rev_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
+     } 
 
     // TODO: combine extends, transpose, bit permutation reverse
     void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
@@ -230,6 +267,144 @@ namespace ntt
         return RustError{cudaSuccess};
     }
 
+    /**
+    * Used for benchmarking and wrapping into rust
+    * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
+    * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
+    * @param n length of `arr`. 
+    * @param batch_size the size of the batch.
+    */
+    RustError ComputeTransposeRev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, TransposeConfig cfg)
+    {
+        try
+        {
+            size_t size = (size_t)1 << lg_n;
+            size_t total_elements = size * cfg.batches;
+
+            dev_ptr_t<fr_t> d_input{
+                total_elements,
+                gpu,
+                cfg.are_inputs_on_device ? false : true, // if inputs are already on device, no need to alloc input memory
+                cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
+            };
+
+            if (cfg.are_inputs_on_device)
+            {
+                d_input.set_device_ptr(input);
+            }
+            else
+            {
+                d_input.alloc();
+                gpu.HtoD(&d_input[0], input, total_elements);
+            }
+
+            dev_ptr_t<fr_t> d_transpose_output{
+                total_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true,
+                cfg.are_outputs_on_device ? true : false
+            };
+
+            if (cfg.are_outputs_on_device)
+            {
+                d_transpose_output.set_device_ptr(output);
+            }
+            else
+            {
+                d_transpose_output.alloc();
+            }
+
+
+            transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
+            
+
+            if (!cfg.are_outputs_on_device)
+            {
+                gpu.DtoH(output, &d_transpose_output[0], total_elements);
+            }
+
+            gpu.sync();
+        }
+        catch (const cuda_error &e)
+        {
+#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+            return RustError{e.code(), e.what()};
+#else
+            return RustError{e.code()};
+#endif
+        }
+        return RustError{cudaSuccess};
+    }
+
+    /**
+    * Used for benchmarking and wrapping into rust
+    * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
+    * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
+    * @param n length of `arr`. 
+    * @param batch_size the size of the batch.
+    */
+    RustError ComputeNaiveTransposeRev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, TransposeConfig cfg)
+    {
+        try
+        {
+            size_t size = (size_t)1 << lg_n;
+            size_t total_elements = size * cfg.batches;
+
+            dev_ptr_t<fr_t> d_input{
+                total_elements,
+                gpu,
+                cfg.are_inputs_on_device ? false : true, // if inputs are already on device, no need to alloc input memory
+                cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
+            };
+
+            if (cfg.are_inputs_on_device)
+            {
+                d_input.set_device_ptr(input);
+            }
+            else
+            {
+                d_input.alloc();
+                gpu.HtoD(&d_input[0], input, total_elements);
+            }
+
+            dev_ptr_t<fr_t> d_transpose_output{
+                total_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true,
+                cfg.are_outputs_on_device ? true : false
+            };
+
+            if (cfg.are_outputs_on_device)
+            {
+                d_transpose_output.set_device_ptr(output);
+            }
+            else
+            {
+                d_transpose_output.alloc();
+            }
+
+
+            naive_transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
+            
+
+            if (!cfg.are_outputs_on_device)
+            {
+                gpu.DtoH(output, &d_transpose_output[0], total_elements);
+            }
+
+            gpu.sync();
+        }
+        catch (const cuda_error &e)
+        {
+#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+            return RustError{e.code(), e.what()};
+#else
+            return RustError{e.code()};
+#endif
+        }
+        return RustError{cudaSuccess};
+    }
+
     RustError init_coset(const gpu_t &gpu, size_t lg_domain_size, fr_t coset_gen)
     {
         gpu.select();
@@ -322,7 +497,6 @@ namespace ntt
             }
 
             size_t total_elements = size * cfg.batches;
-            int input_size_bytes = total_elements * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{
                 total_elements,
@@ -330,6 +504,7 @@ namespace ntt
                 cfg.are_inputs_on_device ? false : true, // if inputs are already on device, no need to alloc input memory
                 cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
             };
+
             if (cfg.are_inputs_on_device)
             {
                 d_input.set_device_ptr(inout);
@@ -349,10 +524,12 @@ namespace ntt
             {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
+
             if (!cfg.are_outputs_on_device)
             {
                 gpu.DtoH(inout, &d_input[0], total_elements);
             }
+
             gpu.sync();
         }
         catch (const cuda_error &e)
@@ -373,7 +550,7 @@ namespace ntt
      */
     RustError BatchLde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, Direction direction, NTTConfig cfg)
     {
-
+ 
         if (lg_n == 0 || cfg.extension_rate_bits < 1)
         {
             // printf("invalid input : %d\n", cfg.with_coset);
@@ -382,7 +559,7 @@ namespace ntt
 
         try
         {
-
+ 
             gpu.select();
             // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d, direction: %d, batches: %d, are_outputs_on_device: %d, are_inputs_on_device: %d\n", lg_n, cfg.extension_rate_bits, direction,
             //        cfg.batches,
@@ -401,7 +578,7 @@ namespace ntt
             {
                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_output_domain_size);
             }
-
+ 
             size_t total_input_elements = (1 << lg_n) * cfg.batches;
             int input_size_bytes = total_input_elements * sizeof(fr_t);
 
@@ -453,27 +630,26 @@ namespace ntt
             {
                 reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
             }
-            // printf("after reverse order batch \n");
+            
             if (!cfg.are_outputs_on_device)
             {
                 // printf("start copy device to host \n");
                 gpu.DtoH(output, &d_output[0], total_output_elements);
             }
-            // printf("start sync \n");
-            gpu.sync();
-            // printf("end sync \n");
+
+             gpu.sync();
         }
         catch (const cuda_error &e)
         {
-#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-            return RustError{e.code(), e.what()};
-#else
-            return RustError{e.code()};
-#endif
+ #ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+             return RustError{e.code(), e.what()};
+ #else
+             return RustError{e.code()};
+ #endif
         }
-
+ 
         return RustError{cudaSuccess};
     }
-#endif
-}
-#endif
+ #endif
+ }
+ #endif
