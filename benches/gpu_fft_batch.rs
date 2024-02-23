@@ -1,6 +1,6 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt, ntt_batch, types::{NTTConfig, NTTInputOutputOrder}};
+use cryptography_cuda::{device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt_batch, types::NTTConfig};
 use plonky2_field::{fft::fft, goldilocks_field::GoldilocksField, polynomial::PolynomialCoeffs, types::{Field, PrimeField64}};
 use rand::random;
 
@@ -36,7 +36,6 @@ fn bench_gpu_ntt_batch(c: &mut Criterion) {
         let mut cfg = NTTConfig::default();
         cfg.are_inputs_on_device = true;
         cfg.are_outputs_on_device = true;
-        cfg.are_outputs_transposed = false;
         cfg.batches = batches as u32;
 
         group.sample_size(20).bench_function(
@@ -57,7 +56,7 @@ pub fn cpu_ntt(
     batches: usize,
 )->Vec<u64>{
     let mut cpu_res: Vec<Vec<u64>>  = Vec::new();
-    for i in 0..batches{
+    for _i in 0..batches{
         let coeffs = cpu_buffer[0..domain_size]
             .iter()
             .map(|i| GoldilocksField::from_canonical_u64(*i))
@@ -76,5 +75,5 @@ pub fn cpu_ntt(
 }
 
 
-criterion_group!(ntt_benches, bench_gpu_ntt_batch);
-criterion_main!(ntt_benches);
+criterion_group!(benches, bench_gpu_ntt_batch);
+criterion_main!(benches);

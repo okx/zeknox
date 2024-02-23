@@ -83,7 +83,7 @@ extern "C"
 #endif 
 RustError 
 compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
-                        Ntt_Types::NTTConfig cfg)
+                        Ntt_Types::TransposeConfig cfg)
 {
     auto &gpu = select_gpu(device_id);
     return ntt::ComputeTransposeRev(gpu, output, input, lg_n, cfg);
@@ -94,7 +94,7 @@ extern "C"
 #endif 
 RustError 
 compute_naive_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
-                        Ntt_Types::NTTConfig cfg)
+                        Ntt_Types::TransposeConfig cfg)
 {
     auto &gpu = select_gpu(device_id);
     return ntt::ComputeNaiveTransposeRev(gpu, output, input, lg_n, cfg);

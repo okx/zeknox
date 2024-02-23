@@ -50,3 +50,24 @@ impl Default for NTTConfig {
         }
     }
 }
+
+
+#[repr(C)]
+#[derive(Clone, Debug)]
+pub struct TransposeConfig {
+    pub batches: u32,
+    pub are_inputs_on_device: bool, //**< True if inputs are on device and false if they're on host. Default value: false.
+    pub are_outputs_on_device: bool, //**< If true, output is preserved on device, otherwise on host. Default value: false.
+
+}
+
+impl Default for TransposeConfig {
+    fn default() -> Self {
+        Self {
+            batches: 1,        
+            are_inputs_on_device: false,
+            are_outputs_on_device: false,
+        }
+    }
+}
+

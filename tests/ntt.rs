@@ -334,7 +334,7 @@ fn test_naive_transpose_rev(){
     let _ = device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
 
 
-    let mut cfg = NTTConfig::default();
+    let mut cfg = TransposeConfig::default();
     cfg.batches = batches as u32;
     // println!("device data len: {:?}", device_data.len());
     naive_transpose_rev_batch(DEFAULT_GPU, device_data2.as_mut_ptr(), device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
@@ -374,7 +374,7 @@ fn test_transpose_rev(){
     let _ = device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
 
 
-    let mut cfg = NTTConfig::default();
+    let mut cfg = TransposeConfig::default();
     cfg.batches = batches as u32;
     // println!("device data len: {:?}", device_data.len());
     transpose_rev_batch(DEFAULT_GPU, device_data2.as_mut_ptr(), device_data.as_mut_ptr(), lg_domain_size, cfg.clone());

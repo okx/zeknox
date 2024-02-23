@@ -269,7 +269,7 @@ namespace ntt
     * @param n length of `arr`. 
     * @param batch_size the size of the batch.
     */
-    RustError ComputeTransposeRev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTTConfig cfg)
+    RustError ComputeTransposeRev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, TransposeConfig cfg)
     {
         try
         {
@@ -338,7 +338,7 @@ namespace ntt
     * @param n length of `arr`. 
     * @param batch_size the size of the batch.
     */
-    RustError ComputeNaiveTransposeRev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTTConfig cfg)
+    RustError ComputeNaiveTransposeRev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, TransposeConfig cfg)
     {
         try
         {

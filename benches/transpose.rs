@@ -2,15 +2,10 @@ extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
 use cryptography_cuda::{
-    device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, naive_transpose_rev_batch,
+    device::memory::HostOrDeviceSlice, naive_transpose_rev_batch,
     transpose_rev_batch, types::NTTConfig,
 };
-use plonky2_field::{
-    fft::fft,
-    goldilocks_field::GoldilocksField,
-    polynomial::PolynomialCoeffs,
-    types::{Field, PrimeField64},
-};
+
 use rand::random;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -133,14 +128,14 @@ pub fn transpose<T: Send + Sync + Copy>(matrix: &Vec<Vec<T>>, len: usize) -> Vec
 
 #[cfg(not(feature = "no_cuda"))]
 criterion_group!(
-    ntt_benches,
+    benches,
     bench_transpose_gpu,
     bench_naive_transpose_gpu,
     bench_transpose_cpu
 );
 #[cfg(feature = "no_cuda")]
 criterion_group!(
-    ntt_benches,
+    benches,
     bench_transpose_cpu
 );
-criterion_main!(ntt_benches);
+criterion_main!(benches);

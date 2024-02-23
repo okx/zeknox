@@ -1,4 +1,4 @@
-use types::NTTConfig;
+use types::{NTTConfig, TransposeConfig};
 
 pub mod device;
 pub mod error;
@@ -43,7 +43,7 @@ extern "C" {
         output: *mut core::ffi::c_void,
         input: *mut core::ffi::c_void,
         lg_n: usize,
-        cfg: types::NTTConfig,
+        cfg: types::TransposeConfig,
     ) -> error::Error;
 
     fn compute_naive_transpose_rev(
@@ -51,7 +51,7 @@ extern "C" {
         output: *mut core::ffi::c_void,
         input: *mut core::ffi::c_void,
         lg_n: usize,
-        cfg: types::NTTConfig,
+        cfg: types::TransposeConfig,
     ) -> error::Error;
 
 
@@ -247,7 +247,7 @@ pub fn transpose_rev_batch<T>(
     output: *mut T, // &mut [T],
     input: *const T, // &mut [T],
     log_n_size: usize,
-    cfg: NTTConfig,
+    cfg: TransposeConfig,
 ){
     let err = unsafe {
         compute_transpose_rev(
@@ -269,7 +269,7 @@ pub fn naive_transpose_rev_batch<T>(
     output: *mut T, // &mut [T],
     input: *const T, // &mut [T],
     log_n_size: usize,
-    cfg: NTTConfig,
+    cfg: TransposeConfig,
 ){
     let err = unsafe {
         compute_naive_transpose_rev(
