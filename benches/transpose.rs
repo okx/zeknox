@@ -2,8 +2,10 @@ extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
 use cryptography_cuda::{
-    device::memory::HostOrDeviceSlice, naive_transpose_rev_batch,
-    transpose_rev_batch, types::NTTConfig,
+    device::memory::HostOrDeviceSlice, 
+    naive_transpose_rev_batch, 
+    transpose_rev_batch, 
+    types::TransposeConfig
 };
 
 use rand::random;
@@ -34,7 +36,7 @@ fn bench_transpose_gpu(c: &mut Criterion) {
         let mut input: Vec<u64> = (0..batches * domain_size).map(|_| random_fr()).collect();
         let _ = device_data.copy_from_host_offset(input.as_mut_slice(), 0, batches * domain_size);
 
-        let mut cfg = NTTConfig::default();
+        let mut cfg = TransposeConfig::default();
         cfg.are_inputs_on_device = true;
         cfg.are_outputs_on_device = true;
         cfg.batches = batches as u32;
@@ -75,7 +77,7 @@ fn bench_naive_transpose_gpu(c: &mut Criterion) {
         let mut input: Vec<u64> = (0..batches * domain_size).map(|_| random_fr()).collect();
         let _ = device_data.copy_from_host_offset(input.as_mut_slice(), 0, batches * domain_size);
 
-        let mut cfg = NTTConfig::default();
+        let mut cfg = TransposeConfig::default();
         cfg.are_inputs_on_device = true;
         cfg.are_outputs_on_device = true;
         cfg.batches = batches as u32;
