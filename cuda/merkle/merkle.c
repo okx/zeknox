@@ -443,7 +443,8 @@ u64 *get_leaves_ptr()
 #include <sys/time.h>
 // #include "test_leaves.h"
 
-void init_gpu_functions(u64 hash_type) {
+void init_gpu_functions(u64 hash_type)
+{
     // dummy for debug
 }
 
@@ -457,17 +458,20 @@ void generate_random_leaves(u64 *leaves, u32 n_leaves, u32 leaf_size)
     }
 }
 
-void read_leaves(u64 *leaves, u32 n_leaves, u32 leaf_size) {
-FILE* f = fopen("/home/ubuntu/git/zkdex-plonky2-circom-poc/leaves.bin", "rb");
-assert(f != NULL);
-for (u32 i = 0; i < n_leaves * leaf_size; i++) {
-    u32 n = fread(leaves + i, 8, 1, f);
-    if (n != 1) {
-        printf("Error reading binary file!");
+void read_leaves(u64 *leaves, u32 n_leaves, u32 leaf_size)
+{
+    FILE *f = fopen("/home/ubuntu/git/zkdex-plonky2-circom-poc/leaves.bin", "rb");
+    assert(f != NULL);
+    for (u32 i = 0; i < n_leaves * leaf_size; i++)
+    {
+        u32 n = fread(leaves + i, 8, 1, f);
+        if (n != 1)
+        {
+            printf("Error reading binary file!");
+        }
     }
-}
 
-fclose(f);
+    fclose(f);
 }
 
 int main()

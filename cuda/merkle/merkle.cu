@@ -12,7 +12,7 @@
 
 // #include "goldilocks.hpp"
 
-#define TPB 128
+#define TPB 64
 
 // pointers to the actual hash functions (could be Poseidon or Keccak)
 __device__ void (*gpu_hash_one_ptr)(gl64_t *input, u32 size, gl64_t *hash);
@@ -50,27 +50,34 @@ __global__ void init_gpu_functions_keccak_kernel()
 
 void init_gpu_functions(u64 hash_type)
 {
-    switch (hash_type)
+    int nDevices = 0;
+    CHECKCUDAERR(cudaGetDeviceCount(&nDevices));
+
+    for (int d = 0; d < nDevices; d++)
     {
-    case 0:
-        init_gpu_functions_poseidon_kernel<<<1, 1>>>();
-        cpu_hash_one_ptr = &cpu_poseidon_hash_one;
-        cpu_hash_two_ptr = &cpu_poseidon_hash_two;
-        break;
-    case 1:
-        init_gpu_functions_keccak_kernel<<<1, 1>>>();
-        cpu_hash_one_ptr = &cpu_keccak_hash_one;
-        cpu_hash_two_ptr = &cpu_keccak_hash_two;
-        break;
-    case 2:
-        init_gpu_functions_poseidon_bn128_kernel<<<1, 1>>>();
-        cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
-        cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
-        break;
-    default:
-        init_gpu_functions_poseidon_kernel<<<1, 1>>>();
-        cpu_hash_one_ptr = &cpu_poseidon_hash_one;
-        cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+        CHECKCUDAERR(cudaSetDevice(d));
+        switch (hash_type)
+        {
+        case 0:
+            init_gpu_functions_poseidon_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+            cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+            break;
+        case 1:
+            init_gpu_functions_keccak_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_keccak_hash_one;
+            cpu_hash_two_ptr = &cpu_keccak_hash_two;
+            break;
+        case 2:
+            init_gpu_functions_poseidon_bn128_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
+            cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
+            break;
+        default:
+            init_gpu_functions_poseidon_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+            cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+        }
     }
 }
 
@@ -91,7 +98,7 @@ __global__ void compute_leaves_hashes_direct(u64 *leaves, u32 leaves_count, u32 
 }
 
 /*
- * Compute only leaves hashes with direct mapping per subtree.
+ * Compute only leaves hashes with direct mapping per subtree over the entire digest buffer.
  */
 __global__ void compute_leaves_hashes_linear_all(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, u32 subtree_leaves_len, u32 subtree_digests_len)
 {
@@ -106,6 +113,22 @@ __global__ void compute_leaves_hashes_linear_all(u64 *leaves, u32 leaves_count, 
 
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + didx * HASH_SIZE_U64;
+    gpu_hash_one_ptr((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
+}
+
+/*
+ * Compute only leaves hashes with direct mapping per subtree (one subtree per GPU).
+ */
+__global__ void compute_leaves_hashes_linear_per_gpu(u64 *leaves, u32 leaf_size, u64 *digests_buf, u32 subtree_leaves_len, u32 subtree_digests_len)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= subtree_leaves_len)
+        return;
+
+    int didx = (subtree_digests_len - subtree_leaves_len) + tid;
+    // printf("%d\n", didx);
+    u64 *lptr = leaves + (tid * leaf_size);
+    u64 *dptr = digests_buf + (didx * HASH_SIZE_U64);
     gpu_hash_one_ptr((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
 }
 
@@ -203,6 +226,22 @@ __global__ void compute_internal_hashes_linear_all(u64 *digests_buf, u32 round_s
     u64 *dptr = dptrs + idx * HASH_SIZE_U64;
     u64 *sptr1 = dptrs + (2 * (idx + 1) + last_idx) * HASH_SIZE_U64;
     u64 *sptr2 = dptrs + (2 * (idx + 1) + 1 + last_idx) * HASH_SIZE_U64;
+
+    // compute hash
+    gpu_hash_two_ptr((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
+}
+
+__global__ void compute_internal_hashes_linear_per_gpu(u64 *digests_buf, u32 round_size, u32 last_idx)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= round_size)
+        return;
+
+    // compute indexes and pointers
+    u64 *dptrs = digests_buf + last_idx * HASH_SIZE_U64;
+    u64 *dptr = dptrs + tid * HASH_SIZE_U64;
+    u64 *sptr1 = dptrs + (2 * (tid + 1) + last_idx) * HASH_SIZE_U64;
+    u64 *sptr2 = dptrs + (2 * (tid + 1) + 1 + last_idx) * HASH_SIZE_U64;
 
     // compute hash
     gpu_hash_two_ptr((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
@@ -942,44 +981,51 @@ void fill_digests_buf_linear_multigpu(
         u64 digests_size_bytes = subtree_digests_len * HASH_SIZE_U64 * sizeof(u64);
         CHECKCUDAERR(cudaSetDevice(d));
         CHECKCUDAERR(cudaStreamCreate(gpu_stream + d));
-        CHECKCUDAERR(cudaMalloc(&gpu_leaves[d], leaves_size_bytes));
-        CHECKCUDAERR(cudaMalloc(&gpu_digests[d], digests_size_bytes));
+        CHECKCUDAERR(cudaMalloc(&(gpu_leaves[d]), leaves_size_bytes));
+        CHECKCUDAERR(cudaMalloc(&(gpu_digests[d]), digests_size_bytes));
     }
 
-    for (int k = 0; k < cap_buf_size; k++)
+    for (int k = 0; k < cap_buf_size; k += ngpus)
     {
-        int d = k % ngpus;
-
-        u64 leaves_size_bytes = subtree_leaves_len * leaf_size * sizeof(u64);
-        u64 digests_size_bytes = subtree_digests_len * HASH_SIZE_U64 * sizeof(u64);
-
-        CHECKCUDAERR(cudaSetDevice(d));
-        CHECKCUDAERR(cudaMemcpyAsync(gpu_leaves[d], global_leaves_buf + k * subtree_leaves_len, leaves_size_bytes, cudaMemcpyHostToDevice, gpu_stream[d]));
-
-        int blocks = subtree_leaves_len / TPB + 1;
-        int threads = (subtree_leaves_len < TPB) ? subtree_leaves_len : TPB;
-        compute_leaves_hashes_linear_all<<<blocks, threads, 0, gpu_stream[d]>>>(gpu_leaves[d], subtree_leaves_len, leaf_size, gpu_digests[d], subtree_leaves_len, subtree_digests_len);
-
-        u64 r = (u64)log2(subtree_leaves_len) - 1;
-        u64 last_index = subtree_digests_len - subtree_leaves_len;
-
-        for (; (1 << r) > TPB; r--)
+#pragma omp parallel for num_threads(ngpus)
+        for (int d = 0; d < ngpus; d++)
         {
-            last_index -= (1 << r);
-            compute_internal_hashes_linear_all<<<((1 << r) * cap_buf_size) / TPB + 1, TPB, 0, gpu_stream[d]>>>(gpu_digests[d], (1 << r), last_index, cap_buf_size, subtree_digests_len);
+            if (k + d >= cap_buf_size)
+            {
+                continue;
+            }
+
+            u64 leaves_size_bytes = subtree_leaves_len * leaf_size * sizeof(u64);
+            u64 digests_size_bytes = subtree_digests_len * HASH_SIZE_U64 * sizeof(u64);
+
+            CHECKCUDAERR(cudaSetDevice(d));
+            CHECKCUDAERR(cudaMemcpyAsync(gpu_leaves[d], global_leaves_buf + (k + d) * subtree_leaves_len * leaf_size, leaves_size_bytes, cudaMemcpyHostToDevice, gpu_stream[d]));
+
+            int blocks = (subtree_leaves_len % TPB == 0) ? subtree_leaves_len / TPB : subtree_leaves_len / TPB + 1;
+            int threads = (subtree_leaves_len < TPB) ? subtree_leaves_len : TPB;
+            compute_leaves_hashes_linear_per_gpu<<<blocks, threads, 0, gpu_stream[d]>>>(gpu_leaves[d], leaf_size, gpu_digests[d], subtree_leaves_len, subtree_digests_len);
+
+            u64 r = (u64)log2(subtree_leaves_len) - 1;
+            u64 last_index = subtree_digests_len - subtree_leaves_len;
+
+            for (; (1 << r) > TPB; r--)
+            {
+                last_index -= (1 << r);
+                compute_internal_hashes_linear_per_gpu<<<(1 << r) / TPB + 1, TPB, 0, gpu_stream[d]>>>(gpu_digests[d], (1 << r), last_index);
+            }
+            for (; r > 0; r--)
+            {
+                last_index -= (1 << r);
+                compute_internal_hashes_linear_per_gpu<<<1, (1 << r), 0, gpu_stream[d]>>>(gpu_digests[d], (1 << r), last_index);
+            }
+            CHECKCUDAERR(cudaMemcpyAsync(global_digests_buf + (k + d) * subtree_digests_len * HASH_SIZE_U64, gpu_digests[d], digests_size_bytes, cudaMemcpyDeviceToHost, gpu_stream[d]));
         }
-        for (; r > 0; r--)
+        // sync
+        for (int d = 0; d < ngpus; d++)
         {
-            last_index -= (1 << r);
-            compute_internal_hashes_linear_all<<<1, (1 << r), 0, gpu_stream[d]>>>(gpu_digests[d], (1 << r), last_index, cap_buf_size, subtree_digests_len);
+            CHECKCUDAERR(cudaSetDevice(d));
+            CHECKCUDAERR(cudaStreamSynchronize(gpu_stream[d]));
         }
-        CHECKCUDAERR(cudaMemcpyAsync(global_digests_buf + k * subtree_digests_len, gpu_digests[d],digests_size_bytes, cudaMemcpyDeviceToHost, gpu_stream[d]));
-    }
-    // sync
-    for (int d = 0; d < ngpus; d++)
-    {
-        CHECKCUDAERR(cudaSetDevice(d));
-        CHECKCUDAERR(cudaStreamSynchronize(gpu_stream[d]));
     }
 
     // compute cap hashes on CPU
@@ -989,7 +1035,7 @@ void fill_digests_buf_linear_multigpu(
         u64 *digests_buf_ptr = global_digests_buf + k * subtree_digests_len * HASH_SIZE_U64;
         u64 *cap_buf_ptr = global_cap_buf + k * HASH_SIZE_U64;
         cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
-    } // end for k
+    }
 
     // free
     for (int d = 0; d < ngpus; d++)
