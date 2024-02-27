@@ -25,7 +25,7 @@ fn bench_gpu_ntt_batch(c: &mut Criterion) {
 
         let mut cpu_buffer: Vec<u64> = Vec::new();
         let mut device_data: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU as i32, total_elements).unwrap();
         for i in 0..batches{
             let mut input: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
             cpu_buffer.extend(input.iter());
