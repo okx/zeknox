@@ -45,7 +45,8 @@ EXTERNC void fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
     uint64_t cap_buf_size,
     uint64_t leaves_buf_size,
     uint64_t leaf_size,
-    uint64_t cap_height
+    uint64_t cap_height,
+    uint64_t hash_type
 );
 
 EXTERNC void fill_digests_buf_linear_cpu(

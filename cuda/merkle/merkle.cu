@@ -50,33 +50,39 @@ __global__ void init_gpu_functions_keccak_kernel()
 
 void init_gpu_functions(u64 hash_type)
 {
-    int nDevices = 0;
-    CHECKCUDAERR(cudaGetDeviceCount(&nDevices));
+    static int64_t initialize_hash_type = -1;
 
-    for (int d = 0; d < nDevices; d++)
+    if (initialize_hash_type == -1 || initialize_hash_type != hash_type)
     {
-        CHECKCUDAERR(cudaSetDevice(d));
-        switch (hash_type)
+
+        int nDevices = 0;
+        CHECKCUDAERR(cudaGetDeviceCount(&nDevices));
+
+        for (int d = 0; d < nDevices; d++)
         {
-        case 0:
-            init_gpu_functions_poseidon_kernel<<<1, 1>>>();
-            cpu_hash_one_ptr = &cpu_poseidon_hash_one;
-            cpu_hash_two_ptr = &cpu_poseidon_hash_two;
-            break;
-        case 1:
-            init_gpu_functions_keccak_kernel<<<1, 1>>>();
-            cpu_hash_one_ptr = &cpu_keccak_hash_one;
-            cpu_hash_two_ptr = &cpu_keccak_hash_two;
-            break;
-        case 2:
-            init_gpu_functions_poseidon_bn128_kernel<<<1, 1>>>();
-            cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
-            cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
-            break;
-        default:
-            init_gpu_functions_poseidon_kernel<<<1, 1>>>();
-            cpu_hash_one_ptr = &cpu_poseidon_hash_one;
-            cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+            CHECKCUDAERR(cudaSetDevice(d));
+            switch (hash_type)
+            {
+            case 0:
+                init_gpu_functions_poseidon_kernel<<<1, 1>>>();
+                cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+                cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+                break;
+            case 1:
+                init_gpu_functions_keccak_kernel<<<1, 1>>>();
+                cpu_hash_one_ptr = &cpu_keccak_hash_one;
+                cpu_hash_two_ptr = &cpu_keccak_hash_two;
+                break;
+            case 2:
+                init_gpu_functions_poseidon_bn128_kernel<<<1, 1>>>();
+                cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
+                cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
+                break;
+            default:
+                init_gpu_functions_poseidon_kernel<<<1, 1>>>();
+                cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+                cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+            }
         }
     }
 }
@@ -1054,8 +1060,12 @@ void fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
     uint64_t cap_buf_size,
     uint64_t leaves_buf_size,
     uint64_t leaf_size,
-    uint64_t cap_height)
+    uint64_t cap_height,
+    uint64_t hash_type)
 {
+    init_gpu_functions(hash_type);
+    fill_init_rounds(leaves_buf_size, log2(leaves_buf_size));
+
     if (cap_buf_size == leaves_buf_size)
     {
         compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr);
@@ -1113,6 +1123,8 @@ void fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
     cudaFree(gpu_indexes);
     cudaFree(gpu_internal_indexes);
     cudaFree(gpu_round_size);
+
+    fill_delete_rounds();
 }
 
 // #define TESTING
