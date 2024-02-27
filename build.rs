@@ -1,6 +1,8 @@
-
+#[cfg(not(feature="no_cuda"))]
 use std::env;
+#[cfg(not(feature="no_cuda"))]
 use std::fs;
+#[cfg(not(feature="no_cuda"))]
 use std::path::PathBuf;
 #[cfg(not(feature="no_cuda"))]
 extern crate rustacuda;
@@ -10,6 +12,7 @@ use rustacuda::device::DeviceAttribute;
 use rustacuda::prelude::*;
 
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
+#[cfg(not(feature="no_cuda"))]
 fn build_device_wrapper() {
     let cuda_runtime_api_path = PathBuf::from("/usr/local/cuda/include")
         .join("cuda_runtime_api.h")
@@ -77,6 +80,7 @@ fn get_device_arch() -> String {
     cuda_arch
 }
 
+#[cfg(not(feature="no_cuda"))]
 fn feature_check() -> String {
     let fr_s = [
         "gl64",

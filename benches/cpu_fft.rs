@@ -4,11 +4,10 @@ use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{
     fft::fft,
     polynomial::PolynomialCoeffs,
-    types::{Field},
+    types::Field,
 };
 use rand::random;
 
-const DEFAULT_GPU: usize = 0;
 fn random_fr() -> u64 {
     let fr: u64 = random();
     fr % 0xffffffff00000001
@@ -34,5 +33,5 @@ fn bench_cpu_ntt(c: &mut Criterion) {
     }
 }
 
-criterion_group!(ntt_benches, bench_cpu_ntt);
-criterion_main!(ntt_benches);
+criterion_group!(benches, bench_cpu_ntt);
+criterion_main!(benches);
