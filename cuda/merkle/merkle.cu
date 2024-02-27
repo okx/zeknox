@@ -1107,7 +1107,7 @@ void fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
     }
 
     // 4.
-    compute_internal_hashes_per_round<<<1, global_round_size[r]>>>((u64 *)cap_buf_gpu_ptr, global_round_size[0], 0, global_max_round_size, gpu_internal_indexes);
+    compute_caps_hashes_per_round<<<1, global_round_size[0]>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, global_round_size[0], 0, global_max_round_size, gpu_internal_indexes);
 
     // free
     cudaFree(gpu_indexes);
