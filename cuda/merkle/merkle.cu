@@ -1064,11 +1064,11 @@ void fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
     uint64_t hash_type)
 {
     init_gpu_functions(hash_type);
-    fill_init_rounds(leaves_buf_size, log2(leaves_buf_size));
+    fill_init_rounds(leaves_buf_size, log2(leaves_buf_size) + 1);
 
     if (cap_buf_size == leaves_buf_size)
     {
-        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr);
+        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr);
         return;
     }
 
