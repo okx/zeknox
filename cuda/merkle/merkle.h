@@ -65,6 +65,18 @@ EXTERNC void fill_digests_buf_linear_gpu(
     uint64_t cap_height
 );
 
+EXTERNC void fill_digests_buf_linear_gpu_with_gpu_ptr(
+    void *digests_buf_gpu_ptr,
+    void *cap_buf_gpu_ptr,
+    void *leaves_buf_gpu_ptr,
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height,
+    uint64_t hash_type
+);
+
 EXTERNC void fill_digests_buf_linear_multigpu(
     uint64_t digests_buf_size,
     uint64_t cap_buf_size,
