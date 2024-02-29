@@ -5,3 +5,6 @@ build/
 package/
 depends/gmp/
 depends/*.tar*
+*.o
+*.so
+*.a
