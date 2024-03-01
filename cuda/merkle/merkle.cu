@@ -24,8 +24,8 @@ __global__ void init_gpu_functions_poseidon_kernel()
     if (tid > 0)
         return;
 
-    gpu_hash_one_ptr = &poseidon_hash_one;
-    gpu_hash_two_ptr = &poseidon_hash_two;
+    gpu_hash_one_ptr = &gpu_poseidon_hash_one;
+    gpu_hash_two_ptr = &gpu_poseidon_hash_two;
 }
 
 __global__ void init_gpu_functions_poseidon_bn128_kernel()
@@ -805,30 +805,20 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     // (special cases) compute leaf hashes on CPU
     if (subtree_leaves_len <= 2)
     {
-        // for all the subtrees
-#pragma omp parallel for
-        for (u64 k = 0; k < cap_buf_size; k++)
+        if (subtree_leaves_len == 1)
         {
-            // printf("Subtree %d\n", k);
-            u64 *leaves_buf_ptr = global_leaves_buf + k * subtree_leaves_len * leaf_size;
-            u64 *digests_buf_ptr = global_digests_buf + k * subtree_digests_len * HASH_SIZE_U64;
-            u64 *cap_buf_ptr = global_cap_buf + k * HASH_SIZE_U64;
-
-            // if one leaf => return its hash
-            if (subtree_leaves_len == 1)
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)cap_buf_gpu_ptr);
+        }
+        else
+        {
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)digests_buf_gpu_ptr);
+            if (cap_buf_size <= TPB)
             {
-                cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
-                memcpy(cap_buf_ptr, digests_buf_ptr, HASH_SIZE);
+                compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64*)cap_buf_gpu_ptr, (u64*)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
             }
             else
             {
-                // if two leaves => return their concat hash
-                if (subtree_leaves_len == 2)
-                {
-                    cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr);
-                    cpu_hash_one_ptr(leaves_buf_ptr + leaf_size, leaf_size, digests_buf_ptr + HASH_SIZE_U64);
-                    cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
-                }
+                compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64*)cap_buf_gpu_ptr, (u64*)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
             }
         }
         return;

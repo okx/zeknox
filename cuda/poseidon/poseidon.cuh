@@ -4,6 +4,7 @@
 #include "int_types.h"
 #include "gl64_t.cuh"
 #include "cuda_utils.cuh"
+#include "poseidon.h"
 
 #define MIN(x, y) (x < y) ? x : y
 
@@ -78,10 +79,6 @@ public:
 
     DEVICE gl64_t *squeeze(u32 size);
 };
-
-DEVICE void poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash);
-
-DEVICE void poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash);
 
 #ifdef DEBUG
 DEVICE  void print_perm(gl64_t *data, int cnt)
