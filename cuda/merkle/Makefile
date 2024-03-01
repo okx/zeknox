@@ -1,4 +1,5 @@
 $(shell ./configure.sh)
+$(shell sleep 1)
 include CudaArch.mk
 
 CC := gcc
