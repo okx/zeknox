@@ -54,6 +54,7 @@ void init_gpu_functions(u64 hash_type)
 
     if (initialize_hash_type == -1 || initialize_hash_type != hash_type)
     {
+        initialize_hash_type = hash_type;
 
         int nDevices = 0;
         CHECKCUDAERR(cudaGetDeviceCount(&nDevices));
@@ -101,6 +102,11 @@ __global__ void compute_leaves_hashes_direct(u64 *leaves, u32 leaves_count, u32 
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + (tid * HASH_SIZE_U64);
     gpu_hash_one_ptr((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
+
+    // if with stride
+    // u64 *lptr = leaves + tid;
+    // u64 *dptr = digests_buf + (tid * HASH_SIZE_U64);
+    // gpu_poseidon_hash_one_stride((gl64_t *)lptr, leaf_size, (gl64_t *)dptr, leaves_count);
 }
 
 /*
@@ -120,6 +126,11 @@ __global__ void compute_leaves_hashes_linear_all(u64 *leaves, u32 leaves_count, 
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + didx * HASH_SIZE_U64;
     gpu_hash_one_ptr((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
+
+    // if with stride
+    // u64 *lptr = leaves + tid;
+    // u64 *dptr = digests_buf + didx * HASH_SIZE_U64;
+    // gpu_poseidon_hash_one_stride((gl64_t *)lptr, leaf_size, (gl64_t *)dptr, leaves_count);
 }
 
 /*
@@ -786,10 +797,10 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     uint64_t hash_type)
 {
     init_gpu_functions(hash_type);
-   
+
     // (special case) compute leaf hashes on GPU
     if (cap_buf_size == leaves_buf_size)
-    { 
+    {
         compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)cap_buf_gpu_ptr);
         return;
     }

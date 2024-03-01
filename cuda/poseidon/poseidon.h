@@ -14,6 +14,7 @@ EXTERNC void cpu_poseidon_hash_two(u64 *hash1, u64 *hash2, u64 *hash);
 
 #ifdef USE_CUDA
 EXTERNC DEVICE void gpu_poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash);
+EXTERNC DEVICE void gpu_poseidon_hash_one_stride(gl64_t *inputs, u32 num_inputs, gl64_t *hash, u32 stride);
 EXTERNC DEVICE void gpu_poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash);
 #endif
 

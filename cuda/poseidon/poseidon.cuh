@@ -71,6 +71,8 @@ public:
 
     DEVICE void set_from_slice(gl64_t *elts, u32 len, u32 start_idx);
 
+    DEVICE void set_from_slice_stride(gl64_t *elts, u32 len, u32 start_idx, u32 stride);
+
     DEVICE void get_state_as_canonical_u64(u64* out);
 
     DEVICE void set_state(u32 idx, gl64_t val);
