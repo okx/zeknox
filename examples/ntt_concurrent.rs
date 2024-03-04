@@ -184,6 +184,7 @@ fn main() {
 
     #[cfg(not(feature = "no_cuda"))]
     let mut device_id = 0;
+    #[cfg(not(feature = "no_cuda"))]
     while (device_id < num_devices) {
         init_twiddle_factors_rs(device_id, log_ntt_size);
         init_twiddle_factors_rs(device_id, log_ntt_size+1);
