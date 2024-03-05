@@ -98,37 +98,51 @@ fn gpu_fft_concurrent_multiple_devices(
 
 #[cfg(not(feature = "no_cuda"))]
 fn gpu_fft_batch(device_id: usize, batches: usize, log_ntt_size: usize) {
-    let domain_size = 1usize << log_ntt_size;
+    use cryptography_cuda::device::memory::HostOrDeviceSlice;
 
-    let mut gpu_buffer: Vec<u64> = (0..domain_size * batches).map(|_| random_fr()).collect();
+    let domain_size = 1usize << log_ntt_size;
+    let total_elements = domain_size * batches;
+
     let start = std::time::Instant::now();
+
+    let mut device_data: HostOrDeviceSlice<'_, u64> =
+            HostOrDeviceSlice::cuda_malloc(device_id as i32, total_elements).unwrap();
+            
+    for i in 0..batches{
+        let mut input: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
+
+        let _ = device_data.copy_from_host_offset(input.as_mut_slice(), i*domain_size, (i+1)*domain_size);
+    }
+
+    let mut cfg = NTTConfig::default();
+        cfg.are_inputs_on_device = true;
+        cfg.are_outputs_on_device = true;
+        cfg.batches = batches as u32;
+        
     ntt_batch(
-        device_id,
-        &mut gpu_buffer,
-        NTTInputOutputOrder::NN,
-        batches as u32,
+        DEFAULT_GPU,
+        device_data.as_mut_ptr(),
         log_ntt_size,
+        cfg.clone(),
     );
-    println!(
-        "gpu fft batch of nums: {:?}, log_ntt_size: {:?}, total time spend: {:?}",
-        batches,
-        log_ntt_size,
-        start.elapsed()
-    );
+    
+    println!("total time spend: {:?}", start.elapsed());
 }
 
 #[cfg(not(feature = "no_cuda"))]
 fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_size: usize) {
+    use cryptography_cuda::device::memory::HostOrDeviceSlice;
+
     let domain_size = 1usize << log_ntt_size;
-    let per_device_batch = batches.div_ceil(device_nums);
+    let per_device_batch = (batches + device_nums - 1)/ device_nums;
+
     println!("per_device_batch: {:?}", per_device_batch);
 
-    let mut gpu_buffers: Vec<Vec<u64>> = (0..device_nums)
+    let mut gpu_buffers: Vec<HostOrDeviceSlice<'_, u64>> = (0..device_nums)
         .into_iter()
-        .map(|_| random_fr_n(domain_size * per_device_batch))
+        .map(|i| HostOrDeviceSlice::cuda_malloc(i as i32, domain_size*per_device_batch).unwrap())
         .collect();
 
-    let mut cpu_buffers = gpu_buffers.clone();
     // println!("input: {:?}", gpu_buffers);
     let start = std::time::Instant::now();
     let _: Vec<_> = gpu_buffers
@@ -136,29 +150,22 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
         .enumerate()
         .map(|(device_id, mut input)| {
             // println!("invoking gpu: {:?}, input: {:?}", device_id, input);
-            ntt_batch(
-                device_id,
-                &mut input,
-                NTTInputOutputOrder::NN,
-                per_device_batch as u32,
-                log_ntt_size,
-            );
+            let mut cfg = NTTConfig::default();
+            cfg.are_inputs_on_device = true;
+            cfg.are_outputs_on_device = true;
+            cfg.batches = per_device_batch as u32;
+            
+        ntt_batch(
+            device_id,
+            input.as_mut_ptr(),
+            log_ntt_size,
+            cfg.clone(),
+        );
             // println!("invoking gpu: {:?}, output: {:?}", device_id, input);
-
         })
         .collect();
 
     // println!("after ntt: {:?}", gpu_buffers);
-
-    // println!("cpu input: {:?}", cpu_buffers[1]);
-    let coeffs = cpu_buffers[0][0..domain_size]
-        .iter()
-        .map(|i| GoldilocksField::from_canonical_u64(*i))
-        .collect::<Vec<GoldilocksField>>();
-    let coefficients = PolynomialCoeffs { coeffs };
-
-    let ret = fft(coefficients.clone());
-    // println!("cpu ret: {:?}", ret);
 
     println!(
         "gpu fft batch of nums: {:?}, log_ntt_size: {:?}, total time spend: {:?}",
@@ -177,6 +184,7 @@ fn main() {
 
     #[cfg(not(feature = "no_cuda"))]
     let mut device_id = 0;
+    #[cfg(not(feature = "no_cuda"))]
     while (device_id < num_devices) {
         init_twiddle_factors_rs(device_id, log_ntt_size);
         init_twiddle_factors_rs(device_id, log_ntt_size+1);

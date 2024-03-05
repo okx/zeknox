@@ -29,9 +29,9 @@ fn bench_transpose_gpu(c: &mut Criterion) {
         let total_elements = domain_size * batches;
         // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
         let mut device_data: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
         let mut device_data2: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
 
         let mut input: Vec<u64> = (0..batches * domain_size).map(|_| random_fr()).collect();
         let _ = device_data.copy_from_host_offset(input.as_mut_slice(), 0, batches * domain_size);
@@ -46,7 +46,7 @@ fn bench_transpose_gpu(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     transpose_rev_batch(
-                        DEFAULT_GPU,
+                        DEFAULT_GPU.try_into().unwrap(),
                         device_data.as_mut_ptr(),
                         device_data2.as_mut_ptr(),
                         log_ntt_size,
@@ -70,9 +70,9 @@ fn bench_naive_transpose_gpu(c: &mut Criterion) {
         let total_elements = domain_size * batches;
         // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
         let mut device_data: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
         let mut device_data2: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
 
         let mut input: Vec<u64> = (0..batches * domain_size).map(|_| random_fr()).collect();
         let _ = device_data.copy_from_host_offset(input.as_mut_slice(), 0, batches * domain_size);
@@ -87,7 +87,7 @@ fn bench_naive_transpose_gpu(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     naive_transpose_rev_batch(
-                        DEFAULT_GPU,
+                        DEFAULT_GPU.try_into().unwrap(),
                         device_data.as_mut_ptr(),
                         device_data2.as_mut_ptr(),
                         log_ntt_size,
