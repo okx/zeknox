@@ -4,9 +4,9 @@
 #include "merkle_private.h"
 
 #include "cuda_utils.cuh"
-// #include "poseidon.hpp"
 #include "poseidon.cuh"
 #include "poseidon.h"
+#include "poseidon2.h"
 #include "poseidon_bn128.h"
 #include "keccak.h"
 
@@ -26,6 +26,16 @@ __global__ void init_gpu_functions_poseidon_kernel()
 
     gpu_hash_one_ptr = &gpu_poseidon_hash_one;
     gpu_hash_two_ptr = &gpu_poseidon_hash_two;
+}
+
+__global__ void init_gpu_functions_poseidon2_kernel()
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > 0)
+        return;
+
+    gpu_hash_one_ptr = &gpu_poseidon2_hash_one;
+    gpu_hash_two_ptr = &gpu_poseidon2_hash_two;
 }
 
 __global__ void init_gpu_functions_poseidon_bn128_kernel()
@@ -78,6 +88,11 @@ void init_gpu_functions(u64 hash_type)
                 init_gpu_functions_poseidon_bn128_kernel<<<1, 1>>>();
                 cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
                 cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
+                break;
+            case 3:
+                init_gpu_functions_poseidon2_kernel<<<1, 1>>>();
+                cpu_hash_one_ptr = &cpu_poseidon2_hash_one;
+                cpu_hash_two_ptr = &cpu_poseidon2_hash_two;
                 break;
             default:
                 init_gpu_functions_poseidon_kernel<<<1, 1>>>();

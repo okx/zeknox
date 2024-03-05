@@ -31,7 +31,7 @@ class PoseidonPermutationGPU
 class PoseidonPermutation
 #endif
 {
-public:
+private:
     DEVICE static gl64_t reduce128(uint128_t x);
 
     DEVICE static gl64_t reduce_u160(uint128_t n_lo, uint32_t n_hi);
@@ -64,6 +64,7 @@ public:
 
     DEVICE gl64_t *poseidon(gl64_t *input);
 
+protected:
     gl64_t state[SPONGE_WIDTH];
 
 public:
@@ -83,14 +84,7 @@ public:
 };
 
 #ifdef DEBUG
-DEVICE  void print_perm(gl64_t *data, int cnt)
-    {
-        for (int i = 0; i < cnt; i++)
-        {
-            printf("%lu ", data[i].get_val());
-        }
-        printf("\n");
-    }
+DEVICE void print_perm(gl64_t *data, int cnt);
 #endif
 
 #endif // __POSEIDON_V2_CUH__

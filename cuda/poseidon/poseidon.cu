@@ -917,3 +917,14 @@ __device__ void gpu_poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash
         hash[i] = ret[i];
     }
 }
+
+#ifdef DEBUG
+DEVICE  void print_perm(gl64_t *data, int cnt)
+    {
+        for (int i = 0; i < cnt; i++)
+        {
+            printf("%lu ", data[i].get_val());
+        }
+        printf("\n");
+    }
+#endif

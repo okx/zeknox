@@ -1510,7 +1510,7 @@ public:
     static const u64 RATE = SPONGE_RATE;
     static const u64 WIDTH = SPONGE_WIDTH;
 
-private:
+protected:
     GoldilocksField state[WIDTH];
 
 public:
