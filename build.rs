@@ -199,15 +199,15 @@ fn build_cuda() {
 #[cfg(not(feature="no_cuda"))]
 fn merkle_tree_bindings() {
     let pwd = env::current_dir().unwrap();
-    let libdir = pwd.join("cuda/merkle");
-    let header_file = libdir.join("merkle.h");
-    let lib_file = libdir.join("libmerkle-gpu.a");
+    let libdir = pwd.join("cuda");
+    let header_file = libdir.join("merkle/merkle.h");
+    let lib_file = libdir.join("libcryptocuda.a");
 
     if !lib_file.exists()
     {
         assert!(env::set_current_dir(&libdir).is_ok());
         Command::new("make")
-        .arg("libmerkle-gpu.a")
+        .arg("lib")
         .output()
         .expect("failed to execute process");
         assert!(env::set_current_dir(&pwd).is_ok());
@@ -217,10 +217,10 @@ fn merkle_tree_bindings() {
     println!("cargo:rustc-link-search={}", libdir.to_str().unwrap());
 
     // Shared lib.
-    // println!("cargo:rustc-link-lib=merkle-gpu");
+    // println!("cargo:rustc-link-lib=cryptocuda");
 
     // Static lib
-    println!("cargo:rustc-link-lib=static=merkle-gpu");
+    println!("cargo:rustc-link-lib=static=cryptocuda");
     println!("cargo:rustc-link-lib=gomp");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
