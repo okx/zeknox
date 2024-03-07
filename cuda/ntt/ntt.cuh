@@ -560,7 +560,7 @@ namespace ntt
 
          try
          {
-            printf("Multi-GPU LDE-starting\n");
+            // printf("Multi-GPU LDE-starting\n");
 
             uint32_t num_batches_per_gpu = (cfg.batches + num_gpu - 1)/num_gpu;
             uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu-1));
@@ -574,7 +574,7 @@ namespace ntt
 
 
                 uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
-                printf("Num batches:%d\n", batches);
+                // printf("Num batches:%d\n", batches);
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = (size_t)1 << lg_output_domain_size;
                 uint32_t n_twiddles = size;
@@ -589,7 +589,7 @@ namespace ntt
                     d_twiddle = all_gpus_twiddle_forward_arr[i].at(lg_output_domain_size);
                 }
 
-                printf("Allocating input memory on GPU: %d\n", gpu.id());
+                // printf("Allocating input memory on GPU: %d\n", gpu.id());
 
                 size_t total_input_elements = (1 << lg_n) * batches;
                 int input_size_bytes = total_input_elements * sizeof(fr_t);
@@ -598,7 +598,7 @@ namespace ntt
 
                 cudaMalloc(&input_data, input_size_bytes);
                 void *src = (inputs + (i * num_batches_per_gpu * (1 << lg_n)));
-                printf("inputs: %d, inputs offset:%d, bytes: %d\n", inputs, src, input_size_bytes);
+                // printf("inputs: %d, inputs offset:%d, bytes: %d\n", inputs, src, input_size_bytes);
                 cudaMemcpyAsync(input_data, src, input_size_bytes, cudaMemcpyHostToDevice, gpu);
 
                 input_pointers.emplace_back(input_data);
@@ -642,7 +642,7 @@ namespace ntt
             d_buffer.set_device_ptr(output);
 
             for(int i = 0; i < num_gpu; i++){
-                printf("Multi-GPU memory movement starting \n");
+                // printf("Multi-GPU memory movement starting \n");
                 cudaSetDevice(i);
                 auto &gpu = select_gpu(i);
                 gpu.sync();
@@ -658,7 +658,7 @@ namespace ntt
                 
                 if (i == 0)
                 {
-                    printf("GPU 0 memory moved\n");
+                    // printf("GPU 0 memory moved\n");
                     cudaMemcpyAsync(d_buffer, output_data, total_output_bytes, cudaMemcpyDeviceToDevice, gpu);
                 }
                 else
@@ -667,14 +667,9 @@ namespace ntt
                     cudaDeviceCanAccessPeer(&canAccessPeer, 0, gpu.id());
                     if(canAccessPeer)
                     {
-                        printf("Peer copy can access gpu\n");
+                        // printf("Peer copy can access gpu\n");
                         cudaMemcpyPeerAsync(&d_buffer[i * num_batches_per_gpu * (1 << lg_output_domain_size)], 0, output_data, i, total_output_bytes, gpu);
                     }
-                    else
-                    {
-                        printf("Peer copy cannot access gpu\n");
-                    }
-                    
                 }
 
                 // if (!cfg.are_outputs_on_device)

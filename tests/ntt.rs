@@ -624,12 +624,12 @@ fn test_compute_batched_lde_data_on_device() {
 
 #[test]
 fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
-    let lg_n: usize = 2;
-    let rate_bits = 2;
+    let lg_n: usize = 8;
+    let rate_bits = 4;
     let lg_domain_size = lg_n + rate_bits;
     let input_domain_size = 1usize << lg_n;
     let output_domain_size = 1usize << (lg_n + rate_bits);
-    let batches = 2;
+    let batches = 12;
 
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
@@ -654,7 +654,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
         .map(|_| (0..input_domain_size).map(|_| random_fr()).collect::<Vec<u64>>())
         .flatten().collect();
 
-    println!("Length of inputs: {:?}", host_inputs.len());
+    // println!("Length of inputs: {:?}", host_inputs.len());
 
     // lde rust allocate to gpu prior to api call
     let mut device_output_data: HostOrDeviceSlice<'_, u64> =
@@ -673,12 +673,12 @@ fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
         host_inputs.as_mut_ptr(),
         2,    
         cfg_lde.clone(),
-        2, 
+        lg_n, 
         total_num_input_elements,
         total_num_output_elements,
     );
 
-    println!("LDE completed");
+    // println!("LDE completed");
 
     let mut host_output = vec![0; batches*output_domain_size];
 
