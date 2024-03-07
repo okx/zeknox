@@ -38,6 +38,17 @@ extern "C" {
         cfg: types::NTTConfig,
     ) -> error::Error;
 
+    fn compute_batched_lde_multi_gpu(
+        output: *mut core::ffi::c_void,
+        input: *mut core::ffi::c_void,
+        num_gpu: usize,
+        ntt_direction: types::NTTDirection,
+        cfg: types::NTTConfig,
+        lg_domain_size: usize,
+        total_num_input_elements: usize,
+        total_num_output_elements: usize
+    ) -> error::Error;
+
     fn compute_transpose_rev(
         device_id: i32,
         output: *mut core::ffi::c_void,
@@ -191,6 +202,33 @@ pub fn lde_batch<T>(
             log_n_size,
             types::NTTDirection::Forward,
             cfg,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+pub fn lde_batch_multi_gpu<T>(
+    output:*mut T, // &mut [T],
+    input: *const T, // &mut [T],
+    num_gpu: usize,
+    cfg: NTTConfig,
+    log_n_size: usize,
+    total_num_input_elements: usize,
+    total_num_output_elements: usize
+) {
+    let err = unsafe {
+        compute_batched_lde_multi_gpu(
+            output as *mut core::ffi::c_void,
+            input as *mut core::ffi::c_void,
+            num_gpu,
+            types::NTTDirection::Forward,
+            cfg,
+            log_n_size,
+            total_num_input_elements,
+            total_num_output_elements
         )
     };
 

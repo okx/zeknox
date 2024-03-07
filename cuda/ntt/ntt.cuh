@@ -246,6 +246,7 @@ namespace ntt
                 ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
                     d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem, stream.gpu_id);
             }
+
         }
         return;
     }
@@ -285,8 +286,9 @@ namespace ntt
                 total_elements,
                 gpu,
                 cfg.are_inputs_on_device ? false : true, // if inputs are already on device, no need to alloc input memory
-                cfg.are_outputs_on_device ? true : false // if keep output on device; let the user drop the pointer
+                true                                     // drop input pointer after transpose
             };
+
 
             if (cfg.are_inputs_on_device)
             {
@@ -313,7 +315,6 @@ namespace ntt
             {
                 d_transpose_output.alloc();
             }
-
 
             transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
             
@@ -545,6 +546,162 @@ namespace ntt
     }
 
     /**
+     * assume with coset and that buffer has already been allocated in GPU with id 0
+     * \param lg_n , logn before extension
+     */
+     RustError BatchLdeMultiGpu(fr_t *output, fr_t *inputs, size_t num_gpu, Direction direction, NTTConfig cfg, size_t lg_n, size_t total_num_input_elements, size_t total_num_output_elements)
+     {
+  
+         if (lg_n == 0 || cfg.extension_rate_bits < 1)
+         {
+             // printf("invalid input : %d\n", cfg.with_coset);
+             return RustError{cudaErrorInvalidValue};
+         }
+
+         try
+         {
+            printf("Multi-GPU LDE-starting\n");
+
+            uint32_t num_batches_per_gpu = (cfg.batches + num_gpu - 1)/num_gpu;
+            uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu-1));
+
+            std::vector<fr_t*> output_pointers;
+            std::vector<fr_t*> input_pointers;
+
+            for(int i = 0; i < num_gpu; i++){
+                cudaSetDevice(i);
+                auto &gpu = select_gpu(i);
+
+
+                uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
+                printf("Num batches:%d\n", batches);
+                uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
+                size_t size = (size_t)1 << lg_output_domain_size;
+                uint32_t n_twiddles = size;
+
+                fr_t *d_twiddle;
+                if (direction == Direction::inverse)
+                {
+                    d_twiddle = all_gpus_twiddle_inverse_arr[i].at(lg_output_domain_size);
+                }
+                else
+                {
+                    d_twiddle = all_gpus_twiddle_forward_arr[i].at(lg_output_domain_size);
+                }
+
+                printf("Allocating input memory on GPU: %d\n", gpu.id());
+
+                size_t total_input_elements = (1 << lg_n) * batches;
+                int input_size_bytes = total_input_elements * sizeof(fr_t);
+
+                fr_t* input_data;
+
+                cudaMalloc(&input_data, input_size_bytes);
+                void *src = (inputs + (i * num_batches_per_gpu * (1 << lg_n)));
+                printf("inputs: %d, inputs offset:%d, bytes: %d\n", inputs, src, input_size_bytes);
+                cudaMemcpyAsync(input_data, src, input_size_bytes, cudaMemcpyHostToDevice, gpu);
+
+                input_pointers.emplace_back(input_data);
+
+                size_t total_output_elements = size * batches;
+                int total_output_bytes = total_output_elements * sizeof(fr_t);
+
+                fr_t *output_data;
+
+                cudaMallocAsync(&output_data, total_output_bytes, gpu);
+
+                output_pointers.emplace_back(output_data);
+
+                extend_inputs_batch(output_data, input_data, 1 << lg_n, lg_n, cfg.extension_rate_bits, batches, gpu);
+
+                if (direction == Direction::inverse)
+                {
+                    reverse_order_batch(output_data, size, lg_output_domain_size, batches, gpu);
+                }
+
+                // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
+                ntt_inplace_batch_template(output_data, d_twiddle, n_twiddles, batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[i], gpu);
+                // printf("end inplace batch template, with coset: %d \n", cfg.with_coset);
+
+                if (direction == Direction::forward)
+                {
+                    reverse_order_batch(output_data, size, lg_output_domain_size, batches, gpu);
+                }
+            }
+
+            cudaSetDevice(0);
+            auto &gpu = select_gpu(0);
+        
+            dev_ptr_t<fr_t> d_buffer{
+                total_num_output_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true, 
+                cfg.are_outputs_on_device ? true : false
+            };
+
+            d_buffer.set_device_ptr(output);
+
+            for(int i = 0; i < num_gpu; i++){
+                printf("Multi-GPU memory movement starting \n");
+                cudaSetDevice(i);
+                auto &gpu = select_gpu(i);
+                gpu.sync();
+
+                fr_t *output_data = output_pointers.at(i);
+                fr_t *input_data = input_pointers.at(i);
+
+                uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
+                uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
+                size_t size = (size_t)1 << lg_output_domain_size;
+                size_t total_output_elements = size * batches;
+                int total_output_bytes = total_output_elements * sizeof(fr_t);
+                
+                if (i == 0)
+                {
+                    printf("GPU 0 memory moved\n");
+                    cudaMemcpyAsync(d_buffer, output_data, total_output_bytes, cudaMemcpyDeviceToDevice, gpu);
+                }
+                else
+                {
+                    int canAccessPeer = 0;
+                    cudaDeviceCanAccessPeer(&canAccessPeer, 0, gpu.id());
+                    if(canAccessPeer)
+                    {
+                        printf("Peer copy can access gpu\n");
+                        cudaMemcpyPeerAsync(&d_buffer[i * num_batches_per_gpu * (1 << lg_output_domain_size)], 0, output_data, i, total_output_bytes, gpu);
+                    }
+                    else
+                    {
+                        printf("Peer copy cannot access gpu\n");
+                    }
+                    
+                }
+
+                // if (!cfg.are_outputs_on_device)
+                // {
+                //     // printf("start copy device to host \n");
+                //     gpu.DtoH(output, &d_buffer[0], total_output_elements);
+                // }
+
+                cudaFree(output_data);
+                cudaFree(input_data);
+
+                gpu.sync();
+            }
+        }
+        catch (const cuda_error &e)
+        {
+  #ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+              return RustError{e.code(), e.what()};
+  #else
+              return RustError{e.code()};
+  #endif
+        }
+  
+        return RustError{cudaSuccess};
+    }
+
+    /**
      * assume with coset
      * \param lg_n , logn before extension
      */
@@ -605,7 +762,9 @@ namespace ntt
             dev_ptr_t<fr_t> d_output{
                 total_output_elements,
                 gpu,
-                cfg.are_outputs_on_device ? false : true, cfg.are_outputs_on_device ? true : false};
+                cfg.are_outputs_on_device ? false : true, 
+                cfg.are_outputs_on_device ? true : false
+            };
 
             if (cfg.are_outputs_on_device)
             {

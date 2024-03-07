@@ -37,6 +37,7 @@ namespace Ntt_Types
         bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
         bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
         bool with_coset;
+        bool is_multi_gpu;
     };
 
     struct TransposeConfig

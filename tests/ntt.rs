@@ -2,14 +2,14 @@ use std::ops::Mul;
 
 use cryptography_cuda::device::memory::HostOrDeviceSlice;
 use cryptography_cuda::{
-    naive_transpose_rev_batch, transpose_rev_batch, init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch,
-    ntt, ntt_batch, types::*,
+    init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch, lde_batch_multi_gpu, naive_transpose_rev_batch, ntt, ntt_batch, transpose_rev_batch, types::*
 };
 use plonky2_field::fft::{fft, ifft};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::{PolynomialCoeffs, PolynomialValues};
 use plonky2_field::types::{Field, PrimeField64};
 use rand::random;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::utils::transpose_and_rev;
 
@@ -21,6 +21,7 @@ fn random_fr() -> u64 {
 }
 
 const DEFAULT_GPU: i32 = 0;
+const DEFAULT_GPU2: i32 = 1;
 
 #[test]
 fn test_ntt_intt_gl64_self_consistency() {
@@ -330,9 +331,10 @@ fn test_naive_transpose_rev(){
     let _ = device_data.copy_from_host_offset(input1.as_mut_slice(), 0, domain_size);
     let _ = device_data.copy_from_host_offset(input2.as_mut_slice(), domain_size, domain_size);
 
-
     let mut cfg = TransposeConfig::default();
     cfg.batches = batches as u32;
+    cfg.are_inputs_on_device = true;
+    cfg.are_outputs_on_device = true;
     // println!("device data len: {:?}", device_data.len());
     naive_transpose_rev_batch(DEFAULT_GPU, device_data2.as_mut_ptr(), device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
 
@@ -373,11 +375,13 @@ fn test_transpose_rev(){
 
     let mut cfg = TransposeConfig::default();
     cfg.batches = batches as u32;
+    cfg.are_inputs_on_device = true;
+    cfg.are_outputs_on_device = true;
     // println!("device data len: {:?}", device_data.len());
     transpose_rev_batch(DEFAULT_GPU, device_data2.as_mut_ptr(), device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
 
     let mut host_output = vec![0; total_elements];
-    // println!("start copy to host");
+    println!("start copy to host");
     device_data2
         .copy_to_host(host_output.as_mut_slice(), total_elements)
         .unwrap();
@@ -616,3 +620,87 @@ fn test_compute_batched_lde_data_on_device() {
     assert_eq!(gpu_lde_output_copy[0..output_domain_size], host_output_first);
     assert_eq!(gpu_lde_output_copy[output_domain_size*(batches-1)..output_domain_size*batches], host_output_last);
 }
+
+
+#[test]
+fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
+    let lg_n: usize = 2;
+    let rate_bits = 2;
+    let lg_domain_size = lg_n + rate_bits;
+    let input_domain_size = 1usize << lg_n;
+    let output_domain_size = 1usize << (lg_n + rate_bits);
+    let batches = 2;
+
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
+
+
+    init_coset_rs(
+        DEFAULT_GPU as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+    init_coset_rs(
+        DEFAULT_GPU2 as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    let total_num_input_elements = input_domain_size * batches;
+    let total_num_output_elements = output_domain_size * batches;
+
+    let mut host_inputs: Vec<u64> = (0..batches).collect::<Vec<usize>>()
+        .iter()
+        .map(|_| (0..input_domain_size).map(|_| random_fr()).collect::<Vec<u64>>())
+        .flatten().collect();
+
+    println!("Length of inputs: {:?}", host_inputs.len());
+
+    // lde rust allocate to gpu prior to api call
+    let mut device_output_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_num_output_elements).unwrap();
+
+    let mut cfg_lde = NTTConfig::default();
+    cfg_lde.batches = batches as u32;
+    cfg_lde.extension_rate_bits = rate_bits as u32;
+    cfg_lde.with_coset = true;
+    cfg_lde.are_inputs_on_device = true;
+    cfg_lde.are_outputs_on_device = true;
+    cfg_lde.is_multi_gpu = true;
+
+    lde_batch_multi_gpu(
+        device_output_data.as_mut_ptr(),
+        host_inputs.as_mut_ptr(),
+        2,    
+        cfg_lde.clone(),
+        2, 
+        total_num_input_elements,
+        total_num_output_elements,
+    );
+
+    println!("LDE completed");
+
+    let mut host_output = vec![0; batches*output_domain_size];
+
+    let _ = device_output_data.copy_to_host_offset(host_output.as_mut_slice(), 0, output_domain_size*batches);
+
+    // lde gpu copy from host during api call
+    let mut cfg_lde_copy = NTTConfig::default();
+    cfg_lde_copy.batches = batches as u32;
+    cfg_lde_copy.extension_rate_bits = rate_bits as u32;
+    cfg_lde_copy.with_coset = true;
+
+    let mut gpu_lde_output_copy = vec![0; total_num_output_elements];
+    let mut lde_copy_buffer = host_inputs.clone();
+
+    lde_batch(
+        DEFAULT_GPU as usize,
+        gpu_lde_output_copy.as_mut_ptr(),
+        lde_copy_buffer.as_mut_ptr(),
+        lg_n,
+        cfg_lde_copy,
+    );
+
+    assert_eq!(gpu_lde_output_copy, host_output);
+}
+
