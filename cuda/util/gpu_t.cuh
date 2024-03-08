@@ -495,7 +495,7 @@ public:
 
         if (d_ptr && !manual_drop)
         {
-            printf("drop device pointer, named: %s, on device: %d\n", name, stream.gpu_id);
+            // printf("drop device pointer, named: %s, on device: %d\n", name, stream.gpu_id);
             cudaFree((void *)d_ptr);
         }
     }

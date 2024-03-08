@@ -647,7 +647,7 @@ namespace ntt
             d_buffer.set_device_ptr(output);
 
             for(int i = 0; i < num_gpu; i++){
-                // printf("Multi-GPU memory movement starting \n");
+                printf("Multi-GPU memory movement starting \n");
                 auto &gpu = select_gpu(i);
                 // gpu.select();
                 // gpu.sync();
@@ -655,10 +655,13 @@ namespace ntt
                 fr_t *output_data = output_pointers.at(i);
 
                 uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
+                printf("Num batches:%d on GPU: %d\n", batches, gpu.id());
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = (size_t)1 << lg_output_domain_size;
                 size_t total_output_elements = size * batches;
-                int total_output_bytes = total_output_elements * sizeof(fr_t);
+                size_t total_output_bytes = total_output_elements * sizeof(fr_t);
+                printf("Bytes:%d on GPU: %d\n", total_output_bytes, gpu.id());
+
                 
                 if (i == 0)
                 {
@@ -672,7 +675,9 @@ namespace ntt
                     if(canAccessPeer)
                     {
                         // printf("Peer copy can access gpu\n");
-                        CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[i * num_batches_per_gpu * (1 << lg_output_domain_size)], 0, output_data, i, total_output_bytes, gpu));
+                        size_t offset = i * num_batches_per_gpu * (1 << lg_output_domain_size);
+                        printf("Offset:%d on GPU: %d\n", offset, gpu.id());
+                        CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, i, total_output_bytes, gpu));
                     }
                 }
 
@@ -683,9 +688,14 @@ namespace ntt
                 // }
 
                 // output_data.drop();
-                CUDA_OK(cudaFree((void *)output_data));
+            }
+
+            for(int i = 0; i < num_gpu; i++){
+                fr_t *output_data = output_pointers.at(i);
+                auto &gpu = select_gpu(i);
 
                 gpu.sync();
+                CUDA_OK(cudaFree((void *)output_data));
             }
         }
         catch (const cuda_error &e)
