@@ -566,11 +566,10 @@ namespace ntt
             uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu-1));
 
             std::vector<fr_t*> output_pointers;
-            std::vector<fr_t*> input_pointers;
 
             for(int i = 0; i < num_gpu; i++){
-                cudaSetDevice(i);
                 auto &gpu = select_gpu(i);
+                gpu.select();
 
 
                 uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
@@ -594,14 +593,16 @@ namespace ntt
                 size_t total_input_elements = (1 << lg_n) * batches;
                 int input_size_bytes = total_input_elements * sizeof(fr_t);
 
-                fr_t* input_data;
+                dev_ptr_t<fr_t> input_data{
+                    total_input_elements,
+                    gpu,
+                    true,
+                    false
+                };
 
-                cudaMalloc(&input_data, input_size_bytes);
                 void *src = (inputs + (i * num_batches_per_gpu * (1 << lg_n)));
-                // printf("inputs: %d, inputs offset:%d, bytes: %d\n", inputs, src, input_size_bytes);
-                cudaMemcpyAsync(input_data, src, input_size_bytes, cudaMemcpyHostToDevice, gpu);
+                gpu.HtoD(&input_data[0], src, total_input_elements);
 
-                input_pointers.emplace_back(input_data);
 
                 size_t total_output_elements = size * batches;
                 int total_output_bytes = total_output_elements * sizeof(fr_t);
@@ -629,8 +630,8 @@ namespace ntt
                 }
             }
 
-            cudaSetDevice(0);
             auto &gpu = select_gpu(0);
+            gpu.select();
         
             dev_ptr_t<fr_t> d_buffer{
                 total_num_output_elements,
@@ -643,12 +644,13 @@ namespace ntt
 
             for(int i = 0; i < num_gpu; i++){
                 // printf("Multi-GPU memory movement starting \n");
-                cudaSetDevice(i);
+                // cudaSetDevice(i);
                 auto &gpu = select_gpu(i);
+                gpu.select();
                 gpu.sync();
 
                 fr_t *output_data = output_pointers.at(i);
-                fr_t *input_data = input_pointers.at(i);
+                //dev_ptr_t<fr_t> *input_data = input_pointers.at(i);
 
                 uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
@@ -679,7 +681,7 @@ namespace ntt
                 // }
 
                 cudaFree(output_data);
-                cudaFree(input_data);
+                //cudaFree(input_data);
 
                 gpu.sync();
             }

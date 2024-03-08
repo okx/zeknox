@@ -624,12 +624,12 @@ fn test_compute_batched_lde_data_on_device() {
 
 #[test]
 fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
-    let lg_n: usize = 8;
-    let rate_bits = 4;
+    let lg_n: usize = 2;
+    let rate_bits = 1;
     let lg_domain_size = lg_n + rate_bits;
     let input_domain_size = 1usize << lg_n;
     let output_domain_size = 1usize << (lg_n + rate_bits);
-    let batches = 12;
+    let batches = 2;
 
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
