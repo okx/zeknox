@@ -671,23 +671,16 @@ namespace ntt
                 else
                 {
                     int canAccessPeer = 0;
+                    int canAccessPeer2 = 0;
                     CUDA_OK(cudaDeviceCanAccessPeer(&canAccessPeer, 0, gpu.id()));
                     if(canAccessPeer)
                     {
                         // printf("Peer copy can access gpu\n");
                         size_t offset = i * num_batches_per_gpu * (1 << lg_output_domain_size);
-                        printf("Offset:%d on GPU: %d\n", offset, gpu.id());
-                        CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, i, total_output_bytes, gpu));
+                        // printf("Offset:%d on GPU: %d\n", offset, gpu.id());
+                        CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, gpu.id(), total_output_bytes, gpu));
                     }
                 }
-
-                // if (!cfg.are_outputs_on_device)
-                // {
-                //     // printf("start copy device to host \n");
-                //     gpu.DtoH(output, &d_buffer[0], total_output_elements);
-                // }
-
-                // output_data.drop();
             }
 
             for(int i = 0; i < num_gpu; i++){
@@ -695,6 +688,7 @@ namespace ntt
                 auto &gpu = select_gpu(i);
 
                 gpu.sync();
+                printf("Syncing gpu %d\n", gpu.id());
                 CUDA_OK(cudaFree((void *)output_data));
             }
         }

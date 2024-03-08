@@ -22,6 +22,8 @@ fn random_fr() -> u64 {
 
 const DEFAULT_GPU: i32 = 0;
 const DEFAULT_GPU2: i32 = 1;
+const DEFAULT_GPU3: i32 = 2;
+const DEFAULT_GPU4: i32 = 3;
 
 #[test]
 fn test_ntt_intt_gl64_self_consistency() {
@@ -633,6 +635,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
 
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU3 as usize, lg_domain_size);
 
 
     init_coset_rs(
@@ -642,6 +645,12 @@ fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
     );
     init_coset_rs(
         DEFAULT_GPU2 as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    init_coset_rs(
+        DEFAULT_GPU3 as usize,
         lg_domain_size,
         GoldilocksField::coset_shift().to_canonical_u64(),
     );
@@ -671,7 +680,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_device_one_gpu() {
     lde_batch_multi_gpu(
         device_output_data.as_mut_ptr(),
         host_inputs.as_mut_ptr(),
-        2,    
+        3,    
         cfg_lde.clone(),
         lg_n, 
         total_num_input_elements,
