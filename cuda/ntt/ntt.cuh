@@ -566,10 +566,10 @@ namespace ntt
             uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu-1));
 
             std::vector<fr_t *> output_pointers;
+            std::vector<fr_t *> input_pointers;
 
             for(int i = 0; i < num_gpu; i++){
                 auto &gpu = select_gpu(i);
-                gpu.select();
 
 
                 uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
@@ -596,15 +596,17 @@ namespace ntt
                     total_input_elements,
                     gpu,
                     true,
-                    false
+                    true
                 };
-
-                input_data.name = "Input";
 
                 void *src = (inputs + (i * num_batches_per_gpu * (1 << lg_n)));
                 gpu.HtoD(&input_data[0], src, total_input_elements);
 
+                input_pointers.emplace_back(&input_data[0]);
+
                 size_t total_output_elements = size * batches;
+
+                // printf("Allocating output memory on GPU: %d\n", gpu.id());
 
                 dev_ptr_t<fr_t> output_data{
                     total_output_elements,
@@ -612,31 +614,27 @@ namespace ntt
                     true,
                     true
                 };
-                
-                output_data.name = "Output";
 
                 output_pointers.emplace_back(&output_data[0]);
 
-                extend_inputs_batch(output_data, input_data, 1 << lg_n, lg_n, cfg.extension_rate_bits, batches, gpu);
+                extend_inputs_batch(&output_data[0], &input_data[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, batches, gpu);
+                // gpu.sync();
 
                 if (direction == Direction::inverse)
                 {
-                    reverse_order_batch(output_data, size, lg_output_domain_size, batches, gpu);
+                    reverse_order_batch(&output_data[0], size, lg_output_domain_size, batches, gpu);
                 }
 
-                // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
-                ntt_inplace_batch_template(output_data, d_twiddle, n_twiddles, batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[i], gpu);
-                // printf("end inplace batch template, with coset: %d \n", cfg.with_coset);
+                ntt_inplace_batch_template(&output_data[0], d_twiddle, n_twiddles, batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[i], gpu);
 
                 if (direction == Direction::forward)
                 {
-                    reverse_order_batch(output_data, size, lg_output_domain_size, batches, gpu);
+                    reverse_order_batch(&output_data[0], size, lg_output_domain_size, batches, gpu);
                 } 
             }
 
             auto &gpu = select_gpu(0);
-            gpu.select();
-        
+
             dev_ptr_t<fr_t> d_buffer{
                 total_num_output_elements,
                 gpu,
@@ -644,40 +642,41 @@ namespace ntt
                 cfg.are_outputs_on_device ? true : false
             };
 
+            // gpu.sync();
+
             d_buffer.set_device_ptr(output);
 
             for(int i = 0; i < num_gpu; i++){
-                printf("Multi-GPU memory movement starting \n");
+                // printf("Multi-GPU memory movement starting \n");
                 auto &gpu = select_gpu(i);
-                // gpu.select();
-                // gpu.sync();
 
                 fr_t *output_data = output_pointers.at(i);
 
                 uint32_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
-                printf("Num batches:%d on GPU: %d\n", batches, gpu.id());
+                // printf("Num batches:%d on GPU: %d\n", batches, gpu.id());
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = (size_t)1 << lg_output_domain_size;
                 size_t total_output_elements = size * batches;
                 size_t total_output_bytes = total_output_elements * sizeof(fr_t);
-                printf("Bytes:%d on GPU: %d\n", total_output_bytes, gpu.id());
+                // printf("Bytes:%d on GPU: %d\n", total_output_bytes, gpu.id());
 
                 
                 if (i == 0)
                 {
-                    // printf("GPU 0 memory moved\n");
+                    // printf("Offset:0 on GPU: %d\n", gpu.id());
                     CUDA_OK(cudaMemcpyAsync(&d_buffer[0], output_data, total_output_bytes, cudaMemcpyDeviceToDevice, gpu));
+                    // printf("GPU 0 memory moved\n");
                 }
                 else
                 {
                     int canAccessPeer = 0;
-                    int canAccessPeer2 = 0;
                     CUDA_OK(cudaDeviceCanAccessPeer(&canAccessPeer, 0, gpu.id()));
                     if(canAccessPeer)
                     {
                         // printf("Peer copy can access gpu\n");
                         size_t offset = i * num_batches_per_gpu * (1 << lg_output_domain_size);
                         // printf("Offset:%d on GPU: %d\n", offset, gpu.id());
+                        // printf("The pointer value: %d\n", &d_buffer[offset]);
                         CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, gpu.id(), total_output_bytes, gpu));
                     }
                 }
@@ -685,11 +684,12 @@ namespace ntt
 
             for(int i = 0; i < num_gpu; i++){
                 fr_t *output_data = output_pointers.at(i);
+                fr_t *input_data = input_pointers.at(i);
                 auto &gpu = select_gpu(i);
-
+                // printf("Syncing gpu %d\n", gpu.id());
                 gpu.sync();
-                printf("Syncing gpu %d\n", gpu.id());
                 CUDA_OK(cudaFree((void *)output_data));
+                CUDA_OK(cudaFree((void *)input_data));
             }
         }
         catch (const cuda_error &e)

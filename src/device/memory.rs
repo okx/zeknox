@@ -307,6 +307,7 @@ impl<'a, T> Drop for HostOrDeviceSlice<'a, T> {
                 // free the cuda memory
                 unsafe {
                     let _ = cudaSetDevice(*device_id);
+                    // println!("Drop device {:?}", device_id);
                     cudaFree(s.as_mut_ptr() as *mut c_void).wrap().unwrap();
                 }
             }

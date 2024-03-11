@@ -14,4 +14,4 @@ cargo test --features=gl64 --test ntt -- test_compute_batched_lde --exact --noca
 cargo test --features=gl64 --test ntt -- test_compute_batched_lde_data_on_device --exact --nocapture
 cargo test --features=gl64 --test ntt --  test_transpose_rev --exact --nocapture
 cargo test --features=gl64 --test ntt --  test_naive_transpose_rev --exact --nocapture
-cargo test --features=gl64 --test ntt -- test_compute_batched_lde_multi_gpu_data_on_device_one_gpu --exact --nocapture
+cargo test --features=gl64 --test ntt -- test_compute_batched_lde_multi_gpu_data_on_one_gpu --exact --nocapture
