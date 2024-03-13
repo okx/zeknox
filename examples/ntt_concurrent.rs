@@ -5,7 +5,7 @@ use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
     fft::fft,
     polynomial::PolynomialCoeffs,
-    types::{Field, PrimeField64},
+    types::{Field},
 };
 use rand::random;
 use rayon::prelude::*;
@@ -179,7 +179,7 @@ fn main() {
     let nums = 100;
     let log_ntt_size = 19;
 
-    let num_devices = 1;
+    let _num_devices = 1;
     cpu_fft_concurrent(nums, log_ntt_size);
 
     #[cfg(not(feature = "no_cuda"))]
