@@ -1,3 +1,6 @@
+#[warn(dead_code)]
+
+
 use cryptography_cuda::{list_devices_info_rs, get_number_of_gpus_rs};
 
 
