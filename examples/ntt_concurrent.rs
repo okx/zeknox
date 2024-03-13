@@ -13,13 +13,13 @@ use plonky2_field::{
 use rand::random;
 use rayon::prelude::*;
 
-const DEFAULT_GPU:usize = 0;
 
 fn random_fr() -> u64 {
     let fr: u64 = random();
     fr % 0xffffffff00000001
 }
 
+#[allow(dead_code)]
 fn random_fr_n(n: usize) -> Vec<u64> {
     (0..n).into_iter().map(|_| random_fr()).collect()
 }
