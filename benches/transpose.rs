@@ -13,7 +13,6 @@ use cryptography_cuda::{
 use rand::random;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-const DEFAULT_GPU: usize = 0;
 fn random_fr() -> u64 {
     let fr: u64 = random();
     fr % 0xffffffff00000001
