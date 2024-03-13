@@ -17,6 +17,7 @@ fn random_fr() -> u64 {
 
 const DEFAULT_GPU: usize = 0;
 
+#[allow(dead_code)]
 fn cpu_fft(log_ntt_size: usize) {
     let domain_size = 1usize << log_ntt_size;
 
