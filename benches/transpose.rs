@@ -1,3 +1,5 @@
+#![warn(dead_code)]
+
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
@@ -101,9 +103,9 @@ fn bench_naive_transpose_gpu(c: &mut Criterion) {
 
 fn bench_transpose_cpu(c: &mut Criterion) {
     let mut group = c.benchmark_group("Transpose");
-    let LOG_NTT_SIZES: Vec<usize> = (19..=21).collect();
+    let log_ntt_sizes: Vec<usize> = (19..=21).collect();
 
-    for log_ntt_size in LOG_NTT_SIZES {
+    for log_ntt_size in log_ntt_sizes {
         let domain_size = 1usize << log_ntt_size;
         let batches = 200;
 
