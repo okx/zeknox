@@ -1,4 +1,4 @@
-#[warn(dead_code)]
+#[allow(dead_code)]
 #[allow(unused_imports)]
 
 extern crate criterion;

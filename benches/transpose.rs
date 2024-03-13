@@ -1,4 +1,4 @@
-#[warn(dead_code)]
+#[allow(dead_code)]
 
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
