@@ -1,3 +1,6 @@
+#[warn(dead_code)]
+
+
 #[cfg(not(feature = "no_cuda"))]
 use cryptography_cuda::{intt, init_twiddle_factors_rs, ntt_batch, types::*, ntt};
 use plonky2_field::goldilocks_field::GoldilocksField;
