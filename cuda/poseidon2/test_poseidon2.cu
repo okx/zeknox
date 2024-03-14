@@ -7,7 +7,7 @@ void printhash(u64 *h)
 {
     for (int i = 0; i < 4; i++)
     {
-        printf("%lu ", h[i]);
+        printf("%lx ", h[i]);
     }
     printf("\n");
 }
@@ -41,47 +41,40 @@ __global__ void hash_step2(uint64_t *in, uint64_t *out, uint32_t len)
 
 int test1()
 {
-    // u64 leaf[6] = {13421290117754017454, 7401888676587830362, 15316685236050041751, 13588825262671526271, 13421290117754017454, 7401888676587830362};
-    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    // similar to the test in goldilocks repo
+    // test 1 - Fibonacci
+    u64 inp[12];
+    inp[0] = 0;
+    inp[1] = 1;
+    for (int i = 2; i < 12; i++)
+    {
+        inp[i] = inp[i-2] + inp[i-1];
+    }
 
     u64 h1[4] = {0u};
     u64 h2[4] = {0u};
 
     u64 *gpu_leaf;
     u64 *gpu_hash;
-    CHECKCUDAERR(cudaMalloc(&gpu_leaf, 6 * sizeof(u64)));
+    CHECKCUDAERR(cudaMalloc(&gpu_leaf, 12 * sizeof(u64)));
     CHECKCUDAERR(cudaMalloc(&gpu_hash, 4 * sizeof(u64)));
-    CHECKCUDAERR(cudaMemcpy(gpu_leaf, leaf, 6 * sizeof(u64), cudaMemcpyHostToDevice));
-
-    for (int k = 2; k <= 6; k += 2)
-    {
-        hash<<<1, 1>>>(gpu_leaf, gpu_hash, k);
-        CHECKCUDAERR(cudaMemcpy(h1, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
-        printhash(h1);
-        cpu_poseidon2_hash_one(leaf, k, h2);
-        printhash(h2);
-    }
-
-    /*
-    #ifdef RUST_POSEIDON
-        ext_poseidon_hash_or_noop(h1, leaf, 1);
-        printhash(h1);
-    #endif
-        cpu_poseidon_hash_one(leaf, 1, h2);
-        printhash(h2);
-
-    #ifdef RUST_POSEIDON
-        ext_poseidon_hash_or_noop(h1, leaf, 4);
-        printhash(h1);
-    #endif
-        cpu_poseidon_hash_one(leaf, 4, h2);
-        printhash(h2);
-    */
-
-#ifdef RUST_POSEIDON
-    ext_poseidon_hash_or_noop(h1, leaf, 6);
+    CHECKCUDAERR(cudaMemcpy(gpu_leaf, inp, 12 * sizeof(u64), cudaMemcpyHostToDevice));
+    hash<<<1, 1>>>(gpu_leaf, gpu_hash, 12);
+    CHECKCUDAERR(cudaMemcpy(h1, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
     printhash(h1);
-#endif
+
+    assert(h1[0] == 0x133a03eca11d93fb);
+    assert(h1[1] == 0x5365414fb618f58d);
+    assert(h1[2] == 0xfa49f50f3a2ba2e5);
+    assert(h1[3] == 0xd16e53672c9832a4);
+
+    cpu_poseidon2_hash_one(inp, 12, h2);
+    printhash(h2);
+
+    assert(h2[0] == 0x133a03eca11d93fb);
+    assert(h2[1] == 0x5365414fb618f58d);
+    assert(h2[2] == 0xfa49f50f3a2ba2e5);
+    assert(h2[3] == 0xd16e53672c9832a4);
 
     return 1;
 }
@@ -138,6 +131,7 @@ int test2()
 
 int main()
 {
+    test1();
 
     test2();
 
