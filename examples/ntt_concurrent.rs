@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+#[allow(unused_imports)]
+
 #[cfg(not(feature = "no_cuda"))]
 use cryptography_cuda::{intt, init_twiddle_factors_rs, ntt_batch, types::*, ntt};
 use plonky2_field::goldilocks_field::GoldilocksField;
@@ -5,18 +8,18 @@ use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{
     fft::fft,
     polynomial::PolynomialCoeffs,
-    types::{Field, PrimeField64},
+    types::{Field},
 };
 use rand::random;
 use rayon::prelude::*;
 
-const DEFAULT_GPU:usize = 0;
 
 fn random_fr() -> u64 {
     let fr: u64 = random();
     fr % 0xffffffff00000001
 }
 
+#[allow(dead_code)]
 fn random_fr_n(n: usize) -> Vec<u64> {
     (0..n).into_iter().map(|_| random_fr()).collect()
 }
@@ -179,7 +182,7 @@ fn main() {
     let nums = 100;
     let log_ntt_size = 19;
 
-    let num_devices = 1;
+    let _num_devices = 1;
     cpu_fft_concurrent(nums, log_ntt_size);
 
     #[cfg(not(feature = "no_cuda"))]

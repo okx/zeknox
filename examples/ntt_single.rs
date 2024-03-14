@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+#[allow(unused_imports)]
+
 use cryptography_cuda::{init_twiddle_factors_rs, types::*, ntt};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{
@@ -14,6 +17,7 @@ fn random_fr() -> u64 {
 
 const DEFAULT_GPU: usize = 0;
 
+#[allow(dead_code)]
 fn cpu_fft(log_ntt_size: usize) {
     let domain_size = 1usize << log_ntt_size;
 

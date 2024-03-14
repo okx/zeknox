@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+#[allow(unused_imports)]
+
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 use plonky2_field::goldilocks_field::GoldilocksField;
@@ -14,9 +17,9 @@ fn random_fr() -> u64 {
 }
 
 fn bench_cpu_ntt(c: &mut Criterion) {
-    let LOG_NTT_SIZES: Vec<usize> = (13..=19).collect();
+    let log_ntt_sizes: Vec<usize> = (13..=19).collect();
     let mut group = c.benchmark_group("NTT");
-    for log_ntt_size in LOG_NTT_SIZES {
+    for log_ntt_size in log_ntt_sizes {
         let domain_size = 1usize << log_ntt_size;
 
         let gpu_buffer: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
