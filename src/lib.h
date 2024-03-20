@@ -1,6 +1,7 @@
 #pragma once
 #include <util/rusterror.h>
 #include <ntt/ntt.h>
+#include <vector>
 #if defined(FEATURE_GOLDILOCKS)
 #include <ff/goldilocks.hpp>
 #elif defined(FEATURE_BN254)
@@ -54,6 +55,12 @@ extern "C" RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t
 extern "C" RustError compute_batched_lde(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_domain_size,
                                          Ntt_Types::Direction ntt_direction,
                                          Ntt_Types::NTTConfig cfg);
+
+extern "C" RustError compute_batched_lde_multi_gpu(fr_t *output,fr_t *input, uint32_t num_gpu, Ntt_Types::Direction ntt_direction,
+                                         Ntt_Types::NTTConfig cfg,
+                                         uint32_t lg_domain_size,
+                                         size_t total_num_input_elements,
+                                         size_t total_num_output_elements);
 
 extern "C" RustError compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
                                          Ntt_Types::TransposeConfig cfg);
