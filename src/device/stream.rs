@@ -69,7 +69,7 @@ impl Default for CudaStream {
 
 impl Drop for CudaStream {
     fn drop(&mut self) {
-        println!("this happened?????????");
+        // println!("this happened?????????");
         let handle = self.handle;
         if handle.is_null() {
             return;

@@ -383,7 +383,7 @@ fn test_transpose_rev(){
     transpose_rev_batch(DEFAULT_GPU, device_data2.as_mut_ptr(), device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
 
     let mut host_output = vec![0; total_elements];
-    println!("start copy to host");
+    // println!("start copy to host");
     device_data2
         .copy_to_host(host_output.as_mut_slice(), total_elements)
         .unwrap();
