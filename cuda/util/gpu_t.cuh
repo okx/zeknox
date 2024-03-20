@@ -370,8 +370,9 @@ public:
     inline void sync() const
     {
         zero.sync(); // sync the default stream
-        for (auto &f : flipflop)
+        for (auto &f : flipflop){
             f.sync();
+        }
     }
 };
 

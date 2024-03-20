@@ -39,6 +39,8 @@ RustError list_devices_info(){
 // #include <arithmetic/arithmetic.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
+#include <vector>
+
 
 
 #ifndef __CUDA_ARCH__ // below is cpu code; __CUDA_ARCH__ should not be defined
@@ -88,6 +90,16 @@ compute_batched_lde(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_dom
 {
     auto &gpu = select_gpu(device_id);
     return ntt::BatchLde(gpu, output, input, lg_domain_size, ntt_direction, cfg);
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif 
+RustError 
+compute_batched_lde_multi_gpu(fr_t *output,fr_t *input, uint32_t num_gpu, Ntt_Types::Direction ntt_direction, 
+                        Ntt_Types::NTTConfig cfg, uint32_t lg_domain_size, size_t total_num_input_elements, size_t total_num_output_elements)
+{
+    return ntt::BatchLdeMultiGpu(output, input, num_gpu, ntt_direction, cfg, lg_domain_size, total_num_input_elements, total_num_output_elements);
 }
 
 #if defined(EXPOSE_C_INTERFACE)
