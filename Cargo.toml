@@ -61,7 +61,8 @@ rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
 
 [features]
-default = []
+default = ["cuda"]
 gl64 = []
 bn254 = []
 no_cuda=[]
+cuda=[]

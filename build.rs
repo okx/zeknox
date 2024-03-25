@@ -1,16 +1,9 @@
-// #[cfg(not(feature="no_cuda"))]
 use std::env;
-// #[cfg(not(feature="no_cuda"))]
 use std::fs;
-// #[cfg(not(feature="no_cuda"))]
 use std::path::PathBuf;
-// #[cfg(not(feature="no_cuda"))]
 extern crate rustacuda;
-// #[cfg(not(feature="no_cuda"))]
 use rustacuda::device::DeviceAttribute;
-// #[cfg(not(feature="no_cuda"))]
 use rustacuda::prelude::*;
-// #[cfg(not(feature="no_cuda"))]
 use std::process::Command;
 
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
@@ -251,8 +244,8 @@ fn merkle_tree_bindings() {
 }
 
 fn main() {
-    // #[cfg(not(feature="no_cuda"))]
+    #[cfg(feature="cuda")]
     merkle_tree_bindings();
-    // #[cfg(not(feature="no_cuda"))]
+    #[cfg(feature="cuda")]
     build_cuda();
 }
