@@ -7,6 +7,7 @@
 #include "merkle.h"
 #include "merkle_private.h"
 #include "poseidon.h"
+#include "poseidon2.h"
 #include "poseidon_bn128.h"
 #include "keccak.h"
 
@@ -378,6 +379,10 @@ void fill_init(u64 digests_count, u64 leaves_count, u64 caps_count, u64 leaf_siz
     case 2:
         cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
         cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
+        break;
+    case 3:
+        cpu_hash_one_ptr = &cpu_poseidon2_hash_one;
+        cpu_hash_two_ptr = &cpu_poseidon2_hash_two;
         break;
     default:
         cpu_hash_one_ptr = &cpu_poseidon_hash_one;

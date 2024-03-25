@@ -3,6 +3,7 @@ use types::{NTTConfig, TransposeConfig};
 pub mod device;
 pub mod error;
 pub mod types;
+pub mod merkle;
 
 extern "C" {
 
