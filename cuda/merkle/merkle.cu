@@ -103,6 +103,45 @@ void init_gpu_functions(u64 hash_type)
     }
 }
 
+void init_gpu_functions(u64 hash_type, int gpu_id)
+{
+    static int64_t initialize_hash_type_one = -1;
+
+    if (initialize_hash_type_one == -1 || initialize_hash_type_one != hash_type)
+    {
+        initialize_hash_type_one = hash_type;
+
+        CHECKCUDAERR(cudaSetDevice(gpu_id));
+        switch (hash_type)
+        {
+        case 0:
+            init_gpu_functions_poseidon_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+            cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+            break;
+        case 1:
+            init_gpu_functions_keccak_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_keccak_hash_one;
+            cpu_hash_two_ptr = &cpu_keccak_hash_two;
+            break;
+        case 2:
+            init_gpu_functions_poseidon_bn128_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_poseidon_bn128_hash_one;
+            cpu_hash_two_ptr = &cpu_poseidon_bn128_hash_two;
+            break;
+        case 3:
+            init_gpu_functions_poseidon2_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_poseidon2_hash_one;
+            cpu_hash_two_ptr = &cpu_poseidon2_hash_two;
+            break;
+        default:
+            init_gpu_functions_poseidon_kernel<<<1, 1>>>();
+            cpu_hash_one_ptr = &cpu_poseidon_hash_one;
+            cpu_hash_two_ptr = &cpu_poseidon_hash_two;
+        }
+    }
+}
+
 // GPU kernels
 
 /*
@@ -801,6 +840,7 @@ void fill_digests_buf_linear_gpu(
 }
 
 void fill_digests_buf_linear_gpu_with_gpu_ptr(
+    int gpu_id,
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
@@ -811,12 +851,14 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     uint64_t cap_height,
     uint64_t hash_type)
 {
+    CHECKCUDAERR(cudaSetDevice(gpu_id));
+
     init_gpu_functions(hash_type);
 
     // (special case) compute leaf hashes on GPU
     if (cap_buf_size == leaves_buf_size)
     {
-        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)cap_buf_gpu_ptr);
+        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr);
         return;
     }
 
@@ -833,25 +875,25 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     {
         if (subtree_leaves_len == 1)
         {
-            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)cap_buf_gpu_ptr);
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr);
         }
         else
         {
-            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)digests_buf_gpu_ptr);
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr);
             if (cap_buf_size <= TPB)
             {
-                compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64*)cap_buf_gpu_ptr, (u64*)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
+                compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
             }
             else
             {
-                compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64*)cap_buf_gpu_ptr, (u64*)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
+                compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
             }
         }
         return;
     }
 
     // (general case) compute leaf hashes on GPU
-    compute_leaves_hashes_linear_all<<<leaves_buf_size / TPB + 1, TPB>>>((u64*)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64*)digests_buf_gpu_ptr, subtree_leaves_len, subtree_digests_len);
+    compute_leaves_hashes_linear_all<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, subtree_leaves_len, subtree_digests_len);
 
     // compute internal hashes on GPU
     u64 r = (u64)log2(subtree_leaves_len) - 1;
@@ -861,24 +903,24 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     {
         // printf("GPU Round %u\n", r);
         last_index -= (1 << r);
-        compute_internal_hashes_linear_all<<<((1 << r) * cap_buf_size) / TPB + 1, TPB>>>((u64*)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len);
+        compute_internal_hashes_linear_all<<<((1 << r) * cap_buf_size) / TPB + 1, TPB>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len);
     }
 
     for (; r > 0; r--)
     {
         // printf("GPU Round %u\n", r);
         last_index -= (1 << r);
-        compute_internal_hashes_linear_all<<<1, (1 << r) * cap_buf_size>>>((u64*)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len);
+        compute_internal_hashes_linear_all<<<1, (1 << r) * cap_buf_size>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len);
     }
 
     // compute cap hashes on GPU
     if (cap_buf_size <= TPB)
     {
-        compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64*)cap_buf_gpu_ptr, (u64*)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
+        compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
     }
     else
     {
-        compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64*)cap_buf_gpu_ptr, (u64*)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
+        compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
     }
 }
 
