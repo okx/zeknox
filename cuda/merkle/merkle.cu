@@ -840,7 +840,6 @@ void fill_digests_buf_linear_gpu(
 }
 
 void fill_digests_buf_linear_gpu_with_gpu_ptr(
-    int gpu_id,
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
@@ -851,9 +850,10 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     uint64_t cap_height,
     uint64_t hash_type)
 {
-    CHECKCUDAERR(cudaSetDevice(gpu_id));
+    // TODO: take gpu_id as param
+    CHECKCUDAERR(cudaSetDevice(0));
 
-    init_gpu_functions(hash_type);
+    init_gpu_functions(hash_type, 0);
 
     // (special case) compute leaf hashes on GPU
     if (cap_buf_size == leaves_buf_size)

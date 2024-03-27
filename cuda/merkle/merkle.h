@@ -66,7 +66,7 @@ EXTERNC void fill_digests_buf_linear_gpu(
 );
 
 EXTERNC void fill_digests_buf_linear_gpu_with_gpu_ptr(
-    int gpu_id,
+    // int gpu_id,
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
