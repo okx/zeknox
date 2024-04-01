@@ -1032,7 +1032,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     }
     
     u64 leaves_per_gpu = subtree_leaves_len;
-    u64 leaves_size_bytes = leaves_per_gpu * sizeof(u64);
+    u64 leaves_size_bytes = leaves_per_gpu * leaf_size * sizeof(u64);
     u64 digests_per_gpu = subtree_digests_len;
     u64 digests_size_bytes = digests_per_gpu * HASH_SIZE_U64 * sizeof(u64);
 
@@ -1050,7 +1050,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
 #pragma omp parallel for num_threads(nDevices)
         for (int i = 0; i < nDevices; i++)
         {
-            CHECKCUDAERR(cudaMemcpyPeerAsync(gpu_leaves_ptrs[i], i, (u64*)leaves_buf_gpu_ptr + (k + i) * leaves_per_gpu, 0, leaves_size_bytes, gpu_stream[i]));
+            CHECKCUDAERR(cudaMemcpyPeerAsync(gpu_leaves_ptrs[i], i, (u64*)leaves_buf_gpu_ptr + (k + i) * leaves_per_gpu * leaf_size, 0, leaves_size_bytes, gpu_stream[i]));
         }
 #pragma omp parallel for num_threads(nDevices)
         for (int i = 0; i < nDevices; i++)
