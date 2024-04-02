@@ -1,8 +1,10 @@
 use types::{NTTConfig, TransposeConfig};
 
+#[cfg(feature="cuda")]
 pub mod device;
 pub mod error;
 pub mod types;
+#[cfg(feature="cuda")]
 pub mod merkle;
 
 extern "C" {
