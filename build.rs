@@ -1,13 +1,16 @@
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+#[cfg(not(feature="no_cuda"))]
 extern crate rustacuda;
+#[cfg(not(feature="no_cuda"))]
 use rustacuda::device::DeviceAttribute;
+#[cfg(not(feature="no_cuda"))]
 use rustacuda::prelude::*;
 use std::process::Command;
 
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
-// #[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature="no_cuda"))]
 fn build_device_wrapper() {
     let cuda_runtime_api_path = PathBuf::from("/usr/local/cuda/include")
         .join("cuda_runtime_api.h")
@@ -63,7 +66,7 @@ fn build_device_wrapper() {
     fs::write(PathBuf::from("src/device").join("bindings.rs"), bindings.to_string()).expect("Couldn't write bindings!");
 }
 
-// #[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature="no_cuda"))]
 fn get_device_arch() -> String {
     rustacuda::init(CudaFlags::empty()).expect("unable to init");
 
@@ -75,7 +78,7 @@ fn get_device_arch() -> String {
     cuda_arch
 }
 
-// #[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature="no_cuda"))]
 fn feature_check() -> String {
     let fr_s = [
         "gl64",
@@ -105,7 +108,7 @@ fn feature_check() -> String {
     }
 }
 
-// #[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature="no_cuda"))]
 fn build_cuda() {
     if cfg!(target_os = "windows") && !cfg!(target_env = "msvc") {
         panic!("unsupported compiler");
@@ -189,7 +192,7 @@ fn build_cuda() {
     println!("cargo:rerun-if-env-changed=NVCC");
 }
 
-// #[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature="no_cuda"))]
 fn merkle_tree_bindings() {
     let pwd = env::current_dir().unwrap();
     let libdir = pwd.join("cuda");
@@ -244,8 +247,8 @@ fn merkle_tree_bindings() {
 }
 
 fn main() {
-    #[cfg(feature="cuda")]
+    #[cfg(not(feature="no_cuda"))]
     merkle_tree_bindings();
-    #[cfg(feature="cuda")]
+    #[cfg(not(feature="no_cuda"))]
     build_cuda();
 }
