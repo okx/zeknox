@@ -65,15 +65,22 @@ private:
 	{
 		FFE mul;
 
+#pragma unroll
 		for (u32 i = 0; i < size; i++)
 		{
 			newState[i].SetUint64(0);
+#pragma unroll
 			for (u32 j = 0; j < size; j++)
 			{
 				FFE mm = FFE(m[j][i]);
 				mul.Mul(mm, state[j]);
 				newState[i].Add(newState[i], mul);
 			}
+		}
+#pragma unroll
+		for (u32 i = 0; i < size; i++)
+		{
+			state[i] = newState[i];
 		}
 	}
 
@@ -128,13 +135,11 @@ public:
 			exp5state(state, t);
 			ark(state, t, C, (i + 1) * t);
 			mix(state, t, t, M, newState);
-			memcpy(state, newState, t * sizeof(FFE));
 		}
 
 		exp5state(state, t);
 		ark(state, t, C, (nRoundsF / 2) * t);
 		mix(state, t, t, P, newState);
-		memcpy(state, newState, t * sizeof(FFE));
 
 		for (u32 i = 0; i < nRoundsP; i++)
 		{
@@ -165,19 +170,16 @@ public:
 			exp5state(state, t);
 			ark(state, t, C, (nRoundsF / 2 + 1) * t + nRoundsP + i * t);
 			mix(state, t, t, M, newState);
-			memcpy(state, newState, t * sizeof(FFE));
 		}
 		exp5state(state, t);
 		mix(state, t, t, M, newState);
-		memcpy(state, newState, t * sizeof(FFE));
 
 		for (u32 i = 0; i < 4; i++)
 		{
-			FFE rE = state[i];
-			rE.FromMont();
-			out[i * 3] = rE.z[2];
-			out[i * 3 + 1] = rE.z[1];
-			out[i * 3 + 2] = rE.z[0];
+			state[i].FromMont();
+			out[i * 3] = state[i].z[2];
+			out[i * 3 + 1] = state[i].z[1];
+			out[i * 3 + 2] = state[i].z[0];
 		}
 	}
 
@@ -336,10 +338,16 @@ int main2()
 
 int main()
 {
-	u64 inp[5] = {8917524657281059100u, 13029010200779371910u, 16138660518493481604u, 17277322750214136960u, 1441151880423231822u};
 	u64 out[4] = {0};
 
-#ifndef USE_CUDA
+#ifdef USE_CUDA
+	u64 *gpu_out;
+	CHECKCUDAERR(cudaMalloc(&gpu_out, 12 * 8 * 32));
+	test<<<1, 32>>>(gpu_out);
+	CHECKCUDAERR(cudaMemcpy(out, gpu_out, 4 * 8, cudaMemcpyDeviceToHost));
+	CHECKCUDAERR(cudaFree(gpu_out));
+#else
+	u64 inp[5] = {8917524657281059100u, 13029010200779371910u, 16138660518493481604u, 17277322750214136960u, 1441151880423231822u};
 	cpu_poseidon_bn128_hash_one(inp, 5, out);
 #endif
 	printf("Output:\n");
@@ -351,6 +359,7 @@ int main()
     assert(out[1] == 1446699130810517790u);
     assert(out[2] == 15445626857806971868u);
     assert(out[3] == 6331160477881736675u);
+	printf("Test ok!\n");
 	return 0;
 }
 
