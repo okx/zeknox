@@ -1,5 +1,8 @@
+#[cfg(not(feature="no_cuda"))]
 use std::env;
+#[cfg(not(feature="no_cuda"))]
 use std::fs;
+#[cfg(not(feature="no_cuda"))]
 use std::path::PathBuf;
 #[cfg(not(feature="no_cuda"))]
 extern crate rustacuda;
@@ -7,6 +10,7 @@ extern crate rustacuda;
 use rustacuda::device::DeviceAttribute;
 #[cfg(not(feature="no_cuda"))]
 use rustacuda::prelude::*;
+#[cfg(not(feature="no_cuda"))]
 use std::process::Command;
 
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
@@ -231,7 +235,7 @@ fn merkle_tree_bindings() {
         .header(header_file.to_str().unwrap())
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
