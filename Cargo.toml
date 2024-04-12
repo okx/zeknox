@@ -42,7 +42,6 @@ bit_reverse = "=0.1.1"
 
 [dev-dependencies]
 rand = "*"
-plonky2_field = {git="https://github.com/okx/plonky2.git"}
 criterion = "*"
 rayon = "1.8.1"
 rustacuda = "0.1"
