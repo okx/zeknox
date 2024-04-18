@@ -12,15 +12,16 @@ NVCC := /usr/local/cuda/bin/nvcc
 
 # flags
 INCL := -Itypes -Iposeidon -Iposeidon2 -Ikeccak -Imerkle -Iutil
+
 # for release
 CFLAGS := $(INCL) -Wall -Werror -O3 -march=native -fopenmp -fPIC
 CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native -fopenmp -fPIC
 NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH)
 
 # for debug
-#CFLAGS := $(INCL) -Wall -Werror -march=native -fopenmp -fPIC -g
-#CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -march=native -fopenmp -fPIC -g
-#NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -g -arch=$(CUDA_ARCH) -g
+# CFLAGS := $(INCL) -Wall -Werror -march=native -fopenmp -fPIC -g
+# CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -march=native -fopenmp -fPIC -g
+# NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -g -arch=$(CUDA_ARCH) -g
 
 all: lib
 

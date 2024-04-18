@@ -208,64 +208,6 @@ pub type uint_fast64_t = ::std::os::raw::c_ulong;
 pub type intmax_t = __intmax_t;
 pub type uintmax_t = __uintmax_t;
 extern "C" {
-    pub fn fill_digests_buf_in_c(
-        digests_buf_size: u64,
-        cap_buf_size: u64,
-        leaves_buf_size: u64,
-        leaf_size: u64,
-        cap_height: u64,
-    );
-}
-extern "C" {
-    pub fn fill_digests_buf_in_rounds_in_c(
-        digests_buf_size: u64,
-        cap_buf_size: u64,
-        leaves_buf_size: u64,
-        leaf_size: u64,
-        cap_height: u64,
-    );
-}
-extern "C" {
-    pub fn fill_digests_buf_in_rounds_in_c_on_gpu(
-        digests_buf_size: u64,
-        cap_buf_size: u64,
-        leaves_buf_size: u64,
-        leaf_size: u64,
-        cap_height: u64,
-    );
-}
-extern "C" {
-    pub fn fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
-        digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
-        cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
-        leaves_buf_gpu_ptr: *mut ::std::os::raw::c_void,
-        digests_buf_size: u64,
-        cap_buf_size: u64,
-        leaves_buf_size: u64,
-        leaf_size: u64,
-        cap_height: u64,
-        hash_type: u64,
-    );
-}
-extern "C" {
-    pub fn fill_digests_buf_linear_cpu(
-        digests_buf_size: u64,
-        cap_buf_size: u64,
-        leaves_buf_size: u64,
-        leaf_size: u64,
-        cap_height: u64,
-    );
-}
-extern "C" {
-    pub fn fill_digests_buf_linear_gpu(
-        digests_buf_size: u64,
-        cap_buf_size: u64,
-        leaves_buf_size: u64,
-        leaf_size: u64,
-        cap_height: u64,
-    );
-}
-extern "C" {
     pub fn fill_digests_buf_linear_gpu_with_gpu_ptr(
         digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
         cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
@@ -276,16 +218,7 @@ extern "C" {
         leaf_size: u64,
         cap_height: u64,
         hash_type: u64,
-    );
-}
-extern "C" {
-    pub fn fill_digests_buf_linear_multigpu(
-        digests_buf_size: u64,
-        cap_buf_size: u64,
-        leaves_buf_size: u64,
-        leaf_size: u64,
-        cap_height: u64,
-        ngpus: u64,
+        gpu_id: u64,
     );
 }
 extern "C" {
@@ -300,32 +233,4 @@ extern "C" {
         cap_height: u64,
         hash_type: u64,
     );
-}
-extern "C" {
-    pub fn fill_init(
-        digests_count: u64,
-        leaves_count: u64,
-        caps_count: u64,
-        leaf_size: u64,
-        hash_size: u64,
-        hash_type: u64,
-    );
-}
-extern "C" {
-    pub fn fill_init_rounds(leaves_count: u64, rounds: u64);
-}
-extern "C" {
-    pub fn fill_delete();
-}
-extern "C" {
-    pub fn fill_delete_rounds();
-}
-extern "C" {
-    pub fn get_digests_ptr() -> *mut u64;
-}
-extern "C" {
-    pub fn get_cap_ptr() -> *mut u64;
-}
-extern "C" {
-    pub fn get_leaves_ptr() -> *mut u64;
 }
