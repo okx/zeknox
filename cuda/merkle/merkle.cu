@@ -9,6 +9,7 @@
 #include "poseidon2.h"
 #include "poseidon_bn128.h"
 #include "keccak.h"
+#include "monolith.h"
 
 // TODO - benchmark and select best TPB
 #define TPB 64
@@ -20,14 +21,16 @@ __device__ void gpu_hash_one(gl64_t *lptr, uint32_t leaf_size, gl64_t *dptr, uin
 {
     switch (hash_type)
     {
-    case 0:
+    case HashPoseidon:
         return gpu_poseidon_hash_one(lptr, leaf_size, dptr);
-    case 1:
+    case HashKeccak:
         return gpu_keccak_hash_one(lptr, leaf_size, dptr);
-    case 2:
+    case HashPoseidonBN128:
         return gpu_poseidon_bn128_hash_one(lptr, leaf_size, dptr);
-    case 3:
+    case HashPoseidon2:
         return gpu_poseidon2_hash_one(lptr, leaf_size, dptr);
+    case HashMonolith:
+        return gpu_monolith_hash_one(lptr, leaf_size, dptr);
     default:
         return;
     }
@@ -37,14 +40,16 @@ __device__ void gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash, uint64_
 {
     switch (hash_type)
     {
-    case 0:
+    case HashPoseidon:
         return gpu_poseidon_hash_two(hash1, hash2, hash);
-    case 1:
+    case HashKeccak:
         return gpu_keccak_hash_two(hash1, hash2, hash);
-    case 2:
+    case HashPoseidonBN128:
         return gpu_poseidon_bn128_hash_two(hash1, hash2, hash);
-    case 3:
+    case HashPoseidon2:
         return gpu_poseidon2_hash_two(hash1, hash2, hash);
+    case HashMonolith:
+        return gpu_monolith_hash_two(hash1, hash2, hash);
     default:
         return;
     }

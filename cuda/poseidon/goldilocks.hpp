@@ -88,7 +88,7 @@ public:
 
     static GoldilocksField from_noncanonical_u96(u64 n_lo, u32 n_hi)
     {
-        u64 t1 = (u64)n_hi * EPSILON;
+        u64 t1 = ((u64)n_hi) * (u64)EPSILON;
         return GoldilocksField(modulo_add(n_lo, t1));
     }
 

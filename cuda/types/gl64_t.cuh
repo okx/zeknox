@@ -50,6 +50,7 @@ public:
     inline gl64_t()                                     {}
     inline gl64_t(const uint64_t a)                     { val = a;  to(); }
     inline gl64_t(const uint64_t *p)                    { val = *p; to(); }
+    inline gl64_t(uint32_t val_u128[4])                      { val = 0; reduce(val_u128); }
 
     inline uint64_t get_val() const { return val; }
 

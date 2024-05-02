@@ -13,6 +13,14 @@
 #define EXTERNC
 #endif
 
+enum HashType {
+    HashPoseidon = 0,
+    HashKeccak = 1,
+    HashPoseidonBN128 = 2,
+    HashPoseidon2 = 3,
+    HashMonolith = 4
+};
+
 EXTERNC void fill_digests_buf_linear_gpu_with_gpu_ptr(
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
