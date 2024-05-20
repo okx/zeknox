@@ -163,8 +163,6 @@ DEVICE void FFE::_mulGeneric(u64 *z, u64 *x, u64 *y)
     madd2(v, y[3], c[1], t[3], &c[1], &c[0]);
     madd3(m, 3486998266802970665u, c[0], c[2], c[1], &z[3], &z[2]);
 
-    // if z > q --> z -= q
-    // note: this is NOT constant time
     if (!(z[3] < 3486998266802970665u ||
           (z[3] == 3486998266802970665u &&
            (z[2] < 13281191951274694749u ||
@@ -190,8 +188,6 @@ DEVICE void FFE::_addGeneric(u64 *z, u64 *x, u64 *y)
     add64(x[2], y[2], carry, &z[2], &carry);
     add64(x[3], y[3], carry, &z[3], &tmp);
 
-    // if z > q --> z -= q
-    // note: this is NOT constant time
     if (!(z[3] < 3486998266802970665u ||
           (z[3] == 3486998266802970665u &&
            (z[2] < 13281191951274694749u ||
@@ -210,10 +206,6 @@ DEVICE void FFE::_addGeneric(u64 *z, u64 *x, u64 *y)
 
 DEVICE void FFE::_fromMontGeneric(u64 *z)
 {
-    // the following lines implement z = z * 1
-    // with a modified CIOS montgomery multiplication
-
-    // m = z[0]n'[0] mod W
     u64 m = z[0] * 14042775128853446655u;
     u64 c;
     madd0(m, 4891460686036598785u, z[0], &c);
@@ -222,7 +214,6 @@ DEVICE void FFE::_fromMontGeneric(u64 *z)
     madd2(m, 3486998266802970665u, z[3], c, &c, &z[2]);
     z[3] = c;
 
-    // m = z[0]n'[0] mod W
     m = z[0] * 14042775128853446655u;
     madd0(m, 4891460686036598785u, z[0], &c);
     madd2(m, 2896914383306846353u, z[1], c, &c, &z[0]);
@@ -230,7 +221,6 @@ DEVICE void FFE::_fromMontGeneric(u64 *z)
     madd2(m, 3486998266802970665u, z[3], c, &c, &z[2]);
     z[3] = c;
 
-    // m = z[0]n'[0] mod W
     m = z[0] * 14042775128853446655u;
     madd0(m, 4891460686036598785u, z[0], &c);
     madd2(m, 2896914383306846353u, z[1], c, &c, &z[0]);
@@ -238,7 +228,6 @@ DEVICE void FFE::_fromMontGeneric(u64 *z)
     madd2(m, 3486998266802970665u, z[3], c, &c, &z[2]);
     z[3] = c;
 
-    // m = z[0]n'[0] mod W
     m = z[0] * 14042775128853446655u;
     madd0(m, 4891460686036598785u, z[0], &c);
     madd2(m, 2896914383306846353u, z[1], c, &c, &z[0]);
@@ -246,8 +235,6 @@ DEVICE void FFE::_fromMontGeneric(u64 *z)
     madd2(m, 3486998266802970665u, z[3], c, &c, &z[2]);
     z[3] = c;
 
-    // if z > q --> z -= q
-    // note: this is NOT constant time
     if (!(z[3] < 3486998266802970665u ||
           (z[3] == 3486998266802970665u &&
            (z[2] < 13281191951274694749u ||

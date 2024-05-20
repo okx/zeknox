@@ -133,37 +133,6 @@ public:
         return t2;
     }
 
-    inline static u64 mul(u64 a, u64 b)
-    {
-        // a * b = a1*b1*2^64 + (a1*b0 + a0*b1)*2^32 + a0*b0
-        const u64 a0 = a & 0xFFFFFFFF;
-        const u64 a1 = a >> 32;
-        const u64 b0 = b & 0xFFFFFFFF;
-        const u64 b1 = b >> 32;
-        const u64 M = GoldilocksField::ORDER;
-
-        // a0 * b0 mod M
-        u64 res = modulo_mul(a0, b0);
-        assert(res < M);
-
-        // (a1*b0 + a0*b1)*2^32 mod M
-        u64 tmp1 = modulo_mul(a0, b1);
-        assert(tmp1 < M);
-        u64 tmp2 = modulo_mul(a1, b0);
-        assert(tmp2 < M);
-        u64 tmp = modulo_add(tmp1, tmp2);
-        res = modulo_add(res, tmp);
-        assert(res < M);
-
-        // a1 * b1 * 2^64 mod M
-        tmp1 = modulo_mul(a1, b1);
-        assert(tmp1 < M);
-
-        // TODO - split tmp1
-
-        return res;
-    }
-
     inline static u64 mulv2(u64 a, u64 b)
     {
         // a * b = a1*b1*2^64 + (a1*b0 + a0*b1)*2^32 + a0*b0

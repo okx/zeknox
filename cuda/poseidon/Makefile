@@ -11,7 +11,7 @@ NVCCFLAGS := -I../types -I../poseidon -I../keccak -I../util -I. -g
 clean:
 	rm -f *.o *.so *.exe
 
-test_poseidon_goldilocks_gpu.exe: poseidon.cuh poseidon.cu poseidon.cpp poseidon.hpp
+test_poseidon_goldilocks_gpu.exe: poseidon.cuh poseidon.cu poseidon.cpp poseidon.hpp test_poseidon.cu
 	$(CXX) $(CXXFLAGS) -DDEBUG -fPIC -I../types poseidon.cpp -c
 	$(NVCC) -DUSE_CUDA -Xcompiler -fPIC $(NVCCFLAGS) test_poseidon.cu -arch=$(CUDA_ARCH) -dc -o test_poseidon_gpu.o
 	$(NVCC) -DUSE_CUDA -DDEBUG -Xcompiler -fPIC $(NVCCFLAGS) poseidon.cu -arch=$(CUDA_ARCH) -dc -o poseidon_gpu.o

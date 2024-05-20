@@ -10,7 +10,6 @@
 
 #define NUM_HASH_OUT_ELTS 4
 
-// From poseidon.rs
 #define SPONGE_RATE 8
 #define SPONGE_CAPACITY 4
 #define SPONGE_WIDTH 12

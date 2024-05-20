@@ -2,7 +2,6 @@
 #include "poseidon.h"
 #include <stdlib.h>
 
-/// A one-way compression function which takes two ~256 bit inputs and returns a ~256 bit output.
 HashOut compress(HashOut x, HashOut y)
 {
     PoseidonPermutation perm = PoseidonPermutation();
@@ -14,8 +13,6 @@ HashOut compress(HashOut x, HashOut y)
     return perm.squeeze(NUM_HASH_OUT_ELTS);
 }
 
-/// Hash a message without any padding step. Note that this can enable length-extension attacks.
-/// However, it is still collision-resistant in cases where the input has a fixed length.
 inline HashOut hash_n_to_m_no_pad(GoldilocksField *inputs, u64 num_inputs, u64 num_outputs)
 {
     PoseidonPermutation perm = PoseidonPermutation();
@@ -29,7 +26,6 @@ inline HashOut hash_n_to_m_no_pad(GoldilocksField *inputs, u64 num_inputs, u64 n
         idx += PoseidonPermutation::RATE;
     }
 
-    // Squeeze until we have the desired number of outputs.
     assert(num_outputs == NUM_HASH_OUT_ELTS);
     return perm.squeeze(NUM_HASH_OUT_ELTS);
 }

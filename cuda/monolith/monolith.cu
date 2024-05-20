@@ -107,7 +107,8 @@ __device__ __forceinline__
 #else
 inline
 #endif
-uint64_t bar_u64(uint64_t limb)
+    uint64_t
+    bar_u64(uint64_t limb)
 {
     uint64_t limbl1 = ((~limb & 0x8080808080808080) >> 7) | ((~limb & 0x7F7F7F7F7F7F7F7F) << 1); // Left rotation by 1
     uint64_t limbl2 = ((limb & 0xC0C0C0C0C0C0C0C0) >> 6) | ((limb & 0x3F3F3F3F3F3F3F3F) << 2);   // Left rotation by 2
@@ -123,7 +124,8 @@ __device__ __forceinline__
 #else
 inline
 #endif
-void bars(uint64_t *state)
+    void
+    bars(uint64_t *state)
 {
     state[0] = bar_u64(state[0]);
     state[1] = bar_u64(state[1]);
@@ -138,7 +140,8 @@ __device__ __forceinline__
 #else
 inline
 #endif
-void bricks_u64(uint64_t *sl, uint32_t *sh)
+    void
+    bricks_u64(uint64_t *sl, uint32_t *sh)
 {
     // Feistel Type-3
     // Use "& 0xFFFFFFFFFFFFFFFF" to tell the compiler it is dealing with 64-bit values (save
@@ -164,7 +167,8 @@ __device__ __forceinline__
 #else
 inline
 #endif
-void concrete_u64(uint64_t *sl, uint32_t *sh, const uint64_t *rc)
+    void
+    concrete_u64(uint64_t *sl, uint32_t *sh, const uint64_t *rc)
 {
     // temp storage
     uint64_t ssl[SPONGE_WIDTH];
@@ -205,7 +209,8 @@ __device__ __forceinline__
 #else
 inline
 #endif
-void monolith(uint64_t *state)
+    void
+    monolith(uint64_t *state)
 {
     uint32_t state_h[SPONGE_WIDTH] = {0};
 
@@ -229,7 +234,7 @@ void monolith(uint64_t *state)
 #ifdef USE_CUDA
 __device__ void MonolithPermutationGPU::permute2()
 {
-    monolith((uint64_t*)state);
+    monolith((uint64_t *)state);
 }
 
 __device__ void gpu_monolith_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
@@ -277,17 +282,11 @@ __device__ void gpu_monolith_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash
     }
 }
 
-/*
-void init_gpu_const() {
-    CHECKCUDAERR(cudaMemcpyToSymbol(GPU_MATRIX_DIAG_12_GOLDILOCKS, MATRIX_DIAG_12_GOLDILOCKS, 12 * sizeof(u64), 0));
-    CHECKCUDAERR(cudaMemcpyToSymbol(GPU_RC12, RC12, 360 * sizeof(u64), 0));
-}
-*/
+#else  // USE_CUDA
 
-#else
 inline void MonolithPermutation::permute2()
 {
-    monolith((uint64_t*)state);
+    monolith((uint64_t *)state);
 }
 
 void cpu_monolith_hash_one(u64 *data, u32 data_size, u64 *digest)
@@ -339,4 +338,4 @@ void cpu_monolith_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
         digest[i] = out.elements[i].get_val();
     }
 }
-#endif
+#endif // USE_CUDA

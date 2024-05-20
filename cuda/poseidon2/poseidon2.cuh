@@ -19,12 +19,12 @@ class Poseidon2PermutationGPU : public PoseidonPermutationGPU
 public:
     DEVICE void permute2();
 };
-#else
+#else  // USE_CUDA
 class Poseidon2Permutation : public PoseidonPermutation
 {
 public:
     void permute2();
 };
-#endif
+#endif // USE_CUDA
 
 #endif // __POSEIDON2_CUH__
