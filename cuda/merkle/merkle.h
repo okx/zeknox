@@ -13,60 +13,7 @@
 #define EXTERNC
 #endif
 
-EXTERNC void fill_digests_buf_in_c(
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height
-);
-
-EXTERNC void fill_digests_buf_in_rounds_in_c(
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height
-);
-
-EXTERNC void fill_digests_buf_in_rounds_in_c_on_gpu(
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height
-);
-
-EXTERNC void fill_digests_buf_in_rounds_in_c_on_gpu_with_gpu_ptr(
-    void *digests_buf_gpu_ptr,
-    void *cap_buf_gpu_ptr,
-    void *leaves_buf_gpu_ptr,
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height,
-    uint64_t hash_type
-);
-
-EXTERNC void fill_digests_buf_linear_cpu(
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height
-);
-
-EXTERNC void fill_digests_buf_linear_gpu(
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height
-);
-
 EXTERNC void fill_digests_buf_linear_gpu_with_gpu_ptr(
-    // int gpu_id,
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
@@ -75,16 +22,8 @@ EXTERNC void fill_digests_buf_linear_gpu_with_gpu_ptr(
     uint64_t leaves_buf_size,
     uint64_t leaf_size,
     uint64_t cap_height,
-    uint64_t hash_type
-);
-
-EXTERNC void fill_digests_buf_linear_multigpu(
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height,
-    uint64_t ngpus
+    uint64_t hash_type,
+    uint64_t gpu_id
 );
 
 EXTERNC void fill_digests_buf_linear_multigpu_with_gpu_ptr(
@@ -98,29 +37,5 @@ EXTERNC void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     uint64_t cap_height,
     uint64_t hash_type
 );
-
-EXTERNC void fill_init(
-    uint64_t digests_count,
-    uint64_t leaves_count,
-    uint64_t caps_count,
-    uint64_t leaf_size,
-    uint64_t hash_size,
-    uint64_t hash_type
-);
-
-EXTERNC void fill_init_rounds(
-    uint64_t leaves_count,
-    uint64_t rounds
-);
-
-EXTERNC void fill_delete();
-
-EXTERNC void fill_delete_rounds();
-
-EXTERNC uint64_t* get_digests_ptr();
-
-EXTERNC uint64_t* get_cap_ptr();
-
-EXTERNC uint64_t* get_leaves_ptr();
 
 #endif // __MERKEL_H__

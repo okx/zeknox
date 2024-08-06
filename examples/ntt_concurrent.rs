@@ -13,6 +13,7 @@ use plonky2_field::{
 use rand::random;
 use rayon::prelude::*;
 
+const DEFAULT_GPU: usize = 0;
 
 fn random_fr() -> u64 {
     let fr: u64 = random();
@@ -110,7 +111,7 @@ fn gpu_fft_batch(device_id: usize, batches: usize, log_ntt_size: usize) {
 
     let mut device_data: HostOrDeviceSlice<'_, u64> =
             HostOrDeviceSlice::cuda_malloc(device_id as i32, total_elements).unwrap();
-            
+
     for i in 0..batches{
         let mut input: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
@@ -121,14 +122,14 @@ fn gpu_fft_batch(device_id: usize, batches: usize, log_ntt_size: usize) {
         cfg.are_inputs_on_device = true;
         cfg.are_outputs_on_device = true;
         cfg.batches = batches as u32;
-        
+
     ntt_batch(
         DEFAULT_GPU,
         device_data.as_mut_ptr(),
         log_ntt_size,
         cfg.clone(),
     );
-    
+
     println!("total time spend: {:?}", start.elapsed());
 }
 
@@ -157,7 +158,7 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
             cfg.are_inputs_on_device = true;
             cfg.are_outputs_on_device = true;
             cfg.batches = per_device_batch as u32;
-            
+
         ntt_batch(
             device_id,
             input.as_mut_ptr(),
@@ -182,13 +183,13 @@ fn main() {
     let nums = 100;
     let log_ntt_size = 19;
 
-    let _num_devices = 1;
+    let num_devices = 1;
     cpu_fft_concurrent(nums, log_ntt_size);
 
     #[cfg(not(feature = "no_cuda"))]
     let mut device_id = 0;
     #[cfg(not(feature = "no_cuda"))]
-    while (device_id < num_devices) {
+    while device_id < num_devices {
         init_twiddle_factors_rs(device_id, log_ntt_size);
         init_twiddle_factors_rs(device_id, log_ntt_size+1);
         device_id = device_id + 1;
