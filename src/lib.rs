@@ -4,8 +4,6 @@ use types::{NTTConfig, TransposeConfig};
 pub mod device;
 pub mod error;
 pub mod types;
-#[cfg(feature="cuda")]
-pub mod merkle;
 
 extern "C" {
 
@@ -67,6 +65,31 @@ extern "C" {
         lg_n: usize,
         cfg: types::TransposeConfig,
     ) -> error::Error;
+
+    fn fill_digests_buf_linear_gpu_with_gpu_ptr(
+        digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        leaves_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        digests_buf_size: u64,
+        cap_buf_size: u64,
+        leaves_buf_size: u64,
+        leaf_size: u64,
+        cap_height: u64,
+        hash_type: u64,
+        gpu_id: u64,
+    );
+
+    fn fill_digests_buf_linear_multigpu_with_gpu_ptr(
+        digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        leaves_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        digests_buf_size: u64,
+        cap_buf_size: u64,
+        leaves_buf_size: u64,
+        leaf_size: u64,
+        cap_height: u64,
+        hash_type: u64,
+    );
 
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();

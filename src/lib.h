@@ -11,6 +11,8 @@
 #endif
 #include <util/device_context.cuh>
 
+#include <merkle/merkle.h>
+
 #ifndef FEATURE_GOLDILOCKS
 #include <ff/alt_bn254.hpp>
 #include <ec/jacobian_t.hpp>
@@ -64,7 +66,7 @@ extern "C" RustError compute_batched_lde_multi_gpu(fr_t *output,fr_t *input, uin
 
 extern "C" RustError compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
                                          Ntt_Types::TransposeConfig cfg);
-                            
+
 extern "C" RustError compute_naive_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
                                          Ntt_Types::TransposeConfig cfg);
 
