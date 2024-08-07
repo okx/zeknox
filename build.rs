@@ -194,7 +194,43 @@ fn build_cuda() {
     println!("cargo:rerun-if-env-changed=NVCC");
 }
 
+#[cfg(not(feature="no_cuda"))]
+fn build_lib() {
+    use std::process::Command;
+
+    let pwd = env::current_dir().unwrap();
+    let libdir = pwd.join("cuda");
+    let header_file = libdir.join("merkle/merkle.h");
+    let src_file = libdir.join("merkle/merkle.cu");
+    let lib_file = libdir.join("libcryptocuda.a");
+
+    if !lib_file.exists()
+    {
+        assert!(env::set_current_dir(&libdir).is_ok());
+        Command::new("make")
+        .arg("lib")
+        .output()
+        .expect("failed to execute process");
+        assert!(env::set_current_dir(&pwd).is_ok());
+    }
+
+    // Tell cargo to look for shared libraries in the specified directory
+    println!("cargo:rustc-link-search={}", libdir.to_str().unwrap());
+
+    // Shared lib.
+    // println!("cargo:rustc-link-lib=cryptocuda");
+
+    // Static lib
+    println!("cargo:rustc-link-lib=static=cryptocuda");
+    println!("cargo:rustc-link-lib=gomp");
+
+    // Tell cargo to invalidate the built crate whenever the wrapper changes
+    println!("cargo:rerun-if-changed={},{}", header_file.to_str().unwrap(), src_file.to_str().unwrap());
+}
+
 fn main() {
     #[cfg(not(feature="no_cuda"))]
     build_cuda();
+    #[cfg(not(feature="no_cuda"))]
+    build_lib();
 }

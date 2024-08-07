@@ -66,7 +66,7 @@ extern "C" {
         cfg: types::TransposeConfig,
     ) -> error::Error;
 
-    fn fill_digests_buf_linear_gpu_with_gpu_ptr(
+    pub fn fill_digests_buf_linear_gpu_with_gpu_ptr(
         digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
         cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
         leaves_buf_gpu_ptr: *mut ::std::os::raw::c_void,
@@ -79,7 +79,7 @@ extern "C" {
         gpu_id: u64,
     );
 
-    fn fill_digests_buf_linear_multigpu_with_gpu_ptr(
+    pub fn fill_digests_buf_linear_multigpu_with_gpu_ptr(
         digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
         cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
         leaves_buf_gpu_ptr: *mut ::std::os::raw::c_void,
