@@ -486,7 +486,7 @@ public:
     {
         if (n_elements)
         {
-            // printf("alloc %d elements \n", n_elements);
+            printf("Try to alloc %ld elements %ld B\n", n_elements, n_elements * sizeof(T));
             CUDA_OK(cudaMallocAsync(&d_ptr, n_elements * sizeof(T), stream));
         }
     }

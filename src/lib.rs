@@ -13,6 +13,8 @@ extern "C" {
     fn init_twiddle_factors(device_id: usize, lg_n: usize) -> error::Error;
     fn init_coset(device_id: usize, lg_n: usize, coset_gen: u64) -> error::Error;
 
+    fn init_cuda();
+
     fn compute_ntt(
         device_id: usize,
         inout: *mut core::ffi::c_void,
@@ -246,6 +248,7 @@ pub fn lde_batch_multi_gpu<T>(
     total_num_output_elements: usize
 ) {
     let err = unsafe {
+        println!("In compute_batched_lde_multi_gpu {:?}", total_num_input_elements);
         compute_batched_lde_multi_gpu(
             output as *mut core::ffi::c_void,
             input as *mut core::ffi::c_void,
@@ -363,6 +366,12 @@ pub fn init_coset_rs(device_id: usize, lg_n: usize, coset_gen: u64) {
 
     if err.code != 0 {
         panic!("{}", String::from(err));
+    }
+}
+
+pub fn init_cuda_rs() {
+    unsafe {
+        init_cuda();
     }
 }
 
