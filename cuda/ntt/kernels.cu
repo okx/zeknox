@@ -77,7 +77,7 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
     // We use shared memory 'cache' blocks for coalesce memory efficiency improvement
 	__shared__ fr_t block[BLOCK_DIM][BLOCK_DIM+1];
 
-    // Get indexes 
+    // Get indexes
     int j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.y);
     int i_idx = blockIdx.x * BLOCK_DIM + threadIdx.x;
 
@@ -88,7 +88,7 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
         if((i_idx < batch_size) && ((j_idx+i) < n)){
             block[(4 * threadIdx.y) + i][threadIdx.x] = in_arr[idx + i];
         }
-    } 
+    }
 
     // synchronise to ensure all writes to block[][] have completed
 	__syncthreads();
@@ -119,13 +119,13 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
  */
  __global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
  {
-     // Get indexes 
+     // Get indexes
      int threadId = blockIdx.x * blockDim.x + threadIdx.x;
      if (threadId < n * batch_size)
      {
         int j_idx = threadId % n;
         int i_idx = threadId / n;
-    
+
         j_idx = __brev(j_idx) >> (32 - lg_n);
         int idx_swapped = j_idx * batch_size + i_idx;
 

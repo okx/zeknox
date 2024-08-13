@@ -109,7 +109,7 @@ namespace ntt
     void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
     {
         int number_of_threads = MAX_THREADS_BATCH;
-        uint32_t n_extend = 1 << (logn + extension_rate_bits);
+        size_t n_extend = (size_t)1 << (logn + extension_rate_bits);
         int number_of_blocks = (n_extend * batch_size + number_of_threads - 1) / number_of_threads;
         degree_extension_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(output, arr, n, n_extend, batch_size);
     }
@@ -564,6 +564,11 @@ namespace ntt
 
             uint32_t num_batches_per_gpu = (cfg.batches + num_gpu - 1)/num_gpu;
             uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu-1));
+            if (cfg.batches < num_gpu) {
+                num_gpu = cfg.batches;
+                num_batches_per_gpu = 1;
+                num_batches_last_gpu = 0;
+            }
 
             std::vector<fr_t *> output_pointers;
             std::vector<fr_t *> input_pointers;
@@ -588,9 +593,9 @@ namespace ntt
                     d_twiddle = all_gpus_twiddle_forward_arr[i].at(lg_output_domain_size);
                 }
 
-                // printf("Allocating input memory on GPU: %d\n", gpu.id());
+                size_t total_input_elements = ((size_t)1 << lg_n) * batches;
 
-                size_t total_input_elements = (1 << lg_n) * batches;
+                // printf("Allocating input memory %ld B (log %ld, batches %ld) on GPU %d\n", total_input_elements, lg_n, batches, gpu.id());
 
                 dev_ptr_t<fr_t> input_data{
                     total_input_elements,
@@ -599,14 +604,14 @@ namespace ntt
                     true
                 };
 
-                void *src = (inputs + (i * num_batches_per_gpu * (1 << lg_n)));
+                void *src = (inputs + (i * num_batches_per_gpu * ((size_t)1 << lg_n)));
                 gpu.HtoD(&input_data[0], src, total_input_elements);
 
                 input_pointers.emplace_back(&input_data[0]);
 
                 size_t total_output_elements = size * batches;
 
-                // printf("Allocating output memory on GPU: %d\n", gpu.id());
+                // printf("Allocating output memory %ld B on GPU %d\n", total_output_elements, gpu.id());
 
                 dev_ptr_t<fr_t> output_data{
                     total_output_elements,
@@ -617,7 +622,7 @@ namespace ntt
 
                 output_pointers.emplace_back(&output_data[0]);
 
-                extend_inputs_batch(&output_data[0], &input_data[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, batches, gpu);
+                extend_inputs_batch(&output_data[0], &input_data[0], (size_t)1 << lg_n, lg_n, cfg.extension_rate_bits, batches, gpu);
                 // gpu.sync();
 
                 if (direction == Direction::inverse)
@@ -634,6 +639,8 @@ namespace ntt
             }
 
             auto &gpu = select_gpu(0);
+
+            // printf("Allocating buffer memory %ld B on GPU %d\n", total_num_output_elements, gpu.id());
 
             dev_ptr_t<fr_t> d_buffer{
                 total_num_output_elements,
@@ -674,7 +681,7 @@ namespace ntt
                     if(canAccessPeer)
                     {
                         // printf("Peer copy can access gpu\n");
-                        size_t offset = i * num_batches_per_gpu * (1 << lg_output_domain_size);
+                        size_t offset = i * num_batches_per_gpu * ((size_t)1 << lg_output_domain_size);
                         // printf("Offset:%d on GPU: %d\n", offset, gpu.id());
                         // printf("The pointer value: %d\n", &d_buffer[offset]);
                         CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, gpu.id(), total_output_bytes, gpu));
@@ -739,7 +746,7 @@ namespace ntt
                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_output_domain_size);
             }
 
-            size_t total_input_elements = (1 << lg_n) * cfg.batches;
+            size_t total_input_elements = ((size_t)1 << lg_n) * cfg.batches;
             int input_size_bytes = total_input_elements * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{
@@ -779,7 +786,7 @@ namespace ntt
                 d_output.alloc();
             }
 
-            extend_inputs_batch(&d_output[0], &d_input[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
+            extend_inputs_batch(&d_output[0], &d_input[0], (size_t)1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
 
             if (direction == Direction::inverse)
             {
