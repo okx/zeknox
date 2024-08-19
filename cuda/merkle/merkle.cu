@@ -458,6 +458,8 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
 // #define TESTING
 #ifdef TESTING
 
+#include "merkle_c.h"
+
 #define LEAF_SIZE_U64 68
 
 #include <time.h>
@@ -574,7 +576,7 @@ void run_gpu_cpu_verify(u32 log_size)
     CHECKCUDAERR(cudaFree(gpu_caps));
 
     gettimeofday(&t0, 0);
-    fill_digests_buf_linear_cpu(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, cap_h, HashType::HashPoseidon);
+    fill_digests_buf_linear_cpu(global_digests_buf, global_cap_buf, global_leaves_buf, n_digests, n_caps, n_leaves, LEAF_SIZE_U64, cap_h, HashType::HashPoseidon);
     gettimeofday(&t1, 0);
     elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
     printf("Time on CPU: %ld us\n", elapsed);

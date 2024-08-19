@@ -10,6 +10,9 @@
 #endif
 
 EXTERNC void fill_digests_buf_linear_cpu(
+    void *digests_buf_ptr,
+    void *cap_buf_ptr,
+    void *leaves_buf_ptr,
     u64 digests_buf_size,
     u64 cap_buf_size,
     u64 leaves_buf_size,

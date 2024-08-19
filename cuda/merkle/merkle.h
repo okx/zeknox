@@ -46,4 +46,16 @@ EXTERNC void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     uint64_t hash_type
 );
 
+EXTERNC void fill_digests_buf_linear_cpu_avx512(
+    void *digests_buf_ptr,
+    void *cap_buf_ptr,
+    void *leaves_buf_ptr,
+    uint64_t digests_buf_size,
+    uint64_t cap_buf_size,
+    uint64_t leaves_buf_size,
+    uint64_t leaf_size,
+    uint64_t cap_height,
+    uint64_t hash_type
+);
+
 #endif // __MERKEL_H__
