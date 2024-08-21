@@ -149,7 +149,7 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
         int j_idx = threadId % n;
         int i_idx = threadId / n;
 
-        j_idx = __brev(j_idx) >> (33 - lg_n);
+        j_idx = __brev(j_idx) >> (32 - lg_n);
         int idx_swapped = j_idx * batch_size + i_idx;
 
         out_arr[idx_swapped] = in_arr[threadId];
