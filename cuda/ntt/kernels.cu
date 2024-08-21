@@ -7,8 +7,9 @@
 #include <cooperative_groups.h>
 #include <util/sharedmem.cuh>
 
-#define BLOCK_DIM 32
+#include <curand_kernel.h>
 
+#define BLOCK_DIM 32
 
 __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
@@ -61,6 +62,28 @@ __global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, u
             output[batch_idx * n_extend + idx] = fr_t::zero();
         }
         // printf("index: %d, val: %lu \n", batch_idx * n_extend + idx, output[batch_idx * n_extend + idx]);
+    }
+}
+
+__global__ void gen_random_salt_kernel(fr_t *arr, uint32_t size, uint32_t salt_size, uint64_t seed)
+{
+    uint32_t tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+
+    if (tid >= size)
+    {
+        return;
+    }
+
+    curandState rstate;
+    curand_init(seed, tid, 0, &rstate);
+
+    for (uint32_t k = 0; k < salt_size; k++)
+    {
+        uint32_t x1 = curand(&rstate);
+        uint32_t x2 = curand(&rstate);
+        uint64_t x = x1;
+        x = (x << 32) | x2;
+        arr[k * size + tid] = fr_t(x);
     }
 }
 
@@ -126,7 +149,7 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
         int j_idx = threadId % n;
         int i_idx = threadId / n;
 
-        j_idx = __brev(j_idx) >> (32 - lg_n);
+        j_idx = __brev(j_idx) >> (33 - lg_n);
         int idx_swapped = j_idx * batch_size + i_idx;
 
         out_arr[idx_swapped] = in_arr[threadId];

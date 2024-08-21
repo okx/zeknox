@@ -36,6 +36,7 @@ pub struct NTTConfig {
     pub are_outputs_on_device: bool, //**< If true, output is preserved on device, otherwise on host. Default value: false.
     pub with_coset: bool,
     pub is_multi_gpu: bool,
+    pub salt_size: u32,
 }
 
 impl Default for NTTConfig {
@@ -48,7 +49,8 @@ impl Default for NTTConfig {
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             with_coset: false,
-            is_multi_gpu: false
+            is_multi_gpu: false,
+            salt_size: 0
         }
     }
 }

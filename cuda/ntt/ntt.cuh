@@ -31,7 +31,7 @@ namespace ntt
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
-    void bit_rev(fr_t *d_out, const fr_t *d_inp, uint32_t lg_domain_size, stream_t &stream)
+    inline void bit_rev(fr_t *d_out, const fr_t *d_inp, uint32_t lg_domain_size, stream_t &stream)
     {
         assert(lg_domain_size <= MAX_LG_DOMAIN_SIZE);
 
@@ -61,12 +61,18 @@ namespace ntt
      * @param logn log(n).
      * @param batch_size the size of the batch.
      */
-    void reverse_order_batch(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
+    inline void reverse_order_batch(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
     {
-        // printf("reverse_order_batch stream: %d \n", stream.stream);
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
+    }
+
+    inline void gen_random_salt(fr_t *arr, uint32_t chunk_size, uint32_t salt_size, uint64_t seed, stream_t &stream)
+    {
+        int number_of_threads =1024;
+        int number_of_blocks = (chunk_size + number_of_threads - 1) / number_of_threads;
+        gen_random_salt_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, chunk_size, salt_size, seed);
     }
 
     /**
@@ -76,7 +82,7 @@ namespace ntt
      * @param n length of `arr`.
      * @param batch_size the size of the batch.
      */
-    void transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
+    inline void transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
     {
         // This is the dimensions of the block, it is 64 rows and 8 cols however since each thread
         // transposes 8 elements, we consider the block size to be 64 x 64
@@ -98,15 +104,16 @@ namespace ntt
      * @param n length of `arr`.
      * @param batch_size the size of the batch.
      */
-     void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
+     inline void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
      {
+
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         naive_transpose_rev_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
      }
 
     // TODO: combine extends, transpose, bit permutation reverse
-    void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
+    inline void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
     {
         int number_of_threads = MAX_THREADS_BATCH;
         size_t n_extend = (size_t)1 << (logn + extension_rate_bits);
@@ -767,7 +774,7 @@ namespace ntt
                 gpu.HtoD(&d_input[0], input, total_input_elements);
             }
 
-            size_t total_output_elements = size * cfg.batches;
+            size_t total_output_elements = size * (cfg.batches + cfg.salt_size);
             int input_output_bytes = total_output_elements * sizeof(fr_t);
             dev_ptr_t<fr_t> d_output{
                 total_output_elements,
@@ -798,6 +805,12 @@ namespace ntt
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
+            }
+
+            if (cfg.salt_size > 0)
+            {
+                uint64_t seed = time(NULL);
+                gen_random_salt(&d_output[size * cfg.batches], size, cfg.salt_size, seed, gpu);
             }
 
             if (!cfg.are_outputs_on_device)

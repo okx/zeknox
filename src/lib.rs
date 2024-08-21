@@ -15,6 +15,8 @@ extern "C" {
 
     fn init_cuda();
 
+    fn init_cuda_degree(max_degree: usize);
+
     fn compute_ntt(
         device_id: usize,
         inout: *mut core::ffi::c_void,
@@ -372,6 +374,12 @@ pub fn init_coset_rs(device_id: usize, lg_n: usize, coset_gen: u64) {
 pub fn init_cuda_rs() {
     unsafe {
         init_cuda();
+    }
+}
+
+pub fn init_cuda_degree_rs(max_degree: usize) {
+    unsafe {
+        init_cuda_degree(max_degree);
     }
 }
 

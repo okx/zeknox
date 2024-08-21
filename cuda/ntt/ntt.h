@@ -33,11 +33,12 @@ namespace Ntt_Types
         InputOutputOrder order;     /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value:
                                      *   `InputOutputOrder::NN`. */
         Type ntt_type;
-        uint32_t extension_rate_bits; 
+        uint32_t extension_rate_bits;
         bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
         bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
         bool with_coset;
         bool is_multi_gpu;
+        uint32_t salt_size;
     };
 
     struct TransposeConfig

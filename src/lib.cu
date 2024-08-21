@@ -184,7 +184,26 @@ void init_cuda() {
     for (size_t d = 0; d < num_of_gpus; d++)
     {
         init_coset(d, 24, generator);
-        for (size_t k = 10; k < 25; k++)
+        for (size_t k = 2; k < 25; k++)
+        {
+            init_twiddle_factors(d, k);
+        }
+    }
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+void init_cuda_degree(uint32_t max_degree) {
+    // This is taken from Plonky2 field (MULTIPLICATIVE_GROUP_GENERATOR = 7)
+    const fr_t generator = fr_t(7);
+
+    size_t num_of_gpus = ngpus();
+
+    for (size_t d = 0; d < num_of_gpus; d++)
+    {
+        init_coset(d, max_degree, generator);
+        for (size_t k = 2; k <= max_degree; k++)
         {
             init_twiddle_factors(d, k);
         }
