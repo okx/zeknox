@@ -92,8 +92,8 @@ namespace ntt
         // Number of threads is max_threads and we create our 2d thread dimensions with 64x8 threads
         // Which constraints to the max threads defined prior
         int number_of_threads = MAX_NUM_THREADS;
-        dim3 threads_dim = dim3(32, 8);
-        dim3 blocks_dim = dim3(blocks_per_col, blocks_per_row);
+        dim3 threads_dim = dim3(8, 32);
+        dim3 blocks_dim = dim3(blocks_per_row, blocks_per_col);
         transpose_rev_kernel<<<blocks_dim, threads_dim, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
     }
 
@@ -303,7 +303,6 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], input, total_elements);
             }
 
@@ -318,13 +317,8 @@ namespace ntt
             {
                 d_transpose_output.set_device_ptr(output);
             }
-            else
-            {
-                d_transpose_output.alloc();
-            }
 
             transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
 
             if (!cfg.are_outputs_on_device)
             {
@@ -371,7 +365,6 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], input, total_elements);
             }
 
@@ -386,14 +379,8 @@ namespace ntt
             {
                 d_transpose_output.set_device_ptr(output);
             }
-            else
-            {
-                d_transpose_output.alloc();
-            }
-
 
             naive_transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
 
             if (!cfg.are_outputs_on_device)
             {
@@ -519,7 +506,6 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], inout, total_elements);
             }
 
@@ -733,7 +719,6 @@ namespace ntt
 
         try
         {
-
             gpu.select();
             // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d, direction: %d, batches: %d, are_outputs_on_device: %d, are_inputs_on_device: %d\n", lg_n, cfg.extension_rate_bits, direction,
             //        cfg.batches,
@@ -770,7 +755,6 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], input, total_input_elements);
             }
 
@@ -785,12 +769,7 @@ namespace ntt
 
             if (cfg.are_outputs_on_device)
             {
-                // printf("set output device pointer: %x\n", output);
                 d_output.set_device_ptr(output);
-            }
-            else
-            {
-                d_output.alloc();
             }
 
             extend_inputs_batch(&d_output[0], &d_input[0], (size_t)1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);

@@ -12,6 +12,7 @@
 #include "thread_pool_t.hpp"
 #include "exception.cuh"
 #include "slice_t.hpp"
+#include "assert.h"
 
 #ifndef WARP_SZ
 #define WARP_SZ 32
@@ -482,14 +483,6 @@ public:
     void set_device_ptr(T* ptr) {
         d_ptr = ptr;
     }
-    void alloc()
-    {
-        if (n_elements)
-        {
-            // printf("Try to alloc %ld elements %ld B\n", n_elements, n_elements * sizeof(T));
-            CUDA_OK(cudaMallocAsync(&d_ptr, n_elements * sizeof(T), stream));
-        }
-    }
     dev_ptr_t &operator=(const dev_ptr_t &r) = delete; // Copy assignment operator explicitly deleted
     ~dev_ptr_t()
     {
@@ -506,6 +499,19 @@ public:
     inline operator void *() const { return (void *)d_ptr; }
     inline const T &operator[](size_t i) const { return d_ptr[i]; }
     inline T &operator[](size_t i) { return d_ptr[i]; }
+
+private:
+    void alloc()
+    {
+        // should not reach this
+        assert(d_ptr == nullptr);
+
+        if (n_elements)
+        {
+            // printf("Try to alloc %ld elements %ld B\n", n_elements, n_elements * sizeof(T));
+            CUDA_OK(cudaMallocAsync(&d_ptr, n_elements * sizeof(T), stream));
+        }
+    }
 };
 
 #endif

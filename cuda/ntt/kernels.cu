@@ -101,15 +101,15 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
 	__shared__ fr_t block[BLOCK_DIM][BLOCK_DIM+1];
 
     // Get indexes
-    int j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.y);
-    int i_idx = blockIdx.x * BLOCK_DIM + threadIdx.x;
+    int j_idx = blockIdx.x * BLOCK_DIM + (4*threadIdx.x);
+    int i_idx = blockIdx.y * BLOCK_DIM + threadIdx.y;
 
     int idx = i_idx * n + j_idx;
 
 	// read the matrix tile into shared memory in its transposed position
     for(int i = 0; i < 4; i++){
         if((i_idx < batch_size) && ((j_idx+i) < n)){
-            block[(4 * threadIdx.y) + i][threadIdx.x] = in_arr[idx + i];
+            block[(4 * threadIdx.x) + i][threadIdx.y] = in_arr[idx + i];
         }
     }
 
@@ -117,8 +117,8 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
 	__syncthreads();
 
     // calculated transposed indexes
-    j_idx = blockIdx.x * BLOCK_DIM + (4*threadIdx.y);
-    i_idx = blockIdx.y * BLOCK_DIM + threadIdx.x;
+    j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.x);
+    i_idx = blockIdx.x * BLOCK_DIM + threadIdx.y;
 
     int i_idx_rev = __brev(i_idx) >> (32 - lg_n);
 
@@ -127,7 +127,7 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
 	// write the transposed matrix tile to global memory (out_arr) in linear order
 	for(int i = 0; i < 4; i++){
         if((i_idx < n) && ((j_idx+i) < batch_size)){
-            out_arr[idx+ i] = block[threadIdx.x][(4 * threadIdx.y) + i];
+            out_arr[idx+ i] = block[threadIdx.y][(4 * threadIdx.x) + i];
         }
     }
 }

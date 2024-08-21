@@ -407,7 +407,7 @@ fn test_naive_transpose_rev() {
 
 #[test]
 fn test_transpose_rev() {
-    let lg_domain_size = 20;
+    let lg_domain_size = 22;
     let domain_size = 1usize << lg_domain_size;
     let batches = 85;
 
