@@ -250,7 +250,7 @@ pub fn lde_batch_multi_gpu<T>(
     total_num_output_elements: usize
 ) {
     let err = unsafe {
-        println!("In compute_batched_lde_multi_gpu {:?}", total_num_input_elements);
+        // println!("In compute_batched_lde_multi_gpu {:?}", total_num_input_elements);
         compute_batched_lde_multi_gpu(
             output as *mut core::ffi::c_void,
             input as *mut core::ffi::c_void,

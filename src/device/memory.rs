@@ -106,6 +106,12 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
             let _ = cudaSetDevice(device_id);
+            let mut tmem: usize = 0;
+            let mut fmem: usize = 0;
+            cudaMemGetInfo(&mut fmem, &mut tmem).wrap()?;
+            if size > fmem {
+                println!("WARNING: not enough free GPU memory (needed: {:?} B, available: {:?} B, total {:?} B)!", size, fmem, tmem);
+            }
             cudaMallocAsync(
                 device_ptr.as_mut_ptr(),
                 size,
