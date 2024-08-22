@@ -1,5 +1,5 @@
 use crate::device::bindings::{
-    cudaSetDevice, cudaFree, cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
+    cudaSetDevice, cudaFree, cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind, cudaMemGetInfo
 };
 use crate::device::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::device::stream::CudaStream;
@@ -83,6 +83,12 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
             let _ = cudaSetDevice(device_id);
+            let mut tmem: usize = 0;
+            let mut fmem: usize = 0;
+            cudaMemGetInfo(&mut fmem, &mut tmem).wrap()?;
+            if size > fmem {
+                println!("WARNING: not enough free GPU memory (needed: {:?} B, available: {:?} B, total {:?} B)!", size, fmem, tmem);
+            }
             cudaMalloc(device_ptr.as_mut_ptr(), size).wrap()?;
             Ok(Self::Device(device_id, from_raw_parts_mut(
                 device_ptr.assume_init() as *mut T,

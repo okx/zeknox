@@ -62,6 +62,8 @@ fn build_device_wrapper() {
     .allowlist_function("cudaFreeAsync")
     .allowlist_function("cudaMallocAsync")
     //
+    .allowlist_function("cudaMemGetInfo")
+    //
     .generate()
     .expect("Unable to generate bindings");
 

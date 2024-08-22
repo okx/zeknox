@@ -201,6 +201,9 @@ extern "C" {
     pub fn cudaFree(devPtr: *mut ::std::os::raw::c_void) -> cudaError_t;
 }
 extern "C" {
+    pub fn cudaMemGetInfo(free: *mut usize, total: *mut usize) -> cudaError_t;
+}
+extern "C" {
     pub fn cudaMemcpy(
         dst: *mut ::std::os::raw::c_void,
         src: *const ::std::os::raw::c_void,
