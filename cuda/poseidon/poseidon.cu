@@ -841,7 +841,7 @@ __device__ gl64_t *PoseidonPermutationGPU::squeeze(u32 size)
     return state;
 }
 
-__device__ void gpu_poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+__device__ void PoseidonHasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
     if (num_inputs <= NUM_HASH_OUT_ELTS)
     {
@@ -905,7 +905,7 @@ __device__ void gpu_poseidon_hash_one_stride(gl64_t *inputs, u32 num_inputs, gl6
     }
 }
 
-__device__ void gpu_poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+__device__ void PoseidonHasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
     PoseidonPermutationGPU perm = PoseidonPermutationGPU();
     perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);

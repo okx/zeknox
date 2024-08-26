@@ -1479,4 +1479,14 @@ EXTERNC HashOut two_to_one(HashOut left, HashOut right);
 
 EXTERNC void test_MDS(GoldilocksField *inputs, u64 num_inputs);
 
+#include "hasher.hpp"
+
+class PoseidonHasher : public Hasher {
+public:
+
+void cpu_hash_one(uint64_t *input, uint64_t size, uint64_t *output);
+void cpu_hash_two(uint64_t *input1, uint64_t *input2, uint64_t *output);
+
+};
+
 #endif // __POSEIDON_HPP__

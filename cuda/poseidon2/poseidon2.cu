@@ -1,4 +1,4 @@
-#include "poseidon2.cuh"
+#include "poseidon2.hpp"
 
 #ifdef USE_CUDA
 __device__ __constant__ u64 GPU_MATRIX_DIAG_12_GOLDILOCKS[12] = {
@@ -210,7 +210,7 @@ __device__ void Poseidon2PermutationGPU::permute2()
     poseidon2(state);
 }
 
-__device__ void gpu_poseidon2_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+__device__ void Poseidon2Hasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
     if (num_inputs <= NUM_HASH_OUT_ELTS)
     {
@@ -242,7 +242,7 @@ __device__ void gpu_poseidon2_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *h
     }
 }
 
-__device__ void gpu_poseidon2_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+__device__ void Poseidon2Hasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
     Poseidon2PermutationGPU perm = Poseidon2PermutationGPU();
     perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
@@ -262,7 +262,7 @@ inline void Poseidon2Permutation::permute2()
     poseidon2(state);
 }
 
-void cpu_poseidon2_hash_one(u64 *data, u32 data_size, u64 *digest)
+void Poseidon2Hasher::cpu_hash_one(u64 *data, u64 data_size, u64 *digest)
 {
     if (data_size <= NUM_HASH_OUT_ELTS)
     {
@@ -297,7 +297,7 @@ void cpu_poseidon2_hash_one(u64 *data, u32 data_size, u64 *digest)
     free(in);
 }
 
-void cpu_poseidon2_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
+void Poseidon2Hasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
     HashOut x = HashOut(digest_left, NUM_HASH_OUT_ELTS);
     HashOut y = HashOut(digest_right, NUM_HASH_OUT_ELTS);

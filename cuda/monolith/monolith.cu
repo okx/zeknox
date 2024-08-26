@@ -1,4 +1,4 @@
-#include "monolith.cuh"
+#include "monolith.hpp"
 #include "gl64_t.cuh"
 
 #define LOOKUP_BITS 8
@@ -237,7 +237,7 @@ __device__ void MonolithPermutationGPU::permute2()
     monolith((uint64_t *)state);
 }
 
-__device__ void gpu_monolith_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+__device__ void MonolithHasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
     if (num_inputs <= NUM_HASH_OUT_ELTS)
     {
@@ -269,7 +269,7 @@ __device__ void gpu_monolith_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *ha
     }
 }
 
-__device__ void gpu_monolith_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+__device__ void MonolithHasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
     MonolithPermutationGPU perm = MonolithPermutationGPU();
     perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
@@ -289,7 +289,7 @@ inline void MonolithPermutation::permute2()
     monolith((uint64_t *)state);
 }
 
-void cpu_monolith_hash_one(u64 *data, u32 data_size, u64 *digest)
+void MonolithHasher::cpu_hash_one(u64 *data, u64 data_size, u64 *digest)
 {
     if (data_size <= NUM_HASH_OUT_ELTS)
     {
@@ -324,7 +324,7 @@ void cpu_monolith_hash_one(u64 *data, u32 data_size, u64 *digest)
     free(in);
 }
 
-void cpu_monolith_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
+void MonolithHasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
     HashOut x = HashOut(digest_left, NUM_HASH_OUT_ELTS);
     HashOut y = HashOut(digest_right, NUM_HASH_OUT_ELTS);

@@ -31,4 +31,4 @@ EXTERNC void ext_keccak_hash_or_noop(uint64_t *digest, uint64_t *data, uint64_t 
 EXTERNC void ext_keccak_hash_of_two(uint64_t *digest, uint64_t *digest_left, uint64_t *digest_right);
 #endif // RUST_POSEIDON
 
-#endif // _POSEIDON_H_
+#endif // _KECCAK_H_

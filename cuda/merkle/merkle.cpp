@@ -7,11 +7,13 @@
 #include "merkle.h"
 #include "merkle_private.h"
 #include "merkle_c.h"
-#include "poseidon.h"
-#include "poseidon2.h"
-#include "poseidon_bn128.h"
-#include "keccak.h"
-#include "monolith.h"
+
+#include "hasher.hpp"
+#include "keccak.hpp"
+#include "poseidon.hpp"
+#include "poseidon_bn128.hpp"
+#include "poseidon2.hpp"
+#include "monolith.hpp"
 
 // Global vars
 u64 *global_digests_buf = NULL;
@@ -27,47 +29,6 @@ int *global_round_size = NULL;
 int global_max_round = 0;
 int global_max_round_size = 0;
 
-/*
- * Selectors of CPU hash functions.
- */
-inline void cpu_hash_one_ptr(u64 *input, u32 size, u64 *data, uint64_t hash_type)
-{
-    switch (hash_type)
-    {
-    case HashPoseidon:
-        return cpu_poseidon_hash_one(input, size, data);
-    case HashKeccak:
-        return cpu_keccak_hash_one(input, size, data);
-    case HashPoseidonBN128:
-        return cpu_poseidon_bn128_hash_one(input, size, data);
-    case HashPoseidon2:
-        return cpu_poseidon2_hash_one(input, size, data);
-    case HashMonolith:
-        return cpu_monolith_hash_one(input, size, data);
-    default:
-        return;
-    }
-}
-
-inline void cpu_hash_two_ptr(u64 *hash1, u64 *hash2, u64 *hash, uint64_t hash_type)
-{
-    switch (hash_type)
-    {
-    case HashPoseidon:
-        return cpu_poseidon_hash_two(hash1, hash2, hash);
-    case HashKeccak:
-        return cpu_keccak_hash_two(hash1, hash2, hash);
-    case HashPoseidonBN128:
-        return cpu_poseidon_bn128_hash_two(hash1, hash2, hash);
-    case HashPoseidon2:
-        return cpu_poseidon2_hash_two(hash1, hash2, hash);
-    case HashMonolith:
-        return cpu_monolith_hash_two(hash1, hash2, hash);
-    default:
-        return;
-    }
-}
-
 void fill_digests_buf_linear_cpu(
     u64 digests_buf_size,
     u64 cap_buf_size,
@@ -76,17 +37,36 @@ void fill_digests_buf_linear_cpu(
     u64 cap_height,
     u64 hash_type)
 {
+    Hasher *hasher = new PoseidonHasher();
+    switch (hash_type) {
+        case HashKeccak:
+            hasher = new KeccakHasher();
+            break;
+        case HashPoseidon2:
+            hasher = new Poseidon2Hasher();
+            break;
+        case HashPoseidonBN128:
+            hasher = new PoseidonBN128Hasher();
+            break;
+        case HashMonolith:
+            hasher = new MonolithHasher();
+            break;
+        default:
+            break;
+    }
+
     if (cap_buf_size == leaves_buf_size)
     {
 #pragma omp parallel for
-        for (int i = 0; i < leaves_buf_size; i++)
+        for (u64 i = 0; i < leaves_buf_size; i++)
         {
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_or_noop(global_digests_buf + i * HASH_SIZE_U64, global_leaves_buf + (i * leaf_size), leaf_size);
 #else
-            cpu_hash_one_ptr(global_leaves_buf + (i * leaf_size), leaf_size, global_digests_buf + i * HASH_SIZE_U64, hash_type);
+            hasher->cpu_hash_one(global_leaves_buf + (i * leaf_size), leaf_size, global_digests_buf + i * HASH_SIZE_U64);
 #endif
         }
+        delete hasher;
         return;
     }
 
@@ -107,16 +87,16 @@ void fill_digests_buf_linear_cpu(
         // if one leaf => return it hash
         if (subtree_leaves_len == 1)
         {
-            cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr, hash_type);
+            hasher->cpu_hash_one(leaves_buf_ptr, leaf_size, digests_buf_ptr);
             memcpy(cap_buf_ptr, digests_buf_ptr, HASH_SIZE);
             continue;
         }
         // if two leaves => return their concat hash
         if (subtree_leaves_len == 2)
         {
-            cpu_hash_one_ptr(leaves_buf_ptr, leaf_size, digests_buf_ptr, hash_type);
-            cpu_hash_one_ptr(leaves_buf_ptr + leaf_size, leaf_size, digests_buf_ptr + HASH_SIZE_U64, hash_type);
-            cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr, hash_type);
+            hasher->cpu_hash_one(leaves_buf_ptr, leaf_size, digests_buf_ptr);
+            hasher->cpu_hash_one(leaves_buf_ptr + leaf_size, leaf_size, digests_buf_ptr + HASH_SIZE_U64);
+            hasher->cpu_hash_two(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
             continue;
         }
 
@@ -128,7 +108,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
             ext_poseidon_hash_or_noop(digests_curr_ptr + (i * HASH_SIZE_U64), leaves_buf_ptr + (i * leaf_size), leaf_size);
 #else
-            cpu_hash_one_ptr(leaves_buf_ptr + (i * leaf_size), leaf_size, digests_curr_ptr + (i * HASH_SIZE_U64), hash_type);
+            hasher->cpu_hash_one(leaves_buf_ptr + (i * leaf_size), leaf_size, digests_curr_ptr + (i * HASH_SIZE_U64));
 #endif
         }
 
@@ -153,7 +133,7 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
                 ext_poseidon_hash_of_two(digests_buf_ptr2 + (idx * HASH_SIZE_U64), left_ptr, right_ptr);
 #else
-                cpu_hash_two_ptr(left_ptr, right_ptr, digests_buf_ptr2 + (idx * HASH_SIZE_U64), hash_type);
+                hasher->cpu_hash_two(left_ptr, right_ptr, digests_buf_ptr2 + (idx * HASH_SIZE_U64));
 #endif
             }
         }
@@ -162,10 +142,12 @@ void fill_digests_buf_linear_cpu(
 #ifdef RUST_POSEIDON
         ext_poseidon_hash_of_two(cap_buf_ptr, digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64);
 #else
-        cpu_hash_two_ptr(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr, hash_type);
+        hasher->cpu_hash_two(digests_buf_ptr, digests_buf_ptr + HASH_SIZE_U64, cap_buf_ptr);
 #endif
 
     } // end for k
+
+    delete hasher;
 }
 
 /**
@@ -184,7 +166,7 @@ void fill_digests_buf_linear_cpu(
 void generate_random_leaves(u64 *leaves, u32 n_leaves, u32 leaf_size)
 {
     srand(time(NULL));
-    for (int i = 0; i < n_leaves * leaf_size; i++)
+    for (u64 i = 0; i < n_leaves * leaf_size; i++)
     {
         u32 r = rand();
         leaves[i] = ((u64)r << 32) + r * 88958514;

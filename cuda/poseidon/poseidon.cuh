@@ -2,9 +2,12 @@
 #define __POSEIDON_V2_CUH__
 
 #include "int_types.h"
-#include "gl64_t.cuh"
+#include "hasher.hpp"
 #include "cuda_utils.cuh"
-#include "poseidon.h"
+
+#ifdef USE_CUDA
+#include "gl64_t.cuh"
+#endif
 
 #define MIN(x, y) (x < y) ? x : y
 
@@ -20,9 +23,27 @@
 #define N_ROUNDS 30
 #define MAX_WIDTH 12
 
+#ifdef USE_CUDA
 extern __device__ u32 GPU_MDS_MATRIX_CIRC[12];
 extern __device__ u32 GPU_MDS_MATRIX_DIAG[12];
 extern __device__ u64 GPU_ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS];
+#endif
+
+
+class PoseidonHasher : public Hasher {
+public:
+
+#ifdef USE_CUDA
+__host__ void cpu_hash_one(uint64_t *input, uint64_t size, uint64_t *output);
+__host__ void cpu_hash_two(uint64_t *input1, uint64_t *input2, uint64_t *output);
+__device__ void gpu_hash_one(gl64_t *input, uint32_t size, gl64_t *output);
+__device__ void gpu_hash_two(gl64_t *input1, gl64_t *input2, gl64_t *output);
+#else
+void cpu_hash_one(uint64_t *input, uint64_t size, uint64_t *output);
+void cpu_hash_two(uint64_t *input1, uint64_t *input2, uint64_t *output);
+#endif
+
+};
 
 #ifdef USE_CUDA
 class PoseidonPermutationGPU

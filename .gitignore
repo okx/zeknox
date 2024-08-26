@@ -11,4 +11,5 @@ cuda/util/deviceQuery/deviceQuery
 *.o
 *.so
 *.a
+*.exe
 Cargo.lock

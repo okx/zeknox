@@ -4,62 +4,42 @@
 #include "merkle_private.h"
 #include "merkle_c.h"
 
-#include "cuda_utils.cuh"
+#include "hasher.hpp"
+#include "keccak.hpp"
 #include "poseidon.cuh"
-#include "poseidon.h"
-#include "poseidon2.h"
-#include "poseidon_bn128.h"
-#include "keccak.h"
-#include "monolith.h"
+#include "poseidon_bn128.hpp"
+#include "poseidon2.hpp"
+#include "monolith.hpp"
 
-// TODO - benchmark and select best TPB
+#include "cuda_utils.cuh"
+
+// 64 threads per block achives the best performance
 #define TPB 64
 
-/*
- * Selectors of GPU hash functions.
- */
-__device__ void gpu_hash_one(gl64_t *lptr, uint32_t leaf_size, gl64_t *dptr, uint64_t hash_type)
+__global__ void init_hasher(Hasher** hasher, uint64_t hash_type)
 {
-    switch (hash_type)
-    {
-    case HashPoseidon:
-        return gpu_poseidon_hash_one(lptr, leaf_size, dptr);
-    case HashKeccak:
-        return gpu_keccak_hash_one(lptr, leaf_size, dptr);
-    case HashPoseidonBN128:
-        return gpu_poseidon_bn128_hash_one(lptr, leaf_size, dptr);
-    case HashPoseidon2:
-        return gpu_poseidon2_hash_one(lptr, leaf_size, dptr);
-    case HashMonolith:
-        return gpu_monolith_hash_one(lptr, leaf_size, dptr);
-    default:
-        return;
-    }
-}
-
-__device__ void gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash, uint64_t hash_type)
-{
-    switch (hash_type)
-    {
-    case HashPoseidon:
-        return gpu_poseidon_hash_two(hash1, hash2, hash);
-    case HashKeccak:
-        return gpu_keccak_hash_two(hash1, hash2, hash);
-    case HashPoseidonBN128:
-        return gpu_poseidon_bn128_hash_two(hash1, hash2, hash);
-    case HashPoseidon2:
-        return gpu_poseidon2_hash_two(hash1, hash2, hash);
-    case HashMonolith:
-        return gpu_monolith_hash_two(hash1, hash2, hash);
-    default:
-        return;
+    switch (hash_type) {
+        case HashKeccak:
+            *hasher = new KeccakHasher();
+            break;
+        case HashPoseidon2:
+            *hasher = new Poseidon2Hasher();
+            break;
+        case HashPoseidonBN128:
+            *hasher = new PoseidonBN128Hasher();
+            break;
+        case HashMonolith:
+            *hasher = new MonolithHasher();
+            break;
+        default:
+            *hasher = new PoseidonHasher();
     }
 }
 
 /*
  * Compute only leaves hashes with direct mapping (digest i corresponds to leaf i).
  */
-__global__ void compute_leaves_hashes_direct(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, uint64_t hash_type)
+__global__ void compute_leaves_hashes_direct(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= leaves_count)
@@ -67,7 +47,7 @@ __global__ void compute_leaves_hashes_direct(u64 *leaves, u32 leaves_count, u32 
 
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + (tid * HASH_SIZE_U64);
-    gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
 
     // if with stride
     // u64 *lptr = leaves + tid;
@@ -78,7 +58,7 @@ __global__ void compute_leaves_hashes_direct(u64 *leaves, u32 leaves_count, u32 
 /*
  * Compute only leaves hashes with direct mapping per subtree over the entire digest buffer.
  */
-__global__ void compute_leaves_hashes_linear_all(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, u32 subtree_leaves_len, u32 subtree_digests_len, uint64_t hash_type)
+__global__ void compute_leaves_hashes_linear_all(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, u32 subtree_leaves_len, u32 subtree_digests_len, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= leaves_count)
@@ -92,7 +72,7 @@ __global__ void compute_leaves_hashes_linear_all(u64 *leaves, u32 leaves_count, 
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + didx * HASH_SIZE_U64;
 
-    gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
 
     // if with stride
     // u64 *lptr = leaves + tid;
@@ -103,7 +83,7 @@ __global__ void compute_leaves_hashes_linear_all(u64 *leaves, u32 leaves_count, 
 /*
  * Compute only leaves hashes with direct mapping per subtree (one subtree per GPU).
  */
-__global__ void compute_leaves_hashes_linear_per_gpu(u64 *leaves, u32 leaf_size, u64 *digests_buf, u32 subtree_leaves_len, u32 subtree_digests_len, uint64_t hash_type)
+__global__ void compute_leaves_hashes_linear_per_gpu(u64 *leaves, u32 leaf_size, u64 *digests_buf, u32 subtree_leaves_len, u32 subtree_digests_len, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= subtree_leaves_len)
@@ -113,13 +93,13 @@ __global__ void compute_leaves_hashes_linear_per_gpu(u64 *leaves, u32 leaf_size,
     // printf("%d\n", didx);
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + (didx * HASH_SIZE_U64);
-    gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
 }
 
 /*
  * Compute leaves hashes with indirect mapping (digest at digest_idx[i] corresponds to leaf i).
  */
-__global__ void compute_leaves_hashes(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, u32 *digest_idx, uint64_t hash_type)
+__global__ void compute_leaves_hashes(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, u32 *digest_idx, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= leaves_count)
@@ -127,13 +107,13 @@ __global__ void compute_leaves_hashes(u64 *leaves, u32 leaves_count, u32 leaf_si
 
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + digest_idx[tid] * HASH_SIZE_U64;
-    gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
 }
 
 /*
  * Compute leaves hashes with indirect mapping and offset (digest at digest_idx[i] corresponds to leaf i).
  */
-__global__ void compute_leaves_hashes_offset(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, u32 *digest_idx, u64 offset, uint64_t hash_type)
+__global__ void compute_leaves_hashes_offset(u64 *leaves, u32 leaves_count, u32 leaf_size, u64 *digests_buf, u32 *digest_idx, u64 offset, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= leaves_count)
@@ -141,13 +121,13 @@ __global__ void compute_leaves_hashes_offset(u64 *leaves, u32 leaves_count, u32 
 
     u64 *lptr = leaves + (tid * leaf_size);
     u64 *dptr = digests_buf + (digest_idx[tid] - offset) * HASH_SIZE_U64;
-    gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_one((gl64_t *)lptr, leaf_size, (gl64_t *)dptr);
 }
 
 /*
  * Compute internal Merkle tree hashes in linear structure. Only one round.
  */
-__global__ void compute_internal_hashes_linear_all(u64 *digests_buf, u32 round_size, u32 last_idx, u32 subtree_count, u32 subtree_digests_len, uint64_t hash_type)
+__global__ void compute_internal_hashes_linear_all(u64 *digests_buf, u32 round_size, u32 last_idx, u32 subtree_count, u32 subtree_digests_len, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= round_size * subtree_count)
@@ -162,10 +142,10 @@ __global__ void compute_internal_hashes_linear_all(u64 *digests_buf, u32 round_s
     u64 *sptr2 = dptrs + (2 * (idx + 1) + 1 + last_idx) * HASH_SIZE_U64;
 
     // compute hash
-    gpu_hash_two((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_two((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
 }
 
-__global__ void compute_internal_hashes_linear_per_gpu(u64 *digests_buf, u32 round_size, u32 last_idx, uint64_t hash_type)
+__global__ void compute_internal_hashes_linear_per_gpu(u64 *digests_buf, u32 round_size, u32 last_idx, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= round_size)
@@ -178,10 +158,10 @@ __global__ void compute_internal_hashes_linear_per_gpu(u64 *digests_buf, u32 rou
     u64 *sptr2 = dptrs + (2 * (tid + 1) + 1 + last_idx) * HASH_SIZE_U64;
 
     // compute hash
-    gpu_hash_two((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_two((gl64_t *)sptr1, (gl64_t *)sptr2, (gl64_t *)dptr);
 }
 
-__global__ void compute_caps_hashes_linear(u64 *caps_buf, u64 *digests_buf, u64 cap_buf_size, u64 subtree_digests_len, uint64_t hash_type)
+__global__ void compute_caps_hashes_linear(u64 *caps_buf, u64 *digests_buf, u64 cap_buf_size, u64 subtree_digests_len, Hasher **hasher)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= cap_buf_size)
@@ -190,7 +170,7 @@ __global__ void compute_caps_hashes_linear(u64 *caps_buf, u64 *digests_buf, u64 
     // compute hash
     u64 *sptr1 = digests_buf + tid * subtree_digests_len * HASH_SIZE_U64;
     u64 *dptr = caps_buf + tid * HASH_SIZE_U64;
-    gpu_hash_two((gl64_t *)sptr1, (gl64_t *)(sptr1 + HASH_SIZE_U64), (gl64_t *)dptr, hash_type);
+    (*hasher)->gpu_hash_two((gl64_t *)sptr1, (gl64_t *)(sptr1 + HASH_SIZE_U64), (gl64_t *)dptr);
 }
 
 void fill_digests_buf_linear_gpu_with_gpu_ptr(
@@ -207,10 +187,16 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
 {
     CHECKCUDAERR(cudaSetDevice(gpu_id));
 
+    Hasher **gpu_hasher;
+    CHECKCUDAERR(cudaMalloc(&gpu_hasher, sizeof(Hasher*)));
+    init_hasher<<<1,1>>>(gpu_hasher, hash_type);
+
     // (special case) compute leaf hashes on GPU
     if (cap_buf_size == leaves_buf_size)
     {
-        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr, hash_type);
+        compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr, gpu_hasher);
+
+        CHECKCUDAERR(cudaFree(gpu_hasher));
         return;
     }
 
@@ -227,25 +213,27 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     {
         if (subtree_leaves_len == 1)
         {
-            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr, hash_type);
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr, gpu_hasher);
         }
         else
         {
-            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, hash_type);
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, gpu_hasher);
             if (cap_buf_size <= TPB)
             {
-                compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+                compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher);
             }
             else
             {
-                compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+                compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher);
             }
         }
+
+        CHECKCUDAERR(cudaFree(gpu_hasher));
         return;
     }
 
     // (general case) compute leaf hashes on GPU
-    compute_leaves_hashes_linear_all<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, subtree_leaves_len, subtree_digests_len, hash_type);
+    compute_leaves_hashes_linear_all<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, subtree_leaves_len, subtree_digests_len, gpu_hasher);
 
     // compute internal hashes on GPU
     u64 r = (u64)log2(subtree_leaves_len) - 1;
@@ -255,25 +243,27 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     {
         // printf("GPU Round (64) %u\n", r);
         last_index -= (1 << r);
-        compute_internal_hashes_linear_all<<<((1 << r) * cap_buf_size) / TPB + 1, TPB>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len, hash_type);
+        compute_internal_hashes_linear_all<<<((1 << r) * cap_buf_size) / TPB + 1, TPB>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len, gpu_hasher);
     }
 
     for (; r > 0; r--)
     {
         // printf("GPU Round (1) %u\n", r);
         last_index -= (1 << r);
-        compute_internal_hashes_linear_all<<<1, TPB>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len, hash_type);
+        compute_internal_hashes_linear_all<<<1, TPB>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len, gpu_hasher);
     }
 
     // compute cap hashes on GPU
     if (cap_buf_size <= TPB)
     {
-        compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+        compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher);
     }
     else
     {
-        compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+        compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher);
     }
+
+    CHECKCUDAERR(cudaFree(gpu_hasher));
 }
 
 // The provided pointers need to be on GPU 0
@@ -296,6 +286,14 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     u64 *gpu_digests_ptrs[16];
     u64 *gpu_caps_ptrs[16];
     gpu_leaves_ptrs[0] = (u64 *)leaves_buf_gpu_ptr;
+    Hasher **gpu_hasher[16];
+
+    for (int i = 0; i < nDevices; i++)
+    {
+        CHECKCUDAERR(cudaSetDevice(i));
+        CHECKCUDAERR(cudaMalloc(&gpu_hasher[i], sizeof(Hasher*)));
+        init_hasher<<<1,1>>>(gpu_hasher[i], hash_type);
+    }
 
     // (special case) compute leaf hashes on GPU
     if (cap_buf_size == leaves_buf_size)
@@ -320,7 +318,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
         for (int i = 0; i < nDevices; i++)
         {
             CHECKCUDAERR(cudaSetDevice(i));
-            compute_leaves_hashes_direct<<<leaves_buf_size / (nDevices * TPB) + 1, TPB>>>(gpu_leaves_ptrs[i], leaves_buf_size / nDevices, leaf_size, gpu_caps_ptrs[i], hash_type);
+            compute_leaves_hashes_direct<<<leaves_buf_size / (nDevices * TPB) + 1, TPB>>>(gpu_leaves_ptrs[i], leaves_buf_size / nDevices, leaf_size, gpu_caps_ptrs[i], gpu_hasher[i]);
         }
 #pragma omp parallel for num_threads(nDevices)
         for (int i = 1; i < nDevices; i++)
@@ -333,6 +331,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
             CHECKCUDAERR(cudaSetDevice(i));
             CHECKCUDAERR(cudaStreamSynchronize(gpu_stream[i]));
             CHECKCUDAERR(cudaStreamDestroy(gpu_stream[i]));
+            CHECKCUDAERR(cudaFree(gpu_hasher[i]));
         }
 #pragma omp parallel for num_threads(nDevices)
         for (int i = 1; i < nDevices; i++)
@@ -358,19 +357,25 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
         CHECKCUDAERR(cudaSetDevice(0));
         if (subtree_leaves_len == 1)
         {
-            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr, hash_type);
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr, gpu_hasher[0]);
         }
         else
         {
-            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, hash_type);
+            compute_leaves_hashes_direct<<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, gpu_hasher[0]);
             if (cap_buf_size <= TPB)
             {
-                compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+                compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher[0]);
             }
             else
             {
-                compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+                compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher[0]);
             }
+        }
+
+        for (int i = 0; i < nDevices; i++)
+        {
+            CHECKCUDAERR(cudaSetDevice(i));
+            CHECKCUDAERR(cudaFree(gpu_hasher[i]));
         }
         return;
     }
@@ -409,7 +414,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
 
             int blocks = (subtree_leaves_len % TPB == 0) ? subtree_leaves_len / TPB : subtree_leaves_len / TPB + 1;
             int threads = (subtree_leaves_len < TPB) ? subtree_leaves_len : TPB;
-            compute_leaves_hashes_linear_per_gpu<<<blocks, threads, 0, gpu_stream[i]>>>(gpu_leaves_ptrs[i], leaf_size, gpu_digests_ptrs[i], subtree_leaves_len, subtree_digests_len, hash_type);
+            compute_leaves_hashes_linear_per_gpu<<<blocks, threads, 0, gpu_stream[i]>>>(gpu_leaves_ptrs[i], leaf_size, gpu_digests_ptrs[i], subtree_leaves_len, subtree_digests_len, gpu_hasher[i]);
 
             u64 r = (u64)log2(subtree_leaves_len) - 1;
             u64 last_index = subtree_digests_len - subtree_leaves_len;
@@ -417,12 +422,12 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
             for (; (1 << r) > TPB; r--)
             {
                 last_index -= (1 << r);
-                compute_internal_hashes_linear_per_gpu<<<(1 << r) / TPB + 1, TPB, 0, gpu_stream[i]>>>(gpu_digests_ptrs[i], (1 << r), last_index, hash_type);
+                compute_internal_hashes_linear_per_gpu<<<(1 << r) / TPB + 1, TPB, 0, gpu_stream[i]>>>(gpu_digests_ptrs[i], (1 << r), last_index, gpu_hasher[i]);
             }
             for (; r > 0; r--)
             {
                 last_index -= (1 << r);
-                compute_internal_hashes_linear_per_gpu<<<1, (1 << r), 0, gpu_stream[i]>>>(gpu_digests_ptrs[i], (1 << r), last_index, hash_type);
+                compute_internal_hashes_linear_per_gpu<<<1, (1 << r), 0, gpu_stream[i]>>>(gpu_digests_ptrs[i], (1 << r), last_index, gpu_hasher[i]);
             }
             CHECKCUDAERR(cudaMemcpyPeerAsync((u64 *)digests_buf_gpu_ptr + (k + i) * subtree_digests_len * HASH_SIZE_U64, 0, gpu_digests_ptrs[i], i, digests_size_bytes, gpu_stream[i]));
         }
@@ -438,11 +443,11 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     CHECKCUDAERR(cudaSetDevice(0));
     if (cap_buf_size <= TPB)
     {
-        compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+        compute_caps_hashes_linear<<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher[0]);
     }
     else
     {
-        compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, hash_type);
+        compute_caps_hashes_linear<<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len, gpu_hasher[0]);
     }
 
 #pragma omp parallel for num_threads(nDevices)
@@ -452,6 +457,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
         CHECKCUDAERR(cudaStreamDestroy(gpu_stream[i]));
         CHECKCUDAERR(cudaFree(gpu_leaves_ptrs[i]));
         CHECKCUDAERR(cudaFree(gpu_digests_ptrs[i]));
+        CHECKCUDAERR(cudaFree(gpu_hasher[i]));
     }
 }
 

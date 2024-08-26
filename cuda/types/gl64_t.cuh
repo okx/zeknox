@@ -62,6 +62,7 @@ public:
     inline gl64_t& operator&=(const uint64_t& b)
     {
         this->val &= b;
+        return *this;
     }
 
     inline gl64_t& operator+=(const gl64_t& b)

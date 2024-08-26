@@ -1,6 +1,6 @@
 #include "int_types.h"
 #include "element_bn128.cuh"
-#include "poseidon_bn128.h"
+#include "poseidon_bn128.hpp"
 
 #include "cuda_utils.cuh"
 
@@ -198,7 +198,7 @@ public:
 };
 
 #ifdef USE_CUDA
-DEVICE void gpu_poseidon_bn128_hash_one(gl64_t *data, u32 data_size, gl64_t *digest)
+DEVICE void PoseidonBN128Hasher::gpu_hash_one(gl64_t *data, u32 data_size, gl64_t *digest)
 {
 	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
 
@@ -216,7 +216,7 @@ DEVICE void gpu_poseidon_bn128_hash_one(gl64_t *data, u32 data_size, gl64_t *dig
 	}
 }
 #else
-DEVICE void cpu_poseidon_bn128_hash_one(u64 *data, u32 data_size, u64 *digest)
+DEVICE void PoseidonBN128Hasher::cpu_hash_one(u64 *data, u64 data_size, u64 *digest)
 {
 	assert(data_size > NUM_HASH_OUT_ELTS);
 
@@ -247,7 +247,7 @@ DEVICE void cpu_poseidon_bn128_hash_one(u64 *data, u32 data_size, u64 *digest)
 #endif
 
 #ifdef USE_CUDA
-DEVICE void gpu_poseidon_bn128_hash_two(gl64_t *digest_left, gl64_t *digest_right, gl64_t *digest)
+DEVICE void PoseidonBN128Hasher::gpu_hash_two(gl64_t *digest_left, gl64_t *digest_right, gl64_t *digest)
 {
 	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
 	perm.set_from_slice(digest_left, NUM_HASH_OUT_ELTS, 0);
@@ -260,7 +260,7 @@ DEVICE void gpu_poseidon_bn128_hash_two(gl64_t *digest_left, gl64_t *digest_righ
 	}
 }
 #else
-DEVICE void cpu_poseidon_bn128_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
+DEVICE void PoseidonBN128Hasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
 	HashOut in_l = HashOut(digest_left, NUM_HASH_OUT_ELTS);
 	HashOut in_r = HashOut(digest_right, NUM_HASH_OUT_ELTS);
