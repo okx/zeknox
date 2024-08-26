@@ -629,20 +629,10 @@ __device__ gl64_t PoseidonPermutationGPU::mds_row_shf(u32 r, gl64_t *v)
 
 __device__ void PoseidonPermutationGPU::mds_layer(gl64_t *state, gl64_t *result)
 {
-    for (u32 i = 0; i < SPONGE_WIDTH; i++)
-        result[i] = (uint64_t)0u;
-
-    gl64_t s[SPONGE_WIDTH];
-
-    for (int r = 0; r < SPONGE_WIDTH; r++)
-    {
-        s[r] = state[r];
-    }
-
     for (u32 r = 0; r < SPONGE_WIDTH; r++)
     {
         // here the result is already reduced
-        result[r] = mds_row_shf(r, s);
+        result[r] = mds_row_shf(r, state);
     }
 }
 
@@ -661,7 +651,8 @@ __device__ inline gl64_t PoseidonPermutationGPU::sbox_monomial(const gl64_t &x)
     gl64_t x2 = x * x;
     gl64_t x4 = x2 * x2;
     gl64_t x3 = x * x2;
-    return x3 * x4;
+    gl64_t xr = x3 * x4;
+    return xr;
 }
 
 __device__ inline void PoseidonPermutationGPU::sbox_layer(gl64_t *state)
@@ -803,7 +794,9 @@ __device__ gl64_t *PoseidonPermutationGPU::poseidon(gl64_t *input, gl64_t *rcons
 __device__ PoseidonPermutationGPU::PoseidonPermutationGPU()
 {
     for (int i = 0; i < SPONGE_WIDTH; i++)
-        state[i] = (uint64_t)0u;
+    {
+        state[i].zero();
+    }
 }
 
 __device__ void PoseidonPermutationGPU::set_from_slice(gl64_t *elts, u32 len, u32 start_idx)
@@ -812,6 +805,15 @@ __device__ void PoseidonPermutationGPU::set_from_slice(gl64_t *elts, u32 len, u3
     for (int i = 0; i < len; i++)
     {
         this->state[start_idx + i] = elts[i];
+    }
+}
+
+__device__ void PoseidonPermutationGPU::set_from_slice_stride(gl64_t *elts, u32 len, u32 start_idx, u32 stride)
+{
+    assert(start_idx + len <= SPONGE_WIDTH);
+    for (int i = 0; i < len; i++)
+    {
+        this->state[start_idx + i] = elts[i * stride];
     }
 }
 
@@ -842,7 +844,7 @@ __device__ gl64_t *PoseidonPermutationGPU::squeeze(u32 size)
     return state;
 }
 
-__device__ void poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+__device__ void gpu_poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
     if (num_inputs <= NUM_HASH_OUT_ELTS)
     {
@@ -884,7 +886,39 @@ __device__ void poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
     }
 }
 
-__device__ void poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+__device__ void gpu_poseidon_hash_one_stride(gl64_t *inputs, u32 num_inputs, gl64_t *hash, u32 stride)
+{
+    if (num_inputs <= NUM_HASH_OUT_ELTS)
+    {
+        u32 i = 0;
+        for (; i < num_inputs; i++)
+        {
+            hash[i] = inputs[i * stride];
+        }
+        for (; i < NUM_HASH_OUT_ELTS; i++)
+        {
+            hash[i].zero();
+        }
+    }
+    else
+    {
+        PoseidonPermutationGPU perm = PoseidonPermutationGPU();
+
+        // Absorb all input chunks.
+        for (u32 idx = 0; idx < num_inputs; idx += SPONGE_RATE)
+        {
+            perm.set_from_slice_stride(inputs + idx, MIN(SPONGE_RATE, num_inputs - idx), 0, stride);
+            perm.permute();
+        }
+        gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
+        for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
+        {
+            hash[i] = ret[i];
+        }
+    }
+}
+
+__device__ void gpu_poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
     __shared__ gl64_t arc[MAX_WIDTH * N_ROUNDS];
     if (threadIdx.x == 0)
@@ -906,3 +940,14 @@ __device__ void poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
         hash[i] = ret[i];
     }
 }
+
+#ifdef DEBUG
+DEVICE  void print_perm(gl64_t *data, int cnt)
+    {
+        for (int i = 0; i < cnt; i++)
+        {
+            printf("%lu ", data[i].get_val());
+        }
+        printf("\n");
+    }
+#endif

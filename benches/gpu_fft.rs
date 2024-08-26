@@ -10,9 +10,9 @@ fn random_fr() -> u64 {
 }
 
 fn bench_gpu_ntt(c: &mut Criterion) {
-    let LOG_NTT_SIZES: Vec<usize> = (13..=19).collect();
+    let log_ntt_sizes: Vec<usize> = (13..=19).collect();
     let mut group = c.benchmark_group("NTT");
-    for log_ntt_size in LOG_NTT_SIZES {
+    for log_ntt_size in log_ntt_sizes {
         let domain_size = 1usize << log_ntt_size;
 
         let mut gpu_buffer: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -24,5 +24,5 @@ fn bench_gpu_ntt(c: &mut Criterion) {
     }
 }
 
-criterion_group!(ntt_benches, bench_gpu_ntt);
-criterion_main!(ntt_benches);
+criterion_group!(benches, bench_gpu_ntt);
+criterion_main!(benches);

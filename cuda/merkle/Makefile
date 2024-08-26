@@ -1,71 +1,74 @@
 $(shell ./configure.sh)
+$(shell sleep 1)
 include CudaArch.mk
 
+# lib name
+LIBNAME := "libcryptocuda"
+
+# compilers
 CC := gcc
 CXX := g++
 NVCC := /usr/local/cuda/bin/nvcc
 
+# flags
+INCL := -I../types -I../poseidon -I../poseidon2 -I../monolith -I../keccak -I../util
+
 # for release
-#CFLAGS := -I../types -I../poseidon -I../keccak -Wall -Werror -O3 -march=native
-#CXXFLAGS := -I../types -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native
-#NVCCFLAGS := -I../types -I../poseidon -I../keccak -I../util -I.
+#CFLAGS := $(INCL) -Wall -Werror -O3 -march=native -fopenmp -fPIC
+#CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native -fopenmp -fPIC
+#NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH)
 
 # for debug
-CFLAGS := -I../types -I../poseidon -I../keccak -Wall -Werror -g
-CXXFLAGS := -I../types -I../poseidon -I../keccak -I. -Wall -Wno-error=sign-compare -std=c++11 -g
-NVCCFLAGS := -I../types -I../poseidon -I../keccak -I../util -I. -g
-
-all: libgpu
-
-lib: libgpu
-
-libcpu: libmerkle.so
-
-libgpu: libmerkle-gpu.so
+CFLAGS := $(INCL) -Wall -Werror -march=native -fopenmp -fPIC -g
+CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -march=native -fopenmp -fPIC -g
+NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -g -arch=$(CUDA_ARCH) -g
 
 clean:
-	rm -f *.o *.so *.exe
+	rm -f *.o *.so *.a *.exe
+	rm -rf build1 build2
 
-libmerkle.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.h ../poseidon/poseidon_bn128.cu ../poseidon/poseidon.cu ../keccak/keccak.cu
-	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
-	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_bn128.o
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak.o
-	$(CXX) -shared -o $@ poseidon.o poseidon_bn128.o keccak.o merkle.o -fopenmp
+MKDIR_P ?= mkdir -p
 
-libmerkle-gpu.so: merkle.h merkle.c ../poseidon/goldilocks.hpp ../poseidon/poseidon.hpp ../poseidon/poseidon.cu merkle.cu
-	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
-	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak_gpu.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_gpu.o
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file element.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file element_gpu.o
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_bn128.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_bn128_gpu.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC merkle.cu -arch=$(CUDA_ARCH) -dc --output-file merkle_gpu.o
-	$(NVCC) -Xcompiler -fopenmp -shared -arch=$(CUDA_ARCH) -o $@ merkle_gpu.o merkle.o poseidon.o poseidon_gpu.o element.o element_gpu.o poseidon_bn128.o poseidon_bn128_gpu.o keccak.o keccak_gpu.o
+BUILD_DIR_CXX := ./build1
+BUILD_DIR_CUDA := ./build2
 
-test-rust.exe: merkle.c ../poseidon/libposeidon.a
-	$(CC) $(CFLAGS) -g -DRUST_POSEIDON -DDEBUG $^ -o $@ -fopenmp
+SRC_DIRS := ./ ../keccak ../poseidon ../monolith
+SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.cu | cut -d '/' -f 2-)
+OBJS_CXX := $(SRCS:%=$(BUILD_DIR_CXX)/%.o)
+OBJS_CUDA := $(SRCS:%=$(BUILD_DIR_CUDA)/%.o)
+
+# c++ source
+$(BUILD_DIR_CXX)/%.cpp.o: %.cpp
+	$(MKDIR_P) $(dir $@)
+	$(CXX) $(CFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD_DIR_CXX)/%.c.o: ../%.c
+	$(MKDIR_P) $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR_CXX)/%.cu.o: ../%.cu
+	$(MKDIR_P) $(dir $@)
+	$(NVCC) $(NVCCFLAGS) $< -dc -o $@
+
+$(BUILD_DIR_CXX)/%.cpp.o: ../%.cpp
+	$(MKDIR_P) $(dir $@)
+	$(CXX) $(CFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD_DIR_CUDA)/%.cu.o: ../%.cu
+	$(MKDIR_P) $(dir $@)
+	$(NVCC) -DUSE_CUDA $(NVCCFLAGS) $< -dc -o $@
 
 testcpu.exe: merkle.c
 	$(CC) $(CFLAGS) -DTESTING -fPIC merkle.c -c -fopenmp
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak.o
 	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_bn128.o
+	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon2/poseidon2.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon2.o
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file element.o
-	$(NVCC) -Xcompiler -fopenmp -arch=$(CUDA_ARCH) -o $@ merkle.o keccak.o poseidon.o element.o poseidon_bn128.o
+	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../monolith/monolith.cu -arch=$(CUDA_ARCH) -dc --output-file monolith.o
+	$(NVCC) -Xcompiler -fopenmp -arch=$(CUDA_ARCH) -o $@ merkle.o keccak.o poseidon.o element.o poseidon_bn128.o monolith.o poseidon2.o
 
-testgpu.exe: merkle.cu merkle.c ../poseidon/poseidon.cuh
-	$(CC) $(CFLAGS) -c -fPIC merkle.c -fopenmp
-	$(CXX) $(CXXFLAGS) -c -fPIC ../poseidon/poseidon.cpp
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../keccak/keccak.cu -arch=$(CUDA_ARCH) -dc --output-file keccak_gpu.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_gpu.o
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file element.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/element_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file element_gpu.o
-	$(NVCC) $(NVCCFLAGS) -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_bn128.o
-	$(NVCC) $(NVCCFLAGS) -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC ../poseidon/poseidon_bn128.cu -arch=$(CUDA_ARCH) -dc --output-file poseidon_bn128_gpu.o
-	$(NVCC) $(NVCCFLAGS) -DTESTING -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC merkle.cu -arch=$(CUDA_ARCH) -dc --output-file merkle_gpu.o
-	$(NVCC) -Xcompiler -fopenmp -arch=$(CUDA_ARCH) -o $@ merkle_gpu.o merkle.o poseidon.o poseidon_gpu.o element.o element_gpu.o poseidon_bn128.o poseidon_bn128_gpu.o keccak.o keccak_gpu.o
+testgpu.exe: merkle.c merkle_c.h merkle.cu merkle.h $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
+	$(CC) $(CFLAGS) -c merkle.c -o $(BUILD_DIR_CXX)/merkle.o
+	$(NVCC) $(NVCCFLAGS) -DTESTING -DUSE_CUDA -Xcompiler -fopenmp -Xcompiler -fPIC merkle.cu -arch=$(CUDA_ARCH) -dc --output-file $(BUILD_DIR_CUDA)/merkle_gpu.o
+	$(NVCC) -Xcompiler -fopenmp -arch=$(CUDA_ARCH) -o $@ $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/merkle_gpu.o $(BUILD_DIR_CXX)/merkle.o

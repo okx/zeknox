@@ -12,6 +12,7 @@
 #include "thread_pool_t.hpp"
 #include "exception.cuh"
 #include "slice_t.hpp"
+#include "assert.h"
 
 #ifndef WARP_SZ
 #define WARP_SZ 32
@@ -69,6 +70,7 @@ struct launch_params_t
 
 class stream_t
 {
+public:
     cudaStream_t stream;
 
 public:
@@ -217,7 +219,7 @@ public:
 
     inline void sync() const
     {
-        // printf("sync stream: %d\n", stream);
+        // printf("sync stream: %d, gpu_id: %d\n", stream, gpu_id);
         CUDA_OK(cudaStreamSynchronize(stream));
     }
 
@@ -369,8 +371,9 @@ public:
     inline void sync() const
     {
         zero.sync(); // sync the default stream
-        for (auto &f : flipflop)
+        for (auto &f : flipflop){
             f.sync();
+        }
     }
 };
 
@@ -461,9 +464,10 @@ public:
             CUDA_OK(cudaMalloc(&d_ptr, n * sizeof(T)));
         }
     }
+    // TODO: `manual_drop` and `alloc` can be reduced to one flag
     dev_ptr_t(size_t nelems, stream_t &s, bool alloc,  bool manual_drop = false) : d_ptr(nullptr), stream(s), manual_drop(manual_drop)
     {
-        // printf("construct pointer named: %s, on device: %d\n", name, s.gpu_id);
+        // printf("construct pointer on device: %d, nelems: %d, alloc: %d, manual_drop:%d\n",s.gpu_id, nelems, alloc, manual_drop);
         // manual_drop=false;
         if (nelems)
         {
@@ -478,14 +482,6 @@ public:
     dev_ptr_t(const dev_ptr_t &r) = delete; // Copy constructor explicitly deleted
     void set_device_ptr(T* ptr) {
         d_ptr = ptr;
-    }
-    void alloc()
-    {
-        if (n_elements)
-        {
-            // printf("alloc %d elements \n", n_elements);
-            CUDA_OK(cudaMallocAsync(&d_ptr, n_elements * sizeof(T), stream));
-        }
     }
     dev_ptr_t &operator=(const dev_ptr_t &r) = delete; // Copy assignment operator explicitly deleted
     ~dev_ptr_t()
@@ -503,6 +499,19 @@ public:
     inline operator void *() const { return (void *)d_ptr; }
     inline const T &operator[](size_t i) const { return d_ptr[i]; }
     inline T &operator[](size_t i) { return d_ptr[i]; }
+
+private:
+    void alloc()
+    {
+        // should not reach this
+        assert(d_ptr == nullptr);
+
+        if (n_elements)
+        {
+            // printf("Try to alloc %ld elements %ld B\n", n_elements, n_elements * sizeof(T));
+            CUDA_OK(cudaMallocAsync(&d_ptr, n_elements * sizeof(T), stream));
+        }
+    }
 };
 
 #endif

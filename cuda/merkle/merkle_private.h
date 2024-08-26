@@ -19,14 +19,18 @@ extern u64* global_leaves_buf_end;
 extern u64* global_cap_buf_end;
 
 // pointers to the actual hash functions (could be Poseidon or Keccak)
-extern void (*cpu_hash_one_ptr)(u64* input, u32 size, u64* hash);
-extern void (*cpu_hash_two_ptr)(u64 *hash1, u64 *hash2, u64 *hash);
+// extern void (*cpu_hash_one_ptr)(u64* input, u32 size, u64* hash);
+// extern void (*cpu_hash_two_ptr)(u64 *hash1, u64 *hash2, u64 *hash);
 
-extern int* leaf_index;
-extern HashTask* internal_index;
-extern int* round_size;
-extern int max_round;
-extern int max_round_size;
+extern int* global_leaf_index;
+extern HashTask* global_internal_index;
+extern int* global_round_size;
+extern int global_max_round;
+extern int global_max_round_size;
+
+EXTERNC void cpu_hash_one_ptr(u64 *input, u32 size, u64 *data, uint64_t hash_type);
+
+EXTERNC void cpu_hash_two_ptr(u64 *hash1, u64 *hash2, u64 *hash, uint64_t hash_type);
 
 EXTERNC void fill_subtree_get_index(
     int target_index,

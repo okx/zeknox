@@ -7,25 +7,154 @@
 #include <cooperative_groups.h>
 #include <util/sharedmem.cuh>
 
+#include <curand_kernel.h>
+
+#define BLOCK_DIM 32
+
 __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
-    // printf("inside kernel, reverse_order_kernel \n");
     int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (threadId < n * batch_size)
     {
         int idx = threadId % n;
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
-        //Check to ensure that the larger index swaps with the smaller one
-        if(idx > idx_reversed){
-            //Swap with temp
+
+        // if (threadId == 0 || threadId == n * batch_size - 1)
+        // {
+        //     printf("inside kernel, reverse_order_kernel n: %d, logn: %d, batch_size: %d \n", n, logn, batch_size);
+        //     printf("a: %d, b: %d \n", batch_idx * n + idx, batch_idx * n + idx_reversed);
+        // }
+
+        // Check to ensure that the larger index swaps with the smaller one
+        if (idx > idx_reversed)
+        {
+            // Swap with temp
             fr_t temp = arr[batch_idx * n + idx];
             arr[batch_idx * n + idx] = arr[batch_idx * n + idx_reversed];
             arr[batch_idx * n + idx_reversed] = temp;
         }
-
     }
 }
+
+/**
+ *
+ * n, n before extension
+ * n_extended, n after extension
+ * logn, after extension
+ */
+__global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, uint32_t n_extend, uint32_t batch_size)
+{
+    int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (threadId < n_extend * batch_size)
+    {
+        int idx = threadId % n_extend;
+        int batch_idx = threadId / n_extend;
+
+        if (
+            idx < n)
+        {
+
+            output[batch_idx * n_extend + idx] = input[batch_idx * n + idx];
+        }
+        else
+        {
+            output[batch_idx * n_extend + idx] = fr_t::zero();
+        }
+        // printf("index: %d, val: %lu \n", batch_idx * n_extend + idx, output[batch_idx * n_extend + idx]);
+    }
+}
+
+__global__ void gen_random_salt_kernel(fr_t *arr, uint32_t size, uint32_t salt_size, uint64_t seed)
+{
+    uint32_t tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+
+    if (tid >= size)
+    {
+        return;
+    }
+
+    curandState rstate;
+    curand_init(seed, tid, 0, &rstate);
+
+    for (uint32_t k = 0; k < salt_size; k++)
+    {
+        uint32_t x1 = curand(&rstate);
+        uint32_t x2 = curand(&rstate);
+        uint64_t x = x1;
+        x = (x << 32) | x2;
+        arr[k * size + tid] = fr_t(x);
+    }
+}
+
+/**
+ * Fast transpose from NVIDIA. Takes array and returns its transpose
+ * @param in_arr input array of type E (elements).
+ * @param out_arr output array of type E (elements).
+ * @param n column size of in_arr.
+ * @param batch_size row size of in_arr.
+ * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
+ */
+__global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
+{
+    // We use shared memory 'cache' blocks for coalesce memory efficiency improvement
+	__shared__ fr_t block[BLOCK_DIM][BLOCK_DIM+1];
+
+    // Get indexes
+    int j_idx = blockIdx.x * BLOCK_DIM + (4*threadIdx.x);
+    int i_idx = blockIdx.y * BLOCK_DIM + threadIdx.y;
+
+    int idx = i_idx * n + j_idx;
+
+	// read the matrix tile into shared memory in its transposed position
+    for(int i = 0; i < 4; i++){
+        if((i_idx < batch_size) && ((j_idx+i) < n)){
+            block[(4 * threadIdx.x) + i][threadIdx.y] = in_arr[idx + i];
+        }
+    }
+
+    // synchronise to ensure all writes to block[][] have completed
+	__syncthreads();
+
+    // calculated transposed indexes
+    j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.x);
+    i_idx = blockIdx.x * BLOCK_DIM + threadIdx.y;
+
+    int i_idx_rev = __brev(i_idx) >> (32 - lg_n);
+
+    idx = i_idx_rev * batch_size + j_idx;
+
+	// write the transposed matrix tile to global memory (out_arr) in linear order
+	for(int i = 0; i < 4; i++){
+        if((i_idx < n) && ((j_idx+i) < batch_size)){
+            out_arr[idx+ i] = block[threadIdx.y][(4 * threadIdx.x) + i];
+        }
+    }
+}
+
+/**
+ * Fast transpose from NVIDIA. Takes array and returns its transpose
+ * @param in_arr input array of type E (elements).
+ * @param out_arr output array of type E (elements).
+ * @param n column size of in_arr.
+ * @param batch_size row size of in_arr.
+ * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
+ */
+ __global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
+ {
+     // Get indexes
+     int threadId = blockIdx.x * blockDim.x + threadIdx.x;
+     if (threadId < n * batch_size)
+     {
+        int j_idx = threadId % n;
+        int i_idx = threadId / n;
+
+        j_idx = __brev(j_idx) >> (32 - lg_n);
+        int idx_swapped = j_idx * batch_size + i_idx;
+
+        out_arr[idx_swapped] = in_arr[threadId];
+     }
+ }
 
 __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
 {
@@ -53,9 +182,13 @@ __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr
 __global__ void
 ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, bool rev)
 {
+    // if (threadIdx.x == 0 && blockIdx.x == 0)
+    // {
+        // printf("inside ntt_template_kernel blk.idx: %d, thread.idx: %d\n", blockIdx.x, threadIdx.x );
+    // }
 
     int task = blockIdx.x;
-    int chunks = n / (blockDim.x * 2);  // how many chunks within one NTT
+    int chunks = n / (blockDim.x * 2); // how many chunks within one NTT
 
     if (task < max_task)
     {
@@ -67,8 +200,8 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
         {
             uint32_t ntw_i = task % chunks; // chunk index of the current NTT
 
-            uint32_t shift_s = 1 << s;  // offset to j, 
-            uint32_t shift2_s = 1 << (s + 1);  // num of continuous elements access
+            uint32_t shift_s = 1 << s;        // offset to j,
+            uint32_t shift2_s = 1 << (s + 1); // num of continuous elements access
             uint32_t n_twiddles_div = n_twiddles >> (s + 1);
 
             l = ntw_i * blockDim.x + l; // to l from chunks to full
@@ -125,23 +258,23 @@ __global__ void template_normalize_kernel(fr_t *arr, uint32_t n, fr_t n_inv)
  * @param max_task max count of parallel tasks.
  * @param s log2(n) loop index.
  */
-// template <typename E, typename S>
 __global__ void ntt_template_kernel_shared_rev(
-    fr_t *__restrict__ arr_g,
+    fr_t *arr_g,
     uint32_t n,
-    const fr_t *__restrict__ r_twiddles,
+    const fr_t *r_twiddles,
     uint32_t n_twiddles,
     uint32_t max_task,
     uint32_t ss,
     uint32_t logn,
-    int gpu_id
-)
+    int gpu_id)
 {
-  
+    // if (threadIdx.x == 0 && blockIdx.x == 0)
+    // {
+    //     printf("inside ntt_template_kernel_shared_rev, before smGetPointer gpu_id: %d>>>>>\n", gpu_id);
+    // }
     SharedMemory<fr_t> smem;
-    //   printf("inside ntt_template_kernel_shared_rev, before smGetPointer gpu_id: %d>>>>>\n", gpu_id);
     fr_t *arr = smem.getPointer();
- 
+
     uint32_t task = blockIdx.x;
     uint32_t loop_limit = blockDim.x;
     uint32_t chunks = n / (loop_limit * 2);
@@ -153,7 +286,7 @@ __global__ void ntt_template_kernel_shared_rev(
 
         if (l < loop_limit)
         {
- 
+
 #pragma unroll
             for (; ss < logn; ss++)
             {
@@ -179,7 +312,7 @@ __global__ void ntt_template_kernel_shared_rev(
                 // printf("twiddle of: %d, is: %lu, gpu_id: %d\n", j * n_twiddles_div, tw, gpu_id);
                 fr_t u = is_beginning ? arr_g[offset + oij] : arr[oij];
                 fr_t v = is_beginning ? arr_g[offset + k] : arr[k];
-                
+
                 if (is_end)
                 {
                     arr_g[offset + oij] = u + v;

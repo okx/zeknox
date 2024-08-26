@@ -8,10 +8,6 @@
 #include <cstdint>
 #include <stdint.h>
 
-namespace gl64_device {
-    static __device__ __constant__ /*const*/ uint32_t W = 0xffffffffU;
-}
-
 #ifdef USE_CUDA
 # define inline __device__ __forceinline__
 # ifdef __GNUC__
@@ -54,6 +50,7 @@ public:
     inline gl64_t()                                     {}
     inline gl64_t(const uint64_t a)                     { val = a;  to(); }
     inline gl64_t(const uint64_t *p)                    { val = *p; to(); }
+    inline gl64_t(uint32_t val_u128[4])                      { val = 0; reduce(val_u128); }
 
     inline uint64_t get_val() const { return val; }
 
@@ -286,10 +283,10 @@ private:
 
         asm("mad.lo.cc.u32 %0, %3, %4, %0; madc.hi.cc.u32 %1, %3, %4, %1; addc.u32 %2, 0, 0;"
             : "+r"(temp[0]), "+r"(temp[1]), "=r"(temp[2])
-            : "r"(carry), "r"(gl64_device::W));
+            : "r"(carry), "r"(0xffffffffU));
         asm("mad.lo.cc.u32 %0, %2, %3, %0; madc.hi.u32 %1, %2, %3, %1;"
             : "+r"(temp[0]), "+r"(temp[1])
-            : "r"(temp[2]), "r"(gl64_device::W));
+            : "r"(temp[2]), "r"(0xffffffffU));
 # else
         uint32_t b0, b1;
         asm("add.cc.u32 %0, %2, %3; addc.u32 %1, 0, 0;"
@@ -307,7 +304,7 @@ private:
 #  if __CUDA_ARCH__ >= 700
         asm("mad.lo.cc.u32 %0, %2, %3, %0; madc.hi.u32 %1, %2, %3, %1;"
             : "+r"(temp[0]), "+r"(temp[1])
-            : "r"(temp[2]), "r"(gl64_device::W));
+            : "r"(temp[2]), "r"(0xffffffffU));
 #  else
         asm("add.cc.u32 %0, %0, %2; addc.u32 %1, %1, 0;"
             : "+r"(temp[0]), "+r"(temp[1])
@@ -407,7 +404,7 @@ private:
 # if __CUDA_ARCH__ >= 700
         asm("mad.lo.cc.u32 %0, %2, %3, %0; madc.hi.u32 %1, %2, %3, %1;"
             : "+r"(temp[0]), "+r"(temp[1])
-            : "r"(temp[2]), "r"(gl64_device::W));
+            : "r"(temp[2]), "r"(0xffffffffU));
 # else
         asm("add.cc.u32 %0, %0, %2; addc.u32 %1, %1, 0;"
             : "+r"(temp[0]), "+r"(temp[1])
@@ -482,7 +479,7 @@ public:
 # if __CUDA_ARCH__ >= 700
         asm("mad.lo.cc.u32 %0, %2, %3, %0; madc.hi.u32 %1, %2, %3, %1;"
             : "+r"(lo[0]), "+r"(lo[1])
-            : "r"(carry), "r"(gl64_device::W));
+            : "r"(carry), "r"(0xffffffffU));
 # else
         asm("add.cc.u32 %0, %0, %2; addc.u32 %1, %1, 0;"
             : "+r"(lo[0]), "+r"(lo[1])

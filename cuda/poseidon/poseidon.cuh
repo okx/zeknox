@@ -4,12 +4,12 @@
 #include "int_types.h"
 #include "gl64_t.cuh"
 #include "cuda_utils.cuh"
+#include "poseidon.h"
 
 #define MIN(x, y) (x < y) ? x : y
 
 #define NUM_HASH_OUT_ELTS 4
 
-// From poseidon.rs
 #define SPONGE_RATE 8
 #define SPONGE_CAPACITY 4
 #define SPONGE_WIDTH 12
@@ -30,7 +30,7 @@ class PoseidonPermutationGPU
 class PoseidonPermutation
 #endif
 {
-public:
+private:
     DEVICE static gl64_t reduce128(uint128_t x);
 
     DEVICE static gl64_t reduce_u160(uint128_t n_lo, uint32_t n_hi);
@@ -63,12 +63,15 @@ public:
 
     DEVICE gl64_t *poseidon(gl64_t *input, gl64_t* rconst);
 
+protected:
     gl64_t state[SPONGE_WIDTH];
 
 public:
     DEVICE PoseidonPermutationGPU();
 
     DEVICE void set_from_slice(gl64_t *elts, u32 len, u32 start_idx);
+
+    DEVICE void set_from_slice_stride(gl64_t *elts, u32 len, u32 start_idx, u32 stride);
 
     DEVICE void get_state_as_canonical_u64(u64* out);
 
@@ -79,19 +82,8 @@ public:
     DEVICE gl64_t *squeeze(u32 size);
 };
 
-DEVICE void poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash);
-
-DEVICE void poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash);
-
 #ifdef DEBUG
-DEVICE  void print_perm(gl64_t *data, int cnt)
-    {
-        for (int i = 0; i < cnt; i++)
-        {
-            printf("%lu ", data[i].get_val());
-        }
-        printf("\n");
-    }
+DEVICE void print_perm(gl64_t *data, int cnt);
 #endif
 
 #endif // __POSEIDON_V2_CUH__

@@ -1,11 +1,8 @@
 #ifndef __POSEIDON_HPP__
 #define __POSEIDON_HPP__
 
-//! Implementations for Poseidon over Goldilocks field of widths 8 and 12.
-//!
-//! These contents of the implementations *must* be generated using the
-//! `poseidon_constants.sage` script in the `0xPolygonZero/hash-constants`
-//! repository.
+// Based on the Poseidon implementation from Plonky2
+// (https://github.com/okx/plonky2/blob/main/plonky2/src/hash/poseidon.rs)
 
 #include "goldilocks.hpp"
 
@@ -21,7 +18,6 @@
 
 #define MIN(x, y) (x < y) ? x : y
 
-// From poseidon.rs
 const u64 SPONGE_RATE = 8;
 const u64 SPONGE_CAPACITY = 4;
 const u64 SPONGE_WIDTH = SPONGE_RATE + SPONGE_CAPACITY;
@@ -801,13 +797,6 @@ const u64 FAST_PARTIAL_ROUND_INITIAL_MATRIX[11][11] = {
 };
 
 const u64 ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS] = {
-    // WARNING: The AVX2 Goldilocks specialization relies on all round constants being in
-    // 0..0xfffeeac900011537. If these constants are randomly regenerated, there is a ~.6% chance
-    // that this condition will no longer hold.
-    //
-    // WARNING: If these are changed in any way, then all the
-    // implementations of Poseidon must be regenerated. See comments
-    // in `poseidon_goldilocks.rs`.
     0xb585f766f2144405,
     0x7746a55f43921ad7,
     0xb2fb0d31cee799b4,
@@ -1170,293 +1159,6 @@ const u64 ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS] = {
     0xbc8dfb627fe558fc,
 };
 
-/*
-// MDS layer helper methods
-// The following code has been adapted from winterfell/crypto/src/hash/mds/mds_f64_12x12.rs
-// located at https://github.com/facebook/winterfell.
-const i64 MDS_FREQ_BLOCK_ONE[3] = {16, 32, 16};
-const i64 MDS_FREQ_BLOCK_TWO[6] = {2, -1, -4, 1, 16, 1};
-const i64 MDS_FREQ_BLOCK_THREE[3] = {-1, -8, 2};
-
-inline void block1(const i64 *x, const i64 *y, i64 *res)
-{
-    // let [x0, x1, x2] = x;
-    // let [y0, y1, y2] = y;
-    auto x0 = x[0];
-    auto x1 = x[1];
-    auto x2 = x[2];
-    auto y0 = y[0];
-    auto y1 = y[1];
-    auto y2 = y[2];
-
-    res[0] = x0 * y0 + x1 * y2 + x2 * y1;
-    res[1] = x0 * y1 + x1 * y0 + x2 * y2;
-    res[2] = x0 * y2 + x1 * y1 + x2 * y0;
-}
-
-// x[3][2], y[3][2]
-inline void block2(const i64 *x, const i64 *y, i64 *res)
-{
-    auto x0r = x[0];
-    auto x0i = x[1];
-    auto x1r = x[2];
-    auto x1i = x[3];
-    auto x2r = x[4];
-    auto x2i = x[5];
-
-    auto y0r = y[0];
-    auto y0i = y[1];
-    auto y1r = y[2];
-    auto y1i = y[3];
-    auto y2r = y[4];
-    auto y2i = y[5];
-
-    auto x0s = x0r + x0i;
-    auto x1s = x1r + x1i;
-    auto x2s = x2r + x2i;
-    auto y0s = y0r + y0i;
-    auto y1s = y1r + y1i;
-    auto y2s = y2r + y2i;
-
-    // Compute x0​y0 ​− ix1​y2​ − ix2​y1​ using Karatsuba for complex numbers multiplication
-    auto m00 = x0r * y0r;
-    auto m01 = x0i * y0i;
-    auto m10 = x1r * y2r;
-    auto m11 = x1i * y2i;
-    auto m20 = x2r * y1r;
-    auto m21 = x2i * y1i;
-    auto z0r = (m00 - m01) + (x1s * y2s - m10 - m11) + (x2s * y1s - m20 - m21);
-    auto z0i = (x0s * y0s - m00 - m01) + (-m10 + m11) + (-m20 + m21);
-
-    // Compute x0​y1​ + x1​y0​ − ix2​y2 using Karatsuba for complex numbers multiplication
-    m00 = x0r * y1r;
-    m01 = x0i * y1i;
-    m10 = x1r * y0r;
-    m11 = x1i * y0i;
-    m20 = x2r * y2r;
-    m21 = x2i * y2i;
-    auto z1r = (m00 - m01) + (m10 - m11) + (x2s * y2s - m20 - m21);
-    auto z1i = (x0s * y1s - m00 - m01) + (x1s * y0s - m10 - m11) + (-m20 + m21);
-
-    // Compute x0​y2​ + x1​y1 ​+ x2​y0​ using Karatsuba for complex numbers multiplication
-    m00 = x0r * y2r;
-    m01 = x0i * y2i;
-    m10 = x1r * y1r;
-    m11 = x1i * y1i;
-    m20 = x2r * y0r;
-    m21 = x2i * y0i;
-    auto z2r = (m00 - m01) + (m10 - m11) + (m20 - m21);
-    auto z2i = (x0s * y2s - m00 - m01) + (x1s * y1s - m10 - m11) + (x2s * y0s - m20 - m21);
-
-    res[0] = z0r;
-    res[1] = z0i;
-    res[2] = z1r;
-    res[3] = z1i;
-    res[4] = z2r;
-    res[5] = z2i;
-}
-
-
-// returns 3 elements
-inline void block3(const i64 *x, const i64 *y, i64 *res)
-{
-    // let [x0, x1, x2] = x;
-    // let [y0, y1, y2] = y;
-    auto x0 = x[0];
-    auto x1 = x[1];
-    auto x2 = x[2];
-    auto y0 = y[0];
-    auto y1 = y[1];
-    auto y2 = y[2];
-
-    res[0] = x0 * y0 - x1 * y2 - x2 * y1;
-    res[1] = x0 * y1 + x1 * y0 - x2 * y2;
-    res[2] = x0 * y2 + x1 * y1 + x2 * y0;
-}
-
-/// Real 2-FFT over u64 integers.
-// #[inline(always)]
-// pub(crate) fn fft2_real(x: [u64; 2]) -> [i64; 2] {
-inline void fft2_real(u64 *x, i64 *res)
-{
-    res[0] = (i64)x[0] + (i64)x[1];
-    res[1] = (i64)x[0] - (i64)x[1];
-}
-
-/// Real 2-iFFT over u64 integers.
-/// Division by two to complete the inverse FFT is not performed here.
-// #[inline(always)]
-// pub(crate) fn ifft2_real_unreduced(y: [i64; 2]) -> [u64; 2] {
-inline void ifft2_real_unreduced(i64 *y, u64 *res)
-{
-    res[0] = (u64)(y[0] + y[1]);
-    res[1] = (u64)(y[0] - y[1]);
-}
-
-/// Real 4-FFT over u64 integers.
-// #[inline(always)]
-// pub(crate) fn fft4_real(x: [u64; 4]) -> (i64, (i64, i64), i64) {
-inline void fft4_real(u64 *x, i64 *res)
-{
-    u64 a1[2] = {x[0], x[2]};
-    i64 z[2];
-    fft2_real(a1, z);
-    auto z0 = z[0];
-    auto z2 = z[1];
-    u64 a2[2] = {x[1], x[3]};
-    fft2_real(a2, z);
-    auto z1 = z[0];
-    auto z3 = z[1];
-
-    res[0] = z0 + z1;
-    res[1] = z2;
-    res[2] = -z3;
-    res[3] = z0 - z1;
-}
-
-/// Real 4-iFFT over u64 integers.
-/// Division by four to complete the inverse FFT is not performed here.
-// #[inline(always)]
-inline void ifft4_real_unreduced(i64 *y, u64 *res)
-{
-    auto z0 = y[0] + y[3];
-    auto z1 = y[0] - y[3];
-    auto z2 = y[1];
-    auto z3 = -y[2];
-
-    i64 a1[2] = {z0, z2};
-    u64 x[2] = {0};
-    ifft2_real_unreduced(a1, x);
-    auto x0 = x[0];
-    auto x2 = x[1];
-    i64 a2[2] = {z1, z3};
-    ifft2_real_unreduced(a2, x);
-    auto x1 = x[0];
-    auto x3 = x[1];
-
-    res[0] = x0;
-    res[1] = x1;
-    res[2] = x2;
-    res[3] = x3;
-}
-
-/// Split 3 x 4 FFT-based MDS vector-multiplication with the Poseidon circulant MDS matrix.
-// #[inline(always)]
-inline void mds_multiply_freq(u64 *s, u64 *res)
-{
-    i64 u[4] = {0};
-
-    u64 a1[4] = {s[0], s[3], s[6], s[9]};
-    fft4_real(a1, u);
-    auto u0 = u[0];
-    auto u1r = u[1];
-    auto u1i = u[2];
-    auto u2 = u[3];
-
-    u64 a2[4] = {s[1], s[4], s[7], s[10]};
-    fft4_real(a2, u);
-    auto u4 = u[0];
-    auto u5r = u[1];
-    auto u5i = u[2];
-    auto u6 = u[3];
-
-    u64 a3[4] = {s[2], s[5], s[8], s[11]};
-    fft4_real(a3, u);
-    auto u8 = u[0];
-    auto u9r = u[1];
-    auto u9i = u[2];
-    auto u10 = u[3];
-
-    // This where the multiplication in frequency domain is done. More precisely, and with
-    // the appropriate permuations in between, the sequence of
-    // 3-point FFTs --> multiplication by twiddle factors --> Hadamard multiplication -->
-    // 3 point iFFTs --> multiplication by (inverse) twiddle factors
-    // is "squashed" into one step composed of the functions "block1", "block2" and "block3".
-    // The expressions in the aforementioned functions are the result of explicit computations
-    // combined with the Karatsuba trick for the multiplication of complex numbers.
-
-    i64 a4[3] = {u0, u4, u8};
-    block1(a4, MDS_FREQ_BLOCK_ONE, u);
-    auto v0 = u[0];
-    auto v4 = u[1];
-    auto v8 = u[2];
-
-    i64 a5[6] = {u1r, u1i, u5r, u5i, u9r, u9i};
-    i64 uu[6] = {0};
-    block2(a5, MDS_FREQ_BLOCK_TWO, uu);
-    auto v1r = uu[0];
-    auto v1i = uu[1];
-    auto v5r = uu[2];
-    auto v5i = uu[3];
-    auto v9r = uu[4];
-    auto v9i = uu[5];
-
-    i64 a6[3] = {u2, u6, u10};
-    block3(a6, MDS_FREQ_BLOCK_THREE, u);
-    auto v2 = u[0];
-    auto v6 = u[1];
-    auto v10 = u[2];
-    // The 4th block is not computed as it is similar to the 2nd one, up to complex conjugation.
-
-    u64 ss[12] = {0};
-
-    i64 a7[4] = {v0, v1r, v1i, v2};
-    ifft4_real_unreduced(a7, ss);
-    res[0] = ss[0];
-    res[3] = ss[1];
-    res[6] = ss[2];
-    res[9] = ss[3];
-    i64 a8[4] = {v4, v5r, v5i, v6};
-    ifft4_real_unreduced(a8, ss);
-    res[1] = ss[0];
-    res[4] = ss[1];
-    res[7] = ss[2];
-    res[10] = ss[3];
-    i64 a9[4] = {v8, v9r, v9i, v10};
-    ifft4_real_unreduced(a9, ss);
-    res[2] = ss[0];
-    res[5] = ss[1];
-    res[8] = ss[2];
-    res[11] = ss[3];
-}
-
-GoldilocksField *mds_layer_v2(GoldilocksField *state, GoldilocksField *result)
-{
-    for (int i = 0; i < 12; i++)
-        result[i] = GoldilocksField::Zero();
-
-    // Using the linearity of the operations we can split the state into a low||high decomposition
-    // and operate on each with no overflow and then combine/reduce the result to a field element.
-    u64 state_l[12] = {0};
-    u64 state_h[12] = {0};
-    u64 state_l_res[12] = {0};
-    u64 state_h_res[12] = {0};
-
-    for (int r = 0; r < 12; r++)
-    {
-        u64 s = state[r].get_val();
-        state_h[r] = s >> 32;
-        state_l[r] = (u64)((u32)s);
-    }
-
-    mds_multiply_freq(state_h, state_h_res);
-    mds_multiply_freq(state_l, state_l_res);
-
-    for (int r = 0; r < 12; r++)
-    {
-        auto s = (u128)state_l[r] + (((u128)state_h[r]) << 32);
-
-        result[r] = GoldilocksField::from_noncanonical_u96((u64)s, (u32)(s >> 64));
-    }
-
-    // Add first element with the only non-zero diagonal matrix coefficient.
-    auto s = (u128)MDS_MATRIX_DIAG[0] * (u128)state[0].get_val();
-    result[0] = result[0] + GoldilocksField::from_noncanonical_u96((u64)s, (u32)(s >> 64));
-
-    return result;
-}
-*/
-
 static const u64 NUM_HASH_OUT_ELTS = 4;
 
 /*
@@ -1510,7 +1212,7 @@ public:
     static const u64 RATE = SPONGE_RATE;
     static const u64 WIDTH = SPONGE_WIDTH;
 
-private:
+protected:
     GoldilocksField state[WIDTH];
 
 public:
@@ -1613,10 +1315,6 @@ public:
     // Arrys of size SPIONGE_WIDTH
     void poseidon_naive(GoldilocksField *inout)
     {
-        // auto state = input;
-        // GoldilocksField state[SPONGE_WIDTH] = {GoldilocksField::Zero()};
-        // for (int i = 0; i < SPONGE_WIDTH; i++)
-        //    state[i] = input[i];
         u32 round_ctr = 0;
 
         full_rounds(inout, &round_ctr);
@@ -1680,8 +1378,6 @@ public:
 
     void mds_partial_layer_fast(GoldilocksField *state, u32 r)
     {
-        // Set d = [M_00 | w^] dot [state]
-
         // u169 accumulator
         u128 d_sum_lo = 0;
         u32 d_sum_hi = 0;

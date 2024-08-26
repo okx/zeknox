@@ -18,7 +18,7 @@ __global__ void hash(uint64_t *in, uint64_t *out, uint32_t n)
     if (tid > 0)
         return;
 
-    poseidon_hash_one((gl64_t *)in, n, (gl64_t *)out);
+    gpu_poseidon_hash_one((gl64_t *)in, n, (gl64_t *)out);
 }
 
 __global__ void hash_step1(uint64_t *in, uint64_t *out, uint32_t n, uint32_t len)
@@ -27,7 +27,7 @@ __global__ void hash_step1(uint64_t *in, uint64_t *out, uint32_t n, uint32_t len
     if (tid >= len)
         return;
 
-    poseidon_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    gpu_poseidon_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void hash_step2(uint64_t *in, uint64_t *out, uint32_t len)
@@ -36,12 +36,11 @@ __global__ void hash_step2(uint64_t *in, uint64_t *out, uint32_t len)
     if (tid >= len)
         return;
 
-    poseidon_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
+    gpu_poseidon_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
 }
 
 int test1()
 {
-    // u64 leaf[6] = {13421290117754017454, 7401888676587830362, 15316685236050041751, 13588825262671526271, 13421290117754017454, 7401888676587830362};
     u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
 
     u64 h1[4] = {0u};
@@ -60,6 +59,13 @@ int test1()
         printhash(h1);
         cpu_poseidon_hash_one(leaf, k, h2);
         printhash(h2);
+
+        for (int j = 0; j < 4; j++) {
+            if (h1[j] != h2[j]) {
+                printf("ERROR: CPU and GPU results are different!\n");
+                break;
+            }
+        }
     }
 
     /*
@@ -114,7 +120,7 @@ int test2()
     CHECKCUDAERR(cudaMalloc(&gpu_leaf, 28 * sizeof(u64)));
     CHECKCUDAERR(cudaMalloc(&gpu_hash, 28 * sizeof(u64)));
     CHECKCUDAERR(cudaMemcpy(gpu_leaf, test_leaves, 28 * sizeof(u64), cudaMemcpyHostToDevice));
-    hash_step1<<<1, 2>>>(gpu_leaf + 14, gpu_hash + 8, 7, 2);
+    hash_step1<<<1, 4>>>(gpu_leaf, gpu_hash, 7, 4);
     hash_step2<<<1, 2>>>(gpu_hash, gpu_hash + 16, 2);
     hash_step2<<<1, 2>>>(gpu_hash + 16, gpu_hash + 24, 1);
     CHECKCUDAERR(cudaMemcpy(tree2, gpu_hash, 28 * sizeof(u64), cudaMemcpyDeviceToHost));
@@ -140,6 +146,8 @@ int main()
 {
 
     test1();
+
+    test2();
 
     return 0;
 }

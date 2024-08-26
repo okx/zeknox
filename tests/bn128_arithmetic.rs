@@ -1,9 +1,6 @@
 use cryptography_cuda::{
     bn128_add_rust, bn128_sub_rust, bn128_mul_rust, bn128_lshift_rust, bn128_rshift_rust
 };
-use plonky2_field::goldilocks_field::GoldilocksField;
-use plonky2_field::types::{Field, PrimeField64};
-use std::ops::{Add, Mul, Sub};
 
 // P = 21888242871839275222246405745257275088696311157297823662689037894645226208583 (0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47)
 

@@ -1,6 +1,8 @@
-
+#[cfg(not(feature="no_cuda"))]
 use std::env;
+#[cfg(not(feature="no_cuda"))]
 use std::fs;
+#[cfg(not(feature="no_cuda"))]
 use std::path::PathBuf;
 #[cfg(not(feature="no_cuda"))]
 extern crate rustacuda;
@@ -10,6 +12,7 @@ use rustacuda::device::DeviceAttribute;
 use rustacuda::prelude::*;
 
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
+#[cfg(not(feature="no_cuda"))]
 fn build_device_wrapper() {
     let cuda_runtime_api_path = PathBuf::from("/usr/local/cuda/include")
         .join("cuda_runtime_api.h")
@@ -59,6 +62,8 @@ fn build_device_wrapper() {
     .allowlist_function("cudaFreeAsync")
     .allowlist_function("cudaMallocAsync")
     //
+    .allowlist_function("cudaMemGetInfo")
+    //
     .generate()
     .expect("Unable to generate bindings");
 
@@ -77,6 +82,7 @@ fn get_device_arch() -> String {
     cuda_arch
 }
 
+#[cfg(not(feature="no_cuda"))]
 fn feature_check() -> String {
     let fr_s = [
         "gl64",
@@ -118,7 +124,7 @@ fn build_cuda() {
     println!("feature: {:?}", fr);
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let mut base_dir = manifest_dir.join("cuda");
+    let base_dir = manifest_dir.join("cuda");
 
     // pass DEP_CRYPTOGRAPHY_CUDA_* variables to dependents
     println!("cargo:ROOT={}", base_dir.to_string_lossy());
@@ -170,7 +176,7 @@ fn build_cuda() {
         }
 
         nvcc.include(base_dir);
-        // required for parling curve, such as bls12_381, bn254, etc. 
+        // required for parling curve, such as bls12_381, bn254, etc.
         // cargo dependency blst will set DEP_BLST_C_SRC
         if let Some(include) = env::var_os("DEP_BLST_C_SRC") {
             println!("blst_c_src directory: {:?}", include); // ~/.cargo/registry/src/index.crates.io-6f17d22bba15001f/blst-0.3.11/blst/src
@@ -180,6 +186,7 @@ fn build_cuda() {
         nvcc.file("src/lib.cu")
             .file(util_dir.join("all_gpus.cpp"))
             .compile("cryptography_cuda");
+
         println!("cargo:rerun-if-changed=src/lib.cu");
         println!("cargo:rerun-if-changed=cuda");
         println!("cargo:rustc-cfg=feature=\"cuda\"");
@@ -189,7 +196,43 @@ fn build_cuda() {
     println!("cargo:rerun-if-env-changed=NVCC");
 }
 
+#[cfg(not(feature="no_cuda"))]
+fn build_lib() {
+    use std::process::Command;
+
+    let pwd = env::current_dir().unwrap();
+    let libdir = pwd.join("cuda");
+    let header_file = libdir.join("merkle/merkle.h");
+    let src_file = libdir.join("merkle/merkle.cu");
+    let lib_file = libdir.join("libcryptocuda.a");
+
+    if !lib_file.exists()
+    {
+        assert!(env::set_current_dir(&libdir).is_ok());
+        Command::new("make")
+        .arg("lib")
+        .output()
+        .expect("failed to execute process");
+        assert!(env::set_current_dir(&pwd).is_ok());
+    }
+
+    // Tell cargo to look for shared libraries in the specified directory
+    println!("cargo:rustc-link-search={}", libdir.to_str().unwrap());
+
+    // Shared lib.
+    // println!("cargo:rustc-link-lib=cryptocuda");
+
+    // Static lib
+    println!("cargo:rustc-link-lib=static=cryptocuda");
+    println!("cargo:rustc-link-lib=gomp");
+
+    // Tell cargo to invalidate the built crate whenever the wrapper changes
+    println!("cargo:rerun-if-changed={},{}", header_file.to_str().unwrap(), src_file.to_str().unwrap());
+}
+
 fn main() {
     #[cfg(not(feature="no_cuda"))]
     build_cuda();
+    #[cfg(not(feature="no_cuda"))]
+    build_lib();
 }

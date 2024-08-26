@@ -26,31 +26,42 @@ harness = false
 name = "gpu_fft_batch"
 harness = false
 
-[dependencies] 
+[[bench]]
+name = "transpose"
+harness = false
+
+[[bench]]
+name = "lde_batch"
+harness = false
+
+[dependencies]
 blst = "~0.3.11"
 bitflags = "1.3"
+bit_reverse = "=0.1.1"
+
 
 [dev-dependencies]
-rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
-plonky2_field = {git="https://github.com/0xPolygonZero/plonky2.git"}
+rand = "*"
 criterion = "*"
 rayon = "1.8.1"
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
+plonky2_field = { git = "https://github.com/0xPolygonZero/plonky2" }
 
 [build-dependencies]
 cc = "^1.0.70"
 which = "^4.0"
 cmake = "*"
-bindgen = "*"
-libc = "*" #TODO: move libc dependencies to build 
+bindgen = "0.69.4"
+libc = "*" #TODO: move libc dependencies to build
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
 
 [features]
-default = []
+default = ["cuda"]
 gl64 = []
 bn254 = []
-no_cuda=[]
+no_cuda = []
+cuda = []
