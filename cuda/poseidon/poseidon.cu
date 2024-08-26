@@ -1,5 +1,9 @@
 #include "poseidon.cuh"
 
+__device__ u32 GPU_MDS_MATRIX_CIRC[12] = {17, 15, 41, 16, 2, 28, 13, 13, 39, 18, 34, 20};
+
+__device__ u32 GPU_MDS_MATRIX_DIAG[12] = {8, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u};
+
 __device__ u64 GPU_ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS] = {
     0xb585f766f2144405,
     0x7746a55f43921ad7,
@@ -609,14 +613,11 @@ __device__ gl64_t PoseidonPermutationGPU::mds_row_shf(u32 r, gl64_t *v)
     // known to be small, so we can accumulate all the products for
     // each row and reduce just once at the end (done by the
     // caller).
-    u32 GPU_MDS_MATRIX_CIRC[12] = {17, 15, 41, 16, 2, 28, 13, 13, 39, 18, 34, 20};
-
-    u32 GPU_MDS_MATRIX_DIAG[12] = {8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     u128 res = 0;
     for (u32 i = 0; i < 12; i++)
     {
-        int64_t tmp1 = GPU_MDS_MATRIX_CIRC[i];
+        uint64_t tmp1 = GPU_MDS_MATRIX_CIRC[i];
         u128 tmp2 = v[(i + r) % SPONGE_WIDTH];
         res = res + tmp2 * tmp1;
     }
@@ -636,12 +637,11 @@ __device__ void PoseidonPermutationGPU::mds_layer(gl64_t *state, gl64_t *result)
     }
 }
 
-__device__ inline void PoseidonPermutationGPU::constant_layer(gl64_t *state, gl64_t *rconst, u32 *round_ctr)
+__device__ inline void PoseidonPermutationGPU::constant_layer(gl64_t *state, u32 *round_ctr)
 {
     for (int i = 0; i < 12; i++)
     {
-        // gl64_t tmp = GPU_ALL_ROUND_CONSTANTS[i + SPONGE_WIDTH * (*round_ctr)];
-        gl64_t tmp = rconst[i + SPONGE_WIDTH * (*round_ctr)];
+        gl64_t tmp = GPU_ALL_ROUND_CONSTANTS[i + SPONGE_WIDTH * (*round_ctr)];
         state[i] = state[i] + tmp;
     }
 }
@@ -663,14 +663,14 @@ __device__ inline void PoseidonPermutationGPU::sbox_layer(gl64_t *state)
     }
 }
 
-__device__ inline void PoseidonPermutationGPU::full_rounds(gl64_t *state, gl64_t *rconst, u32 *round_ctr)
+__device__ inline void PoseidonPermutationGPU::full_rounds(gl64_t *state, u32 *round_ctr)
 {
     gl64_t res[12] = {(uint64_t)0u};
     gl64_t *pres = res;
 
     for (int k = 0; k < HALF_N_FULL_ROUNDS; k++)
     {
-        constant_layer(state, rconst, round_ctr);
+        constant_layer(state, round_ctr);
         sbox_layer(state);
         mds_layer(state, pres);
         *round_ctr += 1;
@@ -680,13 +680,13 @@ __device__ inline void PoseidonPermutationGPU::full_rounds(gl64_t *state, gl64_t
     }
 }
 
-__device__ void PoseidonPermutationGPU::partial_rounds_naive(gl64_t *state, gl64_t *rconst, u32 *round_ctr)
+__device__ void PoseidonPermutationGPU::partial_rounds_naive(gl64_t *state, u32 *round_ctr)
 {
     gl64_t res[12] = {(uint64_t)0u};
     gl64_t *pres = res;
     for (int k = 0; k < N_PARTIAL_ROUNDS; k++)
     {
-        constant_layer(state, rconst, round_ctr);
+        constant_layer(state, round_ctr);
         state[0] = sbox_monomial(state[0]);
         mds_layer(state, pres);
         *round_ctr += 1;
@@ -698,10 +698,6 @@ __device__ void PoseidonPermutationGPU::partial_rounds_naive(gl64_t *state, gl64
 
 __device__ __forceinline__ void PoseidonPermutationGPU::mds_partial_layer_fast(gl64_t *state, u32 r)
 {
-    u32 GPU_MDS_MATRIX_CIRC[12] = {17, 15, 41, 16, 2, 28, 13, 13, 39, 18, 34, 20};
-
-    u32 GPU_MDS_MATRIX_DIAG[12] = {8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
     // Set d = [M_00 | w^] dot [state]
     u128 d_sum_lo = 0;
     u32 d_sum_hi = 0;
@@ -756,6 +752,7 @@ __device__ void PoseidonPermutationGPU::partial_rounds(gl64_t *state, u32 *round
         state[i] = res[i];
     }
 
+
     // loop
 #pragma unroll
     for (int k = 0; k < N_PARTIAL_ROUNDS; k++)
@@ -768,26 +765,26 @@ __device__ void PoseidonPermutationGPU::partial_rounds(gl64_t *state, u32 *round
 }
 
 // Arrys of size SPIONGE_WIDTH
-__device__ gl64_t *PoseidonPermutationGPU::poseidon_naive(gl64_t *input, gl64_t *rconst)
+__device__ gl64_t *PoseidonPermutationGPU::poseidon_naive(gl64_t *input)
 {
     gl64_t *state = input;
     u32 round_ctr = 0;
 
-    full_rounds(state, rconst, &round_ctr);
-    partial_rounds_naive(state, rconst, &round_ctr);
-    full_rounds(state, rconst, &round_ctr);
+    full_rounds(state, &round_ctr);
+    partial_rounds_naive(state, &round_ctr);
+    full_rounds(state, &round_ctr);
     return state;
 }
 
 // Arrys of size SPIONGE_WIDTH
-__device__ gl64_t *PoseidonPermutationGPU::poseidon(gl64_t *input, gl64_t *rconst)
+__device__ gl64_t *PoseidonPermutationGPU::poseidon(gl64_t *input)
 {
     gl64_t *state = input;
     u32 round_ctr = 0;
 
-    full_rounds(state, rconst, &round_ctr);
+    full_rounds(state, &round_ctr);
     partial_rounds(state, &round_ctr);
-    full_rounds(state, rconst, &round_ctr);
+    full_rounds(state, &round_ctr);
     return state;
 }
 
@@ -832,10 +829,10 @@ __device__ void PoseidonPermutationGPU::set_state(u32 idx, gl64_t val)
     state[idx] = val;
 }
 
-__device__ void PoseidonPermutationGPU::permute(gl64_t *rconst)
+__device__ void PoseidonPermutationGPU::permute()
 {
-    poseidon_naive(state, rconst);
-    // poseidon(state, rconst);
+    poseidon_naive(state);
+    // poseidon(state);
 }
 
 __device__ gl64_t *PoseidonPermutationGPU::squeeze(u32 size)
@@ -860,23 +857,13 @@ __device__ void gpu_poseidon_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *ha
     }
     else
     {
-        __shared__ gl64_t arc[MAX_WIDTH * N_ROUNDS];
-        if (threadIdx.x == 0)
-        {
-            for (int i = 0; i < MAX_WIDTH * N_ROUNDS; i++)
-            {
-                arc[i] = GPU_ALL_ROUND_CONSTANTS[i];
-            }
-        }
-        __syncthreads();
-
         PoseidonPermutationGPU perm = PoseidonPermutationGPU();
 
         // Absorb all input chunks.
         for (u32 idx = 0; idx < num_inputs; idx += SPONGE_RATE)
         {
             perm.set_from_slice(inputs + idx, MIN(SPONGE_RATE, num_inputs - idx), 0);
-            perm.permute(arc);
+            perm.permute();
         }
         gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
         for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
@@ -920,20 +907,10 @@ __device__ void gpu_poseidon_hash_one_stride(gl64_t *inputs, u32 num_inputs, gl6
 
 __device__ void gpu_poseidon_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
-    __shared__ gl64_t arc[MAX_WIDTH * N_ROUNDS];
-    if (threadIdx.x == 0)
-    {
-        for (int i = 0; i < MAX_WIDTH * N_ROUNDS; i++)
-        {
-            arc[i] = GPU_ALL_ROUND_CONSTANTS[i];
-        }
-    }
-    __syncthreads();
-
     PoseidonPermutationGPU perm = PoseidonPermutationGPU();
     perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
     perm.set_from_slice(hash2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
-    perm.permute(arc);
+    perm.permute();
     gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
     for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
     {
