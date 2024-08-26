@@ -608,7 +608,7 @@ __device__ __forceinline__ gl64_t PoseidonPermutationGPU::reduce_u160(u128 n_lo,
 
 __device__ gl64_t PoseidonPermutationGPU::mds_row_shf(u32 r, gl64_t *v)
 {
-    assert(r < SPONGE_WIDTH);
+    // assert(r < SPONGE_WIDTH);
     // The values of `MDS_MATRIX_CIRC` and `MDS_MATRIX_DIAG` are
     // known to be small, so we can accumulate all the products for
     // each row and reduce just once at the end (done by the
