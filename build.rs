@@ -10,8 +10,6 @@ extern crate rustacuda;
 use rustacuda::device::DeviceAttribute;
 #[cfg(not(feature="no_cuda"))]
 use rustacuda::prelude::*;
-#[cfg(not(feature="no_cuda"))]
-use std::process::Command;
 
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
 #[cfg(not(feature="no_cuda"))]
@@ -63,6 +61,8 @@ fn build_device_wrapper() {
     // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html
     .allowlist_function("cudaFreeAsync")
     .allowlist_function("cudaMallocAsync")
+    //
+    .allowlist_function("cudaMemGetInfo")
     //
     .generate()
     .expect("Unable to generate bindings");
@@ -197,10 +197,13 @@ fn build_cuda() {
 }
 
 #[cfg(not(feature="no_cuda"))]
-fn merkle_tree_bindings() {
+fn build_lib() {
+    use std::process::Command;
+
     let pwd = env::current_dir().unwrap();
     let libdir = pwd.join("cuda");
     let header_file = libdir.join("merkle/merkle.h");
+    let src_file = libdir.join("merkle/merkle.cu");
     let lib_file = libdir.join("libcryptocuda.a");
 
     if !lib_file.exists()
@@ -224,35 +227,12 @@ fn merkle_tree_bindings() {
     println!("cargo:rustc-link-lib=gomp");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
-    println!("cargo:rerun-if-changed={}", header_file.to_str().unwrap());
-
-    // The bindgen::Builder is the main entry point
-    // to bindgen, and lets you build up options for
-    // the resulting bindings.
-    let bindings = bindgen::Builder::default()
-        // The input header we would like to generate
-        // bindings for.
-        .header(header_file.to_str().unwrap())
-        // Tell cargo to invalidate the built crate whenever any of the
-        // included header files changed.
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        // Finish the builder and generate the bindings.
-        .generate()
-        // Unwrap the Result and panic on failure.
-        .expect("Unable to generate bindings");
-
-    // Write the bindings to the $OUT_DIR/bindings.rs file.
-
-    let out_path = PathBuf::from("src/merkle");
-
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+    println!("cargo:rerun-if-changed={},{}", header_file.to_str().unwrap(), src_file.to_str().unwrap());
 }
 
 fn main() {
     #[cfg(not(feature="no_cuda"))]
-    merkle_tree_bindings();
-    #[cfg(not(feature="no_cuda"))]
     build_cuda();
+    #[cfg(not(feature="no_cuda"))]
+    build_lib();
 }

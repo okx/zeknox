@@ -1,4 +1,4 @@
-#include "poseidon.cuh"
+#include "monolith.cuh"
 #include "poseidon.h"
 
 #include <stdio.h>
@@ -7,7 +7,7 @@ void printhash(u64 *h)
 {
     for (int i = 0; i < 4; i++)
     {
-        printf("%lu ", h[i]);
+        printf("%lx ", h[i]);
     }
     printf("\n");
 }
@@ -18,7 +18,7 @@ __global__ void hash(uint64_t *in, uint64_t *out, uint32_t n)
     if (tid > 0)
         return;
 
-    gpu_poseidon_hash_one((gl64_t *)in, n, (gl64_t *)out);
+    gpu_monolith_hash_one((gl64_t *)in, n, (gl64_t *)out);
 }
 
 __global__ void hash_step1(uint64_t *in, uint64_t *out, uint32_t n, uint32_t len)
@@ -27,7 +27,7 @@ __global__ void hash_step1(uint64_t *in, uint64_t *out, uint32_t n, uint32_t len
     if (tid >= len)
         return;
 
-    gpu_poseidon_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    gpu_monolith_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void hash_step2(uint64_t *in, uint64_t *out, uint32_t len)
@@ -36,58 +36,40 @@ __global__ void hash_step2(uint64_t *in, uint64_t *out, uint32_t len)
     if (tid >= len)
         return;
 
-    gpu_poseidon_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
+    gpu_monolith_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
 }
 
 int test1()
 {
-    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    u64 inp[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    u64 exp[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
 
     u64 h1[4] = {0u};
     u64 h2[4] = {0u};
 
     u64 *gpu_leaf;
     u64 *gpu_hash;
-    CHECKCUDAERR(cudaMalloc(&gpu_leaf, 6 * sizeof(u64)));
+    CHECKCUDAERR(cudaMalloc(&gpu_leaf, 12 * sizeof(u64)));
     CHECKCUDAERR(cudaMalloc(&gpu_hash, 4 * sizeof(u64)));
-    CHECKCUDAERR(cudaMemcpy(gpu_leaf, leaf, 6 * sizeof(u64), cudaMemcpyHostToDevice));
-
-    for (int k = 2; k <= 6; k += 2)
-    {
-        hash<<<1, 1>>>(gpu_leaf, gpu_hash, k);
-        CHECKCUDAERR(cudaMemcpy(h1, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
-        printhash(h1);
-        cpu_poseidon_hash_one(leaf, k, h2);
-        printhash(h2);
-
-        for (int j = 0; j < 4; j++) {
-            if (h1[j] != h2[j]) {
-                printf("ERROR: CPU and GPU results are different!\n");
-                break;
-            }
-        }
-    }
-
-    /*
-    #ifdef RUST_POSEIDON
-        ext_poseidon_hash_or_noop(h1, leaf, 1);
-        printhash(h1);
-    #endif
-        cpu_poseidon_hash_one(leaf, 1, h2);
-        printhash(h2);
-
-    #ifdef RUST_POSEIDON
-        ext_poseidon_hash_or_noop(h1, leaf, 4);
-        printhash(h1);
-    #endif
-        cpu_poseidon_hash_one(leaf, 4, h2);
-        printhash(h2);
-    */
-
-#ifdef RUST_POSEIDON
-    ext_poseidon_hash_or_noop(h1, leaf, 6);
+    CHECKCUDAERR(cudaMemcpy(gpu_leaf, inp, 12 * sizeof(u64), cudaMemcpyHostToDevice));
+    hash<<<1, 1>>>(gpu_leaf, gpu_hash, 12);
+    CHECKCUDAERR(cudaMemcpy(h1, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
     printhash(h1);
-#endif
+
+    assert(h1[0] == exp[0]);
+    assert(h1[1] == exp[1]);
+    assert(h1[2] == exp[2]);
+    assert(h1[3] == exp[3]);
+
+    cpu_monolith_hash_one(inp, 12, h2);
+    printhash(h2);
+
+    assert(h2[0] == exp[0]);
+    assert(h2[1] == exp[1]);
+    assert(h2[2] == exp[2]);
+    assert(h2[3] == exp[3]);
+
+    printf("Test 1: Results are ok!\n");
 
     return 1;
 }
@@ -106,11 +88,11 @@ int test2()
 
     for (u32 i = 0; i < 4; i++)
     {
-        cpu_poseidon_hash_one(test_leaves + 7 * i, 7, tree1 + 4 * i);
+        cpu_monolith_hash_one(test_leaves + 7 * i, 7, tree1 + 4 * i);
     }
-    cpu_poseidon_hash_two(tree1, tree1 + 4, tree1 + 16);
-    cpu_poseidon_hash_two(tree1 + 8, tree1 + 12, tree1 + 20);
-    cpu_poseidon_hash_two(tree1 + 16, tree1 + 20, tree1 + 24);
+    cpu_monolith_hash_two(tree1, tree1 + 4, tree1 + 16);
+    cpu_monolith_hash_two(tree1 + 8, tree1 + 12, tree1 + 20);
+    cpu_monolith_hash_two(tree1 + 16, tree1 + 20, tree1 + 24);
 
     // GPU
     u64 tree2[28] = {0ul};
@@ -136,18 +118,40 @@ int test2()
     }
     if (ret == 1)
     {
-        printf("Trees are the same!\n");
+        printf("Test 2: Trees are the same!\n");
     }
 
     return ret;
 }
 
+int test3() {
+    uint64_t inp[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    uint64_t hash[4] = {0};
+    cpu_monolith_hash_one(inp, 12, hash);
+
+    printf("Hash: \n");
+    for(int i = 0; i < 4; i++) {
+        printf("%lX ", hash[i]);
+    }
+    printf("\n");
+
+    uint64_t ref[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
+    for(int i = 0; i < 4; i++) {
+        assert(hash[i] == ref[i]);
+    }
+
+    printf("Test 3: Results are ok!\n");
+
+    return 1;
+}
+
 int main()
 {
-
     test1();
 
     test2();
+
+    test3();
 
     return 0;
 }

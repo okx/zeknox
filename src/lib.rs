@@ -4,8 +4,6 @@ use types::{NTTConfig, TransposeConfig};
 pub mod device;
 pub mod error;
 pub mod types;
-#[cfg(feature="cuda")]
-pub mod merkle;
 
 extern "C" {
 
@@ -14,6 +12,10 @@ extern "C" {
 
     fn init_twiddle_factors(device_id: usize, lg_n: usize) -> error::Error;
     fn init_coset(device_id: usize, lg_n: usize, coset_gen: u64) -> error::Error;
+
+    fn init_cuda();
+
+    fn init_cuda_degree(max_degree: usize);
 
     fn compute_ntt(
         device_id: usize,
@@ -67,6 +69,31 @@ extern "C" {
         lg_n: usize,
         cfg: types::TransposeConfig,
     ) -> error::Error;
+
+    pub fn fill_digests_buf_linear_gpu_with_gpu_ptr(
+        digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        leaves_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        digests_buf_size: u64,
+        cap_buf_size: u64,
+        leaves_buf_size: u64,
+        leaf_size: u64,
+        cap_height: u64,
+        hash_type: u64,
+        gpu_id: u64,
+    );
+
+    pub fn fill_digests_buf_linear_multigpu_with_gpu_ptr(
+        digests_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        cap_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        leaves_buf_gpu_ptr: *mut ::std::os::raw::c_void,
+        digests_buf_size: u64,
+        cap_buf_size: u64,
+        leaves_buf_size: u64,
+        leaf_size: u64,
+        cap_height: u64,
+        hash_type: u64,
+    );
 
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
@@ -223,6 +250,7 @@ pub fn lde_batch_multi_gpu<T>(
     total_num_output_elements: usize
 ) {
     let err = unsafe {
+        // println!("In compute_batched_lde_multi_gpu {:?}", total_num_input_elements);
         compute_batched_lde_multi_gpu(
             output as *mut core::ffi::c_void,
             input as *mut core::ffi::c_void,
@@ -340,6 +368,18 @@ pub fn init_coset_rs(device_id: usize, lg_n: usize, coset_gen: u64) {
 
     if err.code != 0 {
         panic!("{}", String::from(err));
+    }
+}
+
+pub fn init_cuda_rs() {
+    unsafe {
+        init_cuda();
+    }
+}
+
+pub fn init_cuda_degree_rs(max_degree: usize) {
+    unsafe {
+        init_cuda_degree(max_degree);
     }
 }
 

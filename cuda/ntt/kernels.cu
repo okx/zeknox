@@ -7,8 +7,9 @@
 #include <cooperative_groups.h>
 #include <util/sharedmem.cuh>
 
-#define BLOCK_DIM 32
+#include <curand_kernel.h>
 
+#define BLOCK_DIM 32
 
 __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
@@ -64,6 +65,28 @@ __global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, u
     }
 }
 
+__global__ void gen_random_salt_kernel(fr_t *arr, uint32_t size, uint32_t salt_size, uint64_t seed)
+{
+    uint32_t tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+
+    if (tid >= size)
+    {
+        return;
+    }
+
+    curandState rstate;
+    curand_init(seed, tid, 0, &rstate);
+
+    for (uint32_t k = 0; k < salt_size; k++)
+    {
+        uint32_t x1 = curand(&rstate);
+        uint32_t x2 = curand(&rstate);
+        uint64_t x = x1;
+        x = (x << 32) | x2;
+        arr[k * size + tid] = fr_t(x);
+    }
+}
+
 /**
  * Fast transpose from NVIDIA. Takes array and returns its transpose
  * @param in_arr input array of type E (elements).
@@ -77,25 +100,25 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
     // We use shared memory 'cache' blocks for coalesce memory efficiency improvement
 	__shared__ fr_t block[BLOCK_DIM][BLOCK_DIM+1];
 
-    // Get indexes 
-    int j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.y);
-    int i_idx = blockIdx.x * BLOCK_DIM + threadIdx.x;
+    // Get indexes
+    int j_idx = blockIdx.x * BLOCK_DIM + (4*threadIdx.x);
+    int i_idx = blockIdx.y * BLOCK_DIM + threadIdx.y;
 
     int idx = i_idx * n + j_idx;
 
 	// read the matrix tile into shared memory in its transposed position
     for(int i = 0; i < 4; i++){
         if((i_idx < batch_size) && ((j_idx+i) < n)){
-            block[(4 * threadIdx.y) + i][threadIdx.x] = in_arr[idx + i];
+            block[(4 * threadIdx.x) + i][threadIdx.y] = in_arr[idx + i];
         }
-    } 
+    }
 
     // synchronise to ensure all writes to block[][] have completed
 	__syncthreads();
 
     // calculated transposed indexes
-    j_idx = blockIdx.x * BLOCK_DIM + (4*threadIdx.y);
-    i_idx = blockIdx.y * BLOCK_DIM + threadIdx.x;
+    j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.x);
+    i_idx = blockIdx.x * BLOCK_DIM + threadIdx.y;
 
     int i_idx_rev = __brev(i_idx) >> (32 - lg_n);
 
@@ -104,7 +127,7 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
 	// write the transposed matrix tile to global memory (out_arr) in linear order
 	for(int i = 0; i < 4; i++){
         if((i_idx < n) && ((j_idx+i) < batch_size)){
-            out_arr[idx+ i] = block[threadIdx.x][(4 * threadIdx.y) + i];
+            out_arr[idx+ i] = block[threadIdx.y][(4 * threadIdx.x) + i];
         }
     }
 }
@@ -119,13 +142,13 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
  */
  __global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
  {
-     // Get indexes 
+     // Get indexes
      int threadId = blockIdx.x * blockDim.x + threadIdx.x;
      if (threadId < n * batch_size)
      {
         int j_idx = threadId % n;
         int i_idx = threadId / n;
-    
+
         j_idx = __brev(j_idx) >> (32 - lg_n);
         int idx_swapped = j_idx * batch_size + i_idx;
 

@@ -5,10 +5,10 @@ REPS=3
 TSTAMP=`date '+%Y-%m-%d-%H-%M-%S'`
 FILE="benchmark_$TSTAMP.txt"
 
-make testgpuv2
+make testgpu.exe
 
 for SIZE in $SIZES; do
 	for REP in `seq 1 $REPS`; do
-		./testgpu $SIZE >> $FILE
+		./testgpu.exe $SIZE >> $FILE
 	done
 done

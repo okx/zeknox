@@ -1,5 +1,5 @@
-#ifndef __POSEIDON2_CUH__
-#define __POSEIDON2_CUH__
+#ifndef __MONOLITH_CUH__
+#define __MONOLITH_CUH__
 
 #include "int_types.h"
 #ifdef USE_CUDA
@@ -11,20 +11,20 @@
 #include "poseidon.hpp"
 #endif
 #include "poseidon.h"
-#include "poseidon2.h"
+#include "monolith.h"
 
 #ifdef USE_CUDA
-class Poseidon2PermutationGPU : public PoseidonPermutationGPU
+class MonolithPermutationGPU : public PoseidonPermutationGPU
 {
 public:
     DEVICE void permute2();
 };
 #else  // USE_CUDA
-class Poseidon2Permutation : public PoseidonPermutation
+class MonolithPermutation : public PoseidonPermutation
 {
 public:
     void permute2();
 };
 #endif // USE_CUDA
 
-#endif // __POSEIDON2_CUH__
+#endif // __MONOLITH_CUH__

@@ -102,7 +102,7 @@ private:
 		}
 		printf("\n");
 	}
-	#endif	// DEBUG
+#endif // DEBUG
 
 public:
 	// input and output of size 12
@@ -202,25 +202,23 @@ DEVICE void gpu_poseidon_bn128_hash_one(gl64_t *data, u32 data_size, gl64_t *dig
 {
 	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
 
-    // Absorb all input chunks.
-    for (u32 idx = 0; idx < data_size; idx += SPONGE_RATE)
-    {
-        perm.set_from_slice(data + idx, MIN(SPONGE_RATE, data_size - idx), 0);
-        perm.permute();
-    }
+	// Absorb all input chunks.
+	for (u32 idx = 0; idx < data_size; idx += SPONGE_RATE)
+	{
+		perm.set_from_slice(data + idx, MIN(SPONGE_RATE, data_size - idx), 0);
+		perm.permute();
+	}
 
-    // Squeeze until we have the desired number of outputs.
-    // assert(num_outputs == NUM_HASH_OUT_ELTS);
-    gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-    for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-    {
-        digest[i] = ret[i];
-    }
+	gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
+	for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
+	{
+		digest[i] = ret[i];
+	}
 }
 #else
 DEVICE void cpu_poseidon_bn128_hash_one(u64 *data, u32 data_size, u64 *digest)
 {
-	assert (data_size > NUM_HASH_OUT_ELTS);
+	assert(data_size > NUM_HASH_OUT_ELTS);
 
 	GoldilocksField *in = (GoldilocksField *)malloc(data_size * sizeof(GoldilocksField));
 	for (u32 i = 0; i < data_size; i++)
@@ -228,18 +226,17 @@ DEVICE void cpu_poseidon_bn128_hash_one(u64 *data, u32 data_size, u64 *digest)
 		in[i] = GoldilocksField(data[i]);
 	}
 
+	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
 
-		PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
+	u64 idx = 0;
+	while (idx < data_size)
+	{
+		perm.set_from_slice(in + idx, MIN(PoseidonPermutation::RATE, (data_size - idx)), 0);
+		perm.permute();
+		idx += PoseidonPermutation::RATE;
+	}
 
-		u64 idx = 0;
-		while (idx < data_size)
-		{
-			perm.set_from_slice(in + idx, MIN(PoseidonPermutation::RATE, (data_size - idx)), 0);
-			perm.permute();
-			idx += PoseidonPermutation::RATE;
-		}
-
-	HashOut	out = perm.squeeze(NUM_HASH_OUT_ELTS);
+	HashOut out = perm.squeeze(NUM_HASH_OUT_ELTS);
 
 	for (u64 i = 0; i < NUM_HASH_OUT_ELTS; i++)
 	{
@@ -253,14 +250,14 @@ DEVICE void cpu_poseidon_bn128_hash_one(u64 *data, u32 data_size, u64 *digest)
 DEVICE void gpu_poseidon_bn128_hash_two(gl64_t *digest_left, gl64_t *digest_right, gl64_t *digest)
 {
 	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
-    perm.set_from_slice(digest_left, NUM_HASH_OUT_ELTS, 0);
-    perm.set_from_slice(digest_right, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
-    perm.permute();
-    gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-    for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-    {
-        digest[i] = ret[i];
-    }
+	perm.set_from_slice(digest_left, NUM_HASH_OUT_ELTS, 0);
+	perm.set_from_slice(digest_right, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
+	perm.permute();
+	gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
+	for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
+	{
+		digest[i] = ret[i];
+	}
 }
 #else
 DEVICE void cpu_poseidon_bn128_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
@@ -292,10 +289,10 @@ __global__
 	void
 	test(u64 *out)
 {
-	#ifdef USE_CUDA
-		int tid = blockIdx.x * blockDim.x + threadIdx.x;
-		out = out + tid * 12;
-	#endif
+#ifdef USE_CUDA
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	out = out + tid * 12;
+#endif
 	u64 inp[12] = {8917524657281059100u,
 				   13029010200779371910u,
 				   16138660518493481604u,
@@ -316,11 +313,12 @@ int main2()
 	test<<<1, 32>>>(gpu_out);
 	CHECKCUDAERR(cudaMemcpy(cpu_out, gpu_out, 12 * 8 * 32, cudaMemcpyDeviceToHost));
 
-	for (int k = 0; k < 32; k++) {
+	for (int k = 0; k < 32; k++)
+	{
 		printf("Output %d:\n", k);
 		for (int i = 0; i < 12; i++)
 		{
-			printf("%lu\n", cpu_out[12*k +i]);
+			printf("%lu\n", cpu_out[12 * k + i]);
 		}
 	}
 #else
@@ -356,11 +354,11 @@ int main()
 		printf("%lu\n", out[i]);
 	}
 	assert(out[0] == 16736853722845225729u);
-    assert(out[1] == 1446699130810517790u);
-    assert(out[2] == 15445626857806971868u);
-    assert(out[3] == 6331160477881736675u);
+	assert(out[1] == 1446699130810517790u);
+	assert(out[2] == 15445626857806971868u);
+	assert(out[3] == 6331160477881736675u);
 	printf("Test ok!\n");
 	return 0;
 }
 
-#endif	// TESTING
+#endif // TESTING

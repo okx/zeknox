@@ -83,8 +83,8 @@ extern "C"
 
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
-#endif 
-RustError 
+#endif
+RustError
 compute_batched_lde(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_domain_size,
                         Ntt_Types::Direction ntt_direction, Ntt_Types::NTTConfig cfg)
 {
@@ -94,9 +94,9 @@ compute_batched_lde(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_dom
 
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
-#endif 
-RustError 
-compute_batched_lde_multi_gpu(fr_t *output,fr_t *input, uint32_t num_gpu, Ntt_Types::Direction ntt_direction, 
+#endif
+RustError
+compute_batched_lde_multi_gpu(fr_t *output,fr_t *input, uint32_t num_gpu, Ntt_Types::Direction ntt_direction,
                         Ntt_Types::NTTConfig cfg, uint32_t lg_domain_size, size_t total_num_input_elements, size_t total_num_output_elements)
 {
     return ntt::BatchLdeMultiGpu(output, input, num_gpu, ntt_direction, cfg, lg_domain_size, total_num_input_elements, total_num_output_elements);
@@ -104,8 +104,8 @@ compute_batched_lde_multi_gpu(fr_t *output,fr_t *input, uint32_t num_gpu, Ntt_Ty
 
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
-#endif 
-RustError 
+#endif
+RustError
 compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
                         Ntt_Types::TransposeConfig cfg)
 {
@@ -115,8 +115,8 @@ compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n
 
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
-#endif 
-RustError 
+#endif
+RustError
 compute_naive_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
                         Ntt_Types::TransposeConfig cfg)
 {
@@ -171,3 +171,41 @@ extern "C" RustError::by_value mult_pippenger_g2(g2_projective_t *result, g2_aff
 }
 #endif
 #endif
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+void init_cuda() {
+    // This is taken from Plonky2 field (MULTIPLICATIVE_GROUP_GENERATOR = 7)
+    const fr_t generator = fr_t(7);
+
+    size_t num_of_gpus = ngpus();
+
+    for (size_t d = 0; d < num_of_gpus; d++)
+    {
+        init_coset(d, 24, generator);
+        for (size_t k = 2; k < 25; k++)
+        {
+            init_twiddle_factors(d, k);
+        }
+    }
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+void init_cuda_degree(uint32_t max_degree) {
+    // This is taken from Plonky2 field (MULTIPLICATIVE_GROUP_GENERATOR = 7)
+    const fr_t generator = fr_t(7);
+
+    size_t num_of_gpus = ngpus();
+
+    for (size_t d = 0; d < num_of_gpus; d++)
+    {
+        init_coset(d, max_degree, generator);
+        for (size_t k = 2; k <= max_degree; k++)
+        {
+            init_twiddle_factors(d, k);
+        }
+    }
+}

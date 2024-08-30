@@ -31,7 +31,7 @@ namespace ntt
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
-    void bit_rev(fr_t *d_out, const fr_t *d_inp, uint32_t lg_domain_size, stream_t &stream)
+    inline void bit_rev(fr_t *d_out, const fr_t *d_inp, uint32_t lg_domain_size, stream_t &stream)
     {
         assert(lg_domain_size <= MAX_LG_DOMAIN_SIZE);
 
@@ -61,12 +61,18 @@ namespace ntt
      * @param logn log(n).
      * @param batch_size the size of the batch.
      */
-    void reverse_order_batch(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
+    inline void reverse_order_batch(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size, stream_t &stream)
     {
-        // printf("reverse_order_batch stream: %d \n", stream.stream);
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, n, logn, batch_size);
+    }
+
+    inline void gen_random_salt(fr_t *arr, uint32_t chunk_size, uint32_t salt_size, uint64_t seed, stream_t &stream)
+    {
+        int number_of_threads =1024;
+        int number_of_blocks = (chunk_size + number_of_threads - 1) / number_of_threads;
+        gen_random_salt_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, chunk_size, salt_size, seed);
     }
 
     /**
@@ -76,7 +82,7 @@ namespace ntt
      * @param n length of `arr`.
      * @param batch_size the size of the batch.
      */
-    void transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
+    inline void transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
     {
         // This is the dimensions of the block, it is 64 rows and 8 cols however since each thread
         // transposes 8 elements, we consider the block size to be 64 x 64
@@ -86,8 +92,8 @@ namespace ntt
         // Number of threads is max_threads and we create our 2d thread dimensions with 64x8 threads
         // Which constraints to the max threads defined prior
         int number_of_threads = MAX_NUM_THREADS;
-        dim3 threads_dim = dim3(32, 8);
-        dim3 blocks_dim = dim3(blocks_per_col, blocks_per_row);
+        dim3 threads_dim = dim3(8, 32);
+        dim3 blocks_dim = dim3(blocks_per_row, blocks_per_col);
         transpose_rev_kernel<<<blocks_dim, threads_dim, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
     }
 
@@ -98,18 +104,19 @@ namespace ntt
      * @param n length of `arr`.
      * @param batch_size the size of the batch.
      */
-     void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
+     inline void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream)
      {
+
         int number_of_threads = MAX_THREADS_BATCH;
         int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
         naive_transpose_rev_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
      }
 
     // TODO: combine extends, transpose, bit permutation reverse
-    void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
+    inline void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream)
     {
         int number_of_threads = MAX_THREADS_BATCH;
-        uint32_t n_extend = 1 << (logn + extension_rate_bits);
+        size_t n_extend = (size_t)1 << (logn + extension_rate_bits);
         int number_of_blocks = (n_extend * batch_size + number_of_threads - 1) / number_of_threads;
         degree_extension_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(output, arr, n, n_extend, batch_size);
     }
@@ -296,7 +303,6 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], input, total_elements);
             }
 
@@ -311,13 +317,8 @@ namespace ntt
             {
                 d_transpose_output.set_device_ptr(output);
             }
-            else
-            {
-                d_transpose_output.alloc();
-            }
 
             transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
 
             if (!cfg.are_outputs_on_device)
             {
@@ -364,7 +365,6 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], input, total_elements);
             }
 
@@ -379,14 +379,8 @@ namespace ntt
             {
                 d_transpose_output.set_device_ptr(output);
             }
-            else
-            {
-                d_transpose_output.alloc();
-            }
-
 
             naive_transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
 
             if (!cfg.are_outputs_on_device)
             {
@@ -512,7 +506,6 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], inout, total_elements);
             }
 
@@ -564,6 +557,11 @@ namespace ntt
 
             uint32_t num_batches_per_gpu = (cfg.batches + num_gpu - 1)/num_gpu;
             uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu-1));
+            if (cfg.batches < num_gpu) {
+                num_gpu = cfg.batches;
+                num_batches_per_gpu = 1;
+                num_batches_last_gpu = 0;
+            }
 
             std::vector<fr_t *> output_pointers;
             std::vector<fr_t *> input_pointers;
@@ -588,9 +586,9 @@ namespace ntt
                     d_twiddle = all_gpus_twiddle_forward_arr[i].at(lg_output_domain_size);
                 }
 
-                // printf("Allocating input memory on GPU: %d\n", gpu.id());
+                size_t total_input_elements = ((size_t)1 << lg_n) * batches;
 
-                size_t total_input_elements = (1 << lg_n) * batches;
+                // printf("Allocating input memory %ld B (log %ld, batches %ld) on GPU %d\n", total_input_elements, lg_n, batches, gpu.id());
 
                 dev_ptr_t<fr_t> input_data{
                     total_input_elements,
@@ -599,14 +597,14 @@ namespace ntt
                     true
                 };
 
-                void *src = (inputs + (i * num_batches_per_gpu * (1 << lg_n)));
+                void *src = (inputs + (i * num_batches_per_gpu * ((size_t)1 << lg_n)));
                 gpu.HtoD(&input_data[0], src, total_input_elements);
 
                 input_pointers.emplace_back(&input_data[0]);
 
                 size_t total_output_elements = size * batches;
 
-                // printf("Allocating output memory on GPU: %d\n", gpu.id());
+                // printf("Allocating output memory %ld B on GPU %d\n", total_output_elements, gpu.id());
 
                 dev_ptr_t<fr_t> output_data{
                     total_output_elements,
@@ -617,7 +615,7 @@ namespace ntt
 
                 output_pointers.emplace_back(&output_data[0]);
 
-                extend_inputs_batch(&output_data[0], &input_data[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, batches, gpu);
+                extend_inputs_batch(&output_data[0], &input_data[0], (size_t)1 << lg_n, lg_n, cfg.extension_rate_bits, batches, gpu);
                 // gpu.sync();
 
                 if (direction == Direction::inverse)
@@ -634,6 +632,8 @@ namespace ntt
             }
 
             auto &gpu = select_gpu(0);
+
+            // printf("Allocating buffer memory %ld B on GPU %d\n", total_num_output_elements, gpu.id());
 
             dev_ptr_t<fr_t> d_buffer{
                 total_num_output_elements,
@@ -674,7 +674,7 @@ namespace ntt
                     if(canAccessPeer)
                     {
                         // printf("Peer copy can access gpu\n");
-                        size_t offset = i * num_batches_per_gpu * (1 << lg_output_domain_size);
+                        size_t offset = i * num_batches_per_gpu * ((size_t)1 << lg_output_domain_size);
                         // printf("Offset:%d on GPU: %d\n", offset, gpu.id());
                         // printf("The pointer value: %d\n", &d_buffer[offset]);
                         CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, gpu.id(), total_output_bytes, gpu));
@@ -719,7 +719,6 @@ namespace ntt
 
         try
         {
-
             gpu.select();
             // printf("batch lde with input lg_n:%d,  extension_rate_bits: %d, direction: %d, batches: %d, are_outputs_on_device: %d, are_inputs_on_device: %d\n", lg_n, cfg.extension_rate_bits, direction,
             //        cfg.batches,
@@ -739,7 +738,7 @@ namespace ntt
                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_output_domain_size);
             }
 
-            size_t total_input_elements = (1 << lg_n) * cfg.batches;
+            size_t total_input_elements = ((size_t)1 << lg_n) * cfg.batches;
             int input_size_bytes = total_input_elements * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{
@@ -756,11 +755,10 @@ namespace ntt
             }
             else
             {
-                d_input.alloc();
                 gpu.HtoD(&d_input[0], input, total_input_elements);
             }
 
-            size_t total_output_elements = size * cfg.batches;
+            size_t total_output_elements = size * (cfg.batches + cfg.salt_size);
             int input_output_bytes = total_output_elements * sizeof(fr_t);
             dev_ptr_t<fr_t> d_output{
                 total_output_elements,
@@ -771,15 +769,10 @@ namespace ntt
 
             if (cfg.are_outputs_on_device)
             {
-                // printf("set output device pointer: %x\n", output);
                 d_output.set_device_ptr(output);
             }
-            else
-            {
-                d_output.alloc();
-            }
 
-            extend_inputs_batch(&d_output[0], &d_input[0], 1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
+            extend_inputs_batch(&d_output[0], &d_input[0], (size_t)1 << lg_n, lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
 
             if (direction == Direction::inverse)
             {
@@ -791,6 +784,12 @@ namespace ntt
             if (direction == Direction::forward)
             {
                 reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
+            }
+
+            if (cfg.salt_size > 0)
+            {
+                uint64_t seed = time(NULL);
+                gen_random_salt(&d_output[size * cfg.batches], size, cfg.salt_size, seed, gpu);
             }
 
             if (!cfg.are_outputs_on_device)

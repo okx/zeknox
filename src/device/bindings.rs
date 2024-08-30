@@ -135,6 +135,9 @@ pub enum cudaError {
     cudaErrorGraphExecUpdateFailure = 910,
     cudaErrorExternalDevice = 911,
     cudaErrorInvalidClusterSize = 912,
+    cudaErrorFunctionNotLoaded = 913,
+    cudaErrorInvalidResourceType = 914,
+    cudaErrorInvalidResourceConfiguration = 915,
     cudaErrorUnknown = 999,
     cudaErrorApiFailureBase = 10000,
 }
@@ -196,6 +199,9 @@ extern "C" {
 }
 extern "C" {
     pub fn cudaFree(devPtr: *mut ::std::os::raw::c_void) -> cudaError_t;
+}
+extern "C" {
+    pub fn cudaMemGetInfo(free: *mut usize, total: *mut usize) -> cudaError_t;
 }
 extern "C" {
     pub fn cudaMemcpy(
