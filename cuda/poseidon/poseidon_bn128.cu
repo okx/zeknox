@@ -8,9 +8,9 @@
 #include "poseidon/poseidon.cuh"
 typedef gl64_t GoldilocksField;
 #else
-#include <stdlib.h>
-#include <string.h>
+#include <cstring>
 #include "poseidon/poseidon.hpp"
+#include "poseidon/poseidon_permutation.hpp"
 #endif
 
 #include "poseidon/poseidon_bn128_constants.h"
@@ -220,7 +220,7 @@ DEVICE void PoseidonBN128Hasher::cpu_hash_one(u64 *data, u64 data_size, u64 *dig
 {
 	assert(data_size > NUM_HASH_OUT_ELTS);
 
-	GoldilocksField *in = (GoldilocksField *)malloc(data_size * sizeof(GoldilocksField));
+	GoldilocksField *in = new GoldilocksField[data_size];
 	for (u32 i = 0; i < data_size; i++)
 	{
 		in[i] = GoldilocksField(data[i]);
@@ -236,13 +236,11 @@ DEVICE void PoseidonBN128Hasher::cpu_hash_one(u64 *data, u64 data_size, u64 *dig
 		idx += PoseidonPermutation::RATE;
 	}
 
-	HashOut out = perm.squeeze(NUM_HASH_OUT_ELTS);
+	u64 out[SPONGE_WIDTH];
+	perm.get_state_as_canonical_u64(out);
+	std::memcpy(digest, out, NUM_HASH_OUT_ELTS * sizeof(u64));
 
-	for (u64 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-	{
-		digest[i] = out.elements[i].get_val();
-	}
-	free(in);
+	delete [] in;
 }
 #endif
 
@@ -262,20 +260,17 @@ DEVICE void PoseidonBN128Hasher::gpu_hash_two(gl64_t *digest_left, gl64_t *diges
 #else
 DEVICE void PoseidonBN128Hasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
-	HashOut in_l = HashOut(digest_left, NUM_HASH_OUT_ELTS);
-	HashOut in_r = HashOut(digest_right, NUM_HASH_OUT_ELTS);
+	GoldilocksField in1[4] = {digest_left[0], digest_left[1], digest_left[2], digest_left[3]};
+    GoldilocksField in2[4] = {digest_right[0], digest_right[1], digest_right[2], digest_right[3]};
 
 	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
-	perm.set_from_slice(in_l.elements, in_l.n_elements, 0);
-	perm.set_from_slice(in_r.elements, in_r.n_elements, NUM_HASH_OUT_ELTS);
+	perm.set_from_slice(in1, NUM_HASH_OUT_ELTS, 0);
+	perm.set_from_slice(in2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
 
 	perm.permute();
 
-	HashOut out = perm.squeeze(NUM_HASH_OUT_ELTS);
-
-	for (u64 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-	{
-		digest[i] = out.elements[i].get_val();
-	}
+	u64 out[12];
+    perm.get_state_as_canonical_u64(out);
+    std::memcpy(digest, out, NUM_HASH_OUT_ELTS * sizeof(u64));
 }
 #endif // USE_CUDA

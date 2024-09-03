@@ -4,7 +4,8 @@
 #include "merkle/merkle_c.h"
 
 #include "utils/cuda_utils.cuh"
-#include "poseidon/poseidon.cuh"
+
+#include "poseidon/poseidon.hpp"
 #include "poseidon2/poseidon2.hpp"
 #include "poseidon/poseidon_bn128.hpp"
 #include "keccak/keccak.hpp"
@@ -13,7 +14,7 @@
 // 64 threads per block achives the best performance
 #define TPB 64
 
-__global__ void init_hasher(Hasher** hasher, uint64_t hash_type)
+__global__ void init_hasher(Hasher** hasher, u64 hash_type)
 {
     switch (hash_type) {
         case HashKeccak:

@@ -9,6 +9,8 @@
 #else
 #include "poseidon/goldilocks.hpp"
 #include "poseidon/poseidon.hpp"
+#include "poseidon/poseidon_permutation.hpp"
+#include <cstring>
 #endif
 
 #include "merkle/hasher.hpp"
@@ -18,13 +20,13 @@ class Poseidon2Hasher : public Hasher {
 public:
 
 #ifdef USE_CUDA
-__host__ void cpu_hash_one(uint64_t *input, uint64_t size, uint64_t *output);
-__host__ void cpu_hash_two(uint64_t *input1, uint64_t *input2, uint64_t *output);
-__device__ void gpu_hash_one(gl64_t *input, uint32_t size, gl64_t *output);
+__host__ void cpu_hash_one(u64 *input, u64 size, u64 *output);
+__host__ void cpu_hash_two(u64 *input1, u64 *input2, u64 *output);
+__device__ void gpu_hash_one(gl64_t *input, u32 size, gl64_t *output);
 __device__ void gpu_hash_two(gl64_t *input1, gl64_t *input2, gl64_t *output);
 #else
-void cpu_hash_one(uint64_t *input, uint64_t size, uint64_t *output);
-void cpu_hash_two(uint64_t *input1, uint64_t *input2, uint64_t *output);
+void cpu_hash_one(u64 *input, u64 size, u64 *output);
+void cpu_hash_two(u64 *input1, u64 *input2, u64 *output);
 #endif
 
 };
@@ -39,7 +41,7 @@ public:
 class Poseidon2Permutation : public PoseidonPermutation
 {
 public:
-    void permute2();
+    void permute();
 };
 #endif // USE_CUDA
 

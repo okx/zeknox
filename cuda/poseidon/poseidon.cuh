@@ -5,7 +5,7 @@
 #include "types/gl64_t.cuh"
 #include "utils/cuda_utils.cuh"
 #include "merkle/hasher.hpp"
-#include "poseidon/poseidon.h"
+#include "poseidon/poseidon.hpp"
 
 #define MIN(x, y) (x < y) ? x : y
 
@@ -25,29 +25,8 @@
 extern __device__ u32 GPU_MDS_MATRIX_CIRC[12];
 extern __device__ u32 GPU_MDS_MATRIX_DIAG[12];
 extern __device__ u64 GPU_ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS];
-#endif
 
-
-class PoseidonHasher : public Hasher {
-public:
-
-#ifdef USE_CUDA
-__host__ void cpu_hash_one(uint64_t *input, uint64_t size, uint64_t *output);
-__host__ void cpu_hash_two(uint64_t *input1, uint64_t *input2, uint64_t *output);
-__device__ void gpu_hash_one(gl64_t *input, uint32_t size, gl64_t *output);
-__device__ void gpu_hash_two(gl64_t *input1, gl64_t *input2, gl64_t *output);
-#else
-void cpu_hash_one(uint64_t *input, uint64_t size, uint64_t *output);
-void cpu_hash_two(uint64_t *input1, uint64_t *input2, uint64_t *output);
-#endif
-
-};
-
-#ifdef USE_CUDA
-class PoseidonPermutationGPU
-#else
-class PoseidonPermutation
-#endif
+class PoseidonPermutationGPU : public PoseidonPermutationGPUVirtual
 {
 private:
     DEVICE static gl64_t reduce128(u128 x);
@@ -104,5 +83,7 @@ public:
 #ifdef DEBUG
 DEVICE void print_perm(gl64_t *data, int cnt);
 #endif
+
+#endif  // USE_CUDA
 
 #endif // __POSEIDON_V2_CUH__

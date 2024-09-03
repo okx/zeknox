@@ -4,9 +4,9 @@
 #include <math.h>
 
 #include "types/int_types.h"
-#include "merkle/hasher.hpp"
 #include "merkle/merkle.h"
 #include "merkle/merkle_c.h"
+#include "merkle/hasher.hpp"
 #include "poseidon/poseidon.hpp"
 #include "poseidon2/poseidon2.hpp"
 #include "poseidon/poseidon_bn128.hpp"
