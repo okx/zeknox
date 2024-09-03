@@ -1,93 +1,98 @@
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 use std::env;
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 use std::fs;
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 use std::path::PathBuf;
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 extern crate rustacuda;
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 use rustacuda::device::DeviceAttribute;
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 use rustacuda::prelude::*;
 
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 fn build_device_wrapper() {
     let cuda_runtime_api_path = PathBuf::from("/usr/local/cuda/include")
         .join("cuda_runtime_api.h")
         .to_string_lossy()
         .to_string();
-    println!("cargo:rustc-link-search=native={}",  "/usr/local/cuda/lib64");
+    println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rerun-if-changed={}", cuda_runtime_api_path);
 
     let bindings = bindgen::Builder::default()
-    .header(cuda_runtime_api_path)
-    .size_t_is_usize(true)
-    .generate_comments(false)
-    .layout_tests(false)
-    .allowlist_type("cudaError")
-    .rustified_enum("cudaError")
-    .must_use_type("cudaError")
-    // device management
-    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html
-    .allowlist_function("cudaSetDevice")
-    // error handling
-    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__ERROR.html
-    .allowlist_function("cudaGetLastError")
-    // stream management
-    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__STREAM.html
-    .allowlist_function("cudaStreamCreate")
-    .allowlist_var("cudaStreamDefault")
-    .allowlist_var("cudaStreamNonBlocking")
-    .allowlist_function("cudaStreamCreateWithFlags")
-    .allowlist_function("cudaStreamDestroy")
-    .allowlist_function("cudaStreamQuery")
-    .allowlist_function("cudaStreamSynchronize")
-    .allowlist_var("cudaEventWaitDefault")
-    .allowlist_var("cudaEventWaitExternal")
-    .allowlist_function("cudaStreamWaitEvent")
-    // memory management
-    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html
-    .allowlist_function("cudaFree")
-    .allowlist_function("cudaMalloc")
-    .allowlist_function("cudaMemcpy")
-    .allowlist_function("cudaMemcpyAsync")
-    .allowlist_function("cudaMemset")
-    .allowlist_function("cudaMemsetAsync")
-    .rustified_enum("cudaMemcpyKind")
-    // Stream Ordered Memory Allocator
-    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html
-    .allowlist_function("cudaFreeAsync")
-    .allowlist_function("cudaMallocAsync")
-    //
-    .allowlist_function("cudaMemGetInfo")
-    //
-    .generate()
-    .expect("Unable to generate bindings");
+        .header(cuda_runtime_api_path)
+        .size_t_is_usize(true)
+        .generate_comments(false)
+        .layout_tests(false)
+        .allowlist_type("cudaError")
+        .rustified_enum("cudaError")
+        .must_use_type("cudaError")
+        // device management
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html
+        .allowlist_function("cudaSetDevice")
+        // error handling
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__ERROR.html
+        .allowlist_function("cudaGetLastError")
+        // stream management
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__STREAM.html
+        .allowlist_function("cudaStreamCreate")
+        .allowlist_var("cudaStreamDefault")
+        .allowlist_var("cudaStreamNonBlocking")
+        .allowlist_function("cudaStreamCreateWithFlags")
+        .allowlist_function("cudaStreamDestroy")
+        .allowlist_function("cudaStreamQuery")
+        .allowlist_function("cudaStreamSynchronize")
+        .allowlist_var("cudaEventWaitDefault")
+        .allowlist_var("cudaEventWaitExternal")
+        .allowlist_function("cudaStreamWaitEvent")
+        // memory management
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html
+        .allowlist_function("cudaFree")
+        .allowlist_function("cudaMalloc")
+        .allowlist_function("cudaMemcpy")
+        .allowlist_function("cudaMemcpyAsync")
+        .allowlist_function("cudaMemset")
+        .allowlist_function("cudaMemsetAsync")
+        .rustified_enum("cudaMemcpyKind")
+        // Stream Ordered Memory Allocator
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html
+        .allowlist_function("cudaFreeAsync")
+        .allowlist_function("cudaMallocAsync")
+        //
+        .allowlist_function("cudaMemGetInfo")
+        //
+        .generate()
+        .expect("Unable to generate bindings");
 
-    fs::write(PathBuf::from("src/device").join("bindings.rs"), bindings.to_string()).expect("Couldn't write bindings!");
+    fs::write(
+        PathBuf::from("src/device").join("bindings.rs"),
+        bindings.to_string(),
+    )
+    .expect("Couldn't write bindings!");
 }
 
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 fn get_device_arch() -> String {
     rustacuda::init(CudaFlags::empty()).expect("unable to init");
 
     let device = Device::get_device(0).expect("error in get device");
-    let compute_major = device.get_attribute(DeviceAttribute::ComputeCapabilityMajor).unwrap();
-    let compute_minor = device.get_attribute(DeviceAttribute::ComputeCapabilityMinor).unwrap();
+    let compute_major = device
+        .get_attribute(DeviceAttribute::ComputeCapabilityMajor)
+        .unwrap();
+    let compute_minor = device
+        .get_attribute(DeviceAttribute::ComputeCapabilityMinor)
+        .unwrap();
     let cuda_arch = format!("sm_{}{}", compute_major, compute_minor);
     println!("cuda arch is: {:?}", cuda_arch);
     cuda_arch
 }
 
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 fn feature_check() -> String {
-    let fr_s = [
-        "gl64",
-        "bn254"
-    ];
+    let fr_s = ["gl64", "bn254"];
     let fr_s_as_features: Vec<String> = (0..fr_s.len())
         .map(|i| format!("CARGO_FEATURE_{}", fr_s[i].to_uppercase()))
         .collect();
@@ -98,7 +103,7 @@ fn feature_check() -> String {
     }
 
     match fr_counter {
-        0 => String::from("FEATURE_GOLDILOCKS"),  // use gl64 as default
+        0 => String::from("FEATURE_GOLDILOCKS"), // use gl64 as default
         1 => {
             let mut fr = "";
             if cfg!(feature = "gl64") {
@@ -107,12 +112,12 @@ fn feature_check() -> String {
                 fr = "FEATURE_BN254"
             }
             String::from(fr)
-        },
+        }
         _ => panic!("Multiple fields are not supported, please select only one."),
     }
 }
 
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 fn build_cuda() {
     if cfg!(target_os = "windows") && !cfg!(target_env = "msvc") {
         panic!("unsupported compiler");
@@ -134,11 +139,11 @@ fn build_cuda() {
         Ok(var) => {
             println!("nvcc env var: {:?}", var);
             which::which(var)
-        },
+        }
         Err(_) => {
             println!("no nvcc env var set use nvcc");
             which::which("nvcc")
-        },
+        }
     };
     if nvcc.is_ok() {
         let cuda_version = std::process::Command::new(nvcc.unwrap())
@@ -165,7 +170,7 @@ fn build_cuda() {
         let mut nvcc = cc::Build::new();
         let cuda_arch = get_device_arch();
         nvcc.cuda(true);
-        nvcc.flag(&format!("-arch={}", cuda_arch));  // check [Virtual Architectures](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#virtual-architectures)
+        nvcc.flag(&format!("-arch={}", cuda_arch)); // check [Virtual Architectures](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#virtual-architectures)
         #[cfg(not(target_env = "msvc"))]
         // nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
@@ -196,7 +201,7 @@ fn build_cuda() {
     println!("cargo:rerun-if-env-changed=NVCC");
 }
 
-#[cfg(not(feature="no_cuda"))]
+#[cfg(not(feature = "no_cuda"))]
 fn build_lib() {
     use std::process::Command;
 
@@ -206,13 +211,12 @@ fn build_lib() {
     let src_file = libdir.join("merkle/merkle.cu");
     let lib_file = libdir.join("libcryptocuda.a");
 
-    if !lib_file.exists()
-    {
+    if !lib_file.exists() {
         assert!(env::set_current_dir(&libdir).is_ok());
         Command::new("make")
-        .arg("lib")
-        .output()
-        .expect("failed to execute process");
+            .arg("lib")
+            .output()
+            .expect("failed to execute process");
         assert!(env::set_current_dir(&pwd).is_ok());
     }
 
@@ -227,12 +231,16 @@ fn build_lib() {
     println!("cargo:rustc-link-lib=gomp");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
-    println!("cargo:rerun-if-changed={},{}", header_file.to_str().unwrap(), src_file.to_str().unwrap());
+    println!(
+        "cargo:rerun-if-changed={},{}",
+        header_file.to_str().unwrap(),
+        src_file.to_str().unwrap()
+    );
 }
 
 fn main() {
-    #[cfg(not(feature="no_cuda"))]
+    #[cfg(not(feature = "no_cuda"))]
     build_cuda();
-    #[cfg(not(feature="no_cuda"))]
+    #[cfg(not(feature = "no_cuda"))]
     build_lib();
 }

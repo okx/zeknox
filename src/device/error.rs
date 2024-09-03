@@ -25,8 +25,7 @@ impl CudaResultWrap for CudaError {
     }
 
     fn wrap_maybe_uninit<T>(self, value: MaybeUninit<T>) -> CudaResult<T> {
-        self.wrap_value(value)
-            .map(|x| unsafe { x.assume_init() })
+        self.wrap_value(value).map(|x| unsafe { x.assume_init() })
     }
 }
 

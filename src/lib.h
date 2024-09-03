@@ -47,8 +47,7 @@ extern "C" RustError::by_value mult_pippenger_g2(g2_projective_t *out, g2_affine
 
 extern "C" RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                                  Ntt_Types::InputOutputOrder ntt_order,
-                                 Ntt_Types::Direction ntt_direction,
-                                 Ntt_Types::Type ntt_type);
+                                 Ntt_Types::Direction ntt_direction);
 
 extern "C" RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                                          Ntt_Types::Direction ntt_direction,

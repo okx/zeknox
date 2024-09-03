@@ -2,12 +2,14 @@
 #define XSTR(x) STR(x)
 #define STR(x) #x
 
+/*
 #ifdef NDEBUG
 #define CUDA_DEBUG false
 #else
 #define CUDA_DEBUG true
 #include <cstdio>
 #endif
+*/
 
 // #pragma message "The value of CUDA_DEBUG: " XSTR(CUDA_DEBUG)
 // #pragma message "The value of __CUDA_ARCH__: " XSTR(__CUDA_ARCH__)
@@ -60,13 +62,12 @@ extern "C"
     RustError
     compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                 Ntt_Types::InputOutputOrder ntt_order,
-                Ntt_Types::Direction ntt_direction,
-                Ntt_Types::Type ntt_type)
+                Ntt_Types::Direction ntt_direction)
 {
     auto &gpu = select_gpu(device_id);
 
     return ntt::Base(gpu, inout, lg_domain_size,
-                     ntt_order, ntt_direction, ntt_type);
+                     ntt_order, ntt_direction);
 }
 
 #if defined(EXPOSE_C_INTERFACE)

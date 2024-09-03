@@ -1,8 +1,5 @@
 #[warn(dead_code)]
-
-
-use cryptography_cuda::{list_devices_info_rs, get_number_of_gpus_rs};
-
+use cryptography_cuda::{get_number_of_gpus_rs, list_devices_info_rs};
 
 /// example output
 /// Device 0 - Tesla V100-SXM2-16GB
@@ -15,5 +12,4 @@ fn test_list_devices_info_rs() {
 #[test]
 fn test_get_number_of_gpus() {
     let _ = get_number_of_gpus_rs();
-    
 }
