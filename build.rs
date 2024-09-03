@@ -161,7 +161,7 @@ fn build_cuda() {
             panic!("Unsupported CUDA version {} < 11.4", v);
         }
 
-        let util_dir = base_dir.join("util");
+        let util_dir = base_dir.join("utils");
         let mut nvcc = cc::Build::new();
         let cuda_arch = get_device_arch();
         nvcc.cuda(true);

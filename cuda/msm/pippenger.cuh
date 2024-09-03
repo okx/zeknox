@@ -8,13 +8,13 @@
 #include <cub/device/device_scan.cuh>
 #include <cassert>
 
-#include <util/vec2d_t.hpp>
-#include <util/slice_t.hpp>
+#include <utils/vec2d_t.hpp>
+#include <utils/slice_t.hpp>
 
 #include "sort.cuh"
 #include "batch_addition.cuh"
 #include <msm/kernels/pippenger.cu>
-#include <util/exception.cuh>
+#include <utils/exception.cuh>
 
 #ifndef WARP_SZ
 #define WARP_SZ 32
@@ -360,9 +360,9 @@ template __global__ void breakdown<scalar_t>(vec2d_t<uint32_t> digits, const sca
 
 #include <vector>
 
-#include <util/exception.cuh>
-#include <util/rusterror.h>
-#include <util/gpu_t.cuh>
+#include <utils/exception.cuh>
+#include <utils/rusterror.h>
+#include <utils/gpu_t.cuh>
 
 template <class bucket_t, class point_t, class affine_t, class scalar_t,
           class affine_h = class affine_t::mem_t,

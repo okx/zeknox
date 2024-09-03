@@ -13,7 +13,7 @@ CONST u64 rSquare[4]
 
 INLINE void FFE::mul64(u64 a, u64 b, u64 *h, u64 *l)
 {
-    uint128_t c128 = (uint128_t)a * b;
+    u128 c128 = (u128)a * b;
 #ifdef USE_CUDA
     *l = c128.lo;
     *h = c128.hi;

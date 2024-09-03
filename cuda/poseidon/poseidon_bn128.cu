@@ -1,19 +1,19 @@
-#include "int_types.h"
-#include "element_bn128.cuh"
-#include "poseidon_bn128.h"
+#include "types/int_types.h"
+#include "poseidon/element_bn128.cuh"
+#include "poseidon/poseidon_bn128.h"
 
-#include "cuda_utils.cuh"
+#include "utils/cuda_utils.cuh"
 
 #ifdef USE_CUDA
-#include "poseidon.cuh"
+#include "poseidon/poseidon.cuh"
 typedef gl64_t GoldilocksField;
 #else
 #include <stdlib.h>
 #include <string.h>
-#include "poseidon.hpp"
+#include "poseidon/poseidon.hpp"
 #endif
 
-#include "poseidon_bn128_constants.h"
+#include "poseidon/poseidon_bn128_constants.h"
 
 #define NROUNDSF 8
 
@@ -278,87 +278,4 @@ DEVICE void cpu_poseidon_bn128_hash_two(u64 *digest_left, u64 *digest_right, u64
 		digest[i] = out.elements[i].get_val();
 	}
 }
-#endif
-
-// #define TESTING
-#ifdef TESTING
-
-#ifdef USE_CUDA
-__global__
-#endif
-	void
-	test(u64 *out)
-{
-#ifdef USE_CUDA
-	int tid = blockIdx.x * blockDim.x + threadIdx.x;
-	out = out + tid * 12;
-#endif
-	u64 inp[12] = {8917524657281059100u,
-				   13029010200779371910u,
-				   16138660518493481604u,
-				   17277322750214136960u,
-				   1441151880423231822u,
-				   0, 0, 0, 0, 0, 0, 0};
-
-	PoseidonPermutationBN128::permute_fn(inp, out);
-}
-
-int main2()
-{
-	u64 cpu_out[12 * 32];
-
-#ifdef USE_CUDA
-	u64 *gpu_out;
-	CHECKCUDAERR(cudaMalloc(&gpu_out, 12 * 8 * 32));
-	test<<<1, 32>>>(gpu_out);
-	CHECKCUDAERR(cudaMemcpy(cpu_out, gpu_out, 12 * 8 * 32, cudaMemcpyDeviceToHost));
-
-	for (int k = 0; k < 32; k++)
-	{
-		printf("Output %d:\n", k);
-		for (int i = 0; i < 12; i++)
-		{
-			printf("%lu\n", cpu_out[12 * k + i]);
-		}
-	}
-#else
-	test(cpu_out);
-
-	printf("Output:\n");
-	for (int i = 0; i < 12; i++)
-	{
-		printf("%lu\n", cpu_out[i]);
-	}
-#endif
-
-	return 0;
-}
-
-int main()
-{
-	u64 out[4] = {0};
-
-#ifdef USE_CUDA
-	u64 *gpu_out;
-	CHECKCUDAERR(cudaMalloc(&gpu_out, 12 * 8 * 32));
-	test<<<1, 32>>>(gpu_out);
-	CHECKCUDAERR(cudaMemcpy(out, gpu_out, 4 * 8, cudaMemcpyDeviceToHost));
-	CHECKCUDAERR(cudaFree(gpu_out));
-#else
-	u64 inp[5] = {8917524657281059100u, 13029010200779371910u, 16138660518493481604u, 17277322750214136960u, 1441151880423231822u};
-	cpu_poseidon_bn128_hash_one(inp, 5, out);
-#endif
-	printf("Output:\n");
-	for (int i = 0; i < 4; i++)
-	{
-		printf("%lu\n", out[i]);
-	}
-	assert(out[0] == 16736853722845225729u);
-	assert(out[1] == 1446699130810517790u);
-	assert(out[2] == 15445626857806971868u);
-	assert(out[3] == 6331160477881736675u);
-	printf("Test ok!\n");
-	return 0;
-}
-
-#endif // TESTING
+#endif // USE_CUDA

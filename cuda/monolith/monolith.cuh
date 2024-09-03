@@ -1,17 +1,17 @@
 #ifndef __MONOLITH_CUH__
 #define __MONOLITH_CUH__
 
-#include "int_types.h"
+#include "types/int_types.h"
 #ifdef USE_CUDA
-#include "gl64_t.cuh"
-#include "cuda_utils.cuh"
-#include "poseidon.cuh"
+#include "types/gl64_t.cuh"
+#include "utils/cuda_utils.cuh"
+#include "poseidon/poseidon.cuh"
 #else
-#include "goldilocks.hpp"
-#include "poseidon.hpp"
+#include "poseidon/goldilocks.hpp"
+#include "poseidon/poseidon.hpp"
 #endif
-#include "poseidon.h"
-#include "monolith.h"
+#include "poseidon/poseidon.h"
+#include "monolith/monolith.h"
 
 #ifdef USE_CUDA
 class MonolithPermutationGPU : public PoseidonPermutationGPU

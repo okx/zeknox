@@ -1,11 +1,7 @@
 #ifndef __GOLDILOCKS_H__
 #define __GOLDILOCKS_H__
 
-#include "int_types.h"
-
-#ifdef TESTING
-#include <stdio.h>
-#endif
+#include "types/int_types.h"
 
 class GoldilocksField
 {

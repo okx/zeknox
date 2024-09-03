@@ -2,9 +2,9 @@
 #define __CRYPTO_NTT_NTT_CUH__
 
 #include <cassert>
-#include <util/gpu_t.cuh>
-#include <util/rusterror.h>
-#include <util/batch_mul.cuh>
+#include <utils/gpu_t.cuh>
+#include <utils/rusterror.h>
+#include <utils/batch_mul.cuh>
 #include <ntt/ntt.h>
 #include "parameters.cuh"
 #include "kernels.cu"
@@ -545,7 +545,7 @@ namespace ntt
      RustError BatchLdeMultiGpu(fr_t *output, fr_t *inputs, size_t num_gpu, Direction direction, NTTConfig cfg, size_t lg_n, size_t total_num_input_elements, size_t total_num_output_elements)
      {
 
-         if (lg_n == 0 || cfg.extension_rate_bits < 1)
+         if (total_num_input_elements == 0 || lg_n == 0 || cfg.extension_rate_bits < 1)
          {
              // printf("invalid input : %d\n", cfg.with_coset);
              return RustError{cudaErrorInvalidValue};

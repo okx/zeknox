@@ -1,7 +1,7 @@
 #ifndef __POSEIDON_BN128_CONST_H__
 #define __POSEIDON_BN128_CONST_H__
 
-#include "int_types.h"
+#include "types/int_types.h"
 
 #ifdef USE_CUDA
 #define CONST __device__

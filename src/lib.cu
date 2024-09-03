@@ -9,14 +9,13 @@
 #include <cstdio>
 #endif
 
-
-#pragma message "The value of CUDA_DEBUG: " XSTR(CUDA_DEBUG)
-#pragma message "The value of __CUDA_ARCH__: " XSTR(__CUDA_ARCH__)
+// #pragma message "The value of CUDA_DEBUG: " XSTR(CUDA_DEBUG)
+// #pragma message "The value of __CUDA_ARCH__: " XSTR(__CUDA_ARCH__)
 
 #include <cuda.h>
-#include <util/gpu_t.cuh>
-#include <util/cuda_available.hpp>
-#include <util/all_gpus.cpp>
+#include <utils/gpu_t.cuh>
+#include <utils/cuda_available.hpp>
+#include <utils/all_gpus.cpp>
 #include "lib.h"
 
 

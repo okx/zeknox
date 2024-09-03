@@ -5,7 +5,7 @@
 #ifndef __CRYPTO_KERNELS_CU__
 #define __CRYPTO_KERNELS_CU__
 #include <cooperative_groups.h>
-#include <util/sharedmem.cuh>
+#include <utils/sharedmem.cuh>
 
 #include <curand_kernel.h>
 

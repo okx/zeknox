@@ -2,6 +2,7 @@
 #define __MERKLE_H__
 
 #include <stdint.h>
+#include "types/int_types.h"
 
 #define HASH_SIZE   32
 
@@ -25,25 +26,25 @@ EXTERNC void fill_digests_buf_linear_gpu_with_gpu_ptr(
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height,
-    uint64_t hash_type,
-    uint64_t gpu_id
+    u64 digests_buf_size,
+    u64 cap_buf_size,
+    u64 leaves_buf_size,
+    u64 leaf_size,
+    u64 cap_height,
+    u64 hash_type,
+    u64 gpu_id
 );
 
 EXTERNC void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height,
-    uint64_t hash_type
+    u64 digests_buf_size,
+    u64 cap_buf_size,
+    u64 leaves_buf_size,
+    u64 leaf_size,
+    u64 cap_height,
+    u64 hash_type
 );
 
 #endif // __MERKEL_H__

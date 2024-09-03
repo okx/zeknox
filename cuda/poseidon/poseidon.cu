@@ -2,7 +2,7 @@
 
 __device__ u32 GPU_MDS_MATRIX_CIRC[12] = {17, 15, 41, 16, 2, 28, 13, 13, 39, 18, 34, 20};
 
-__device__ u32 GPU_MDS_MATRIX_DIAG[12] = {8, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u, (uint64_t)0u};
+__device__ u32 GPU_MDS_MATRIX_DIAG[12] = {8, (u64)0u, (u64)0u, (u64)0u, (u64)0u, (u64)0u, (u64)0u, (u64)0u, (u64)0u, (u64)0u, (u64)0u, (u64)0u};
 
 __device__ u64 GPU_ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS] = {
     0xb585f766f2144405,
@@ -558,8 +558,8 @@ __device__ u64 GPU_FAST_PARTIAL_ROUND_INITIAL_MATRIX[11][11] = {
  */
 __device__ __forceinline__ gl64_t PoseidonPermutationGPU::reduce128(u128 x)
 {
-    u64 x_lo = uint128_t::u128tou64(x);
-    u64 x_hi = uint128_t::u128t_hi_ou64(x);
+    u64 x_lo = u128::u128tou64(x);
+    u64 x_hi = u128::u128t_hi_ou64(x);
 
     u64 x_hi_hi = x_hi >> 32;
     u64 x_hi_lo = x_hi & 0xFFFFFFFF; // epsilon
@@ -599,7 +599,7 @@ __device__ __forceinline__ gl64_t PoseidonPermutationGPU::from_noncanonical_u128
     return (gl64_t)(n.lo) + t1;
 }
 
-__device__ __forceinline__ gl64_t PoseidonPermutationGPU::reduce_u160(u128 n_lo, uint32_t n_hi)
+__device__ __forceinline__ gl64_t PoseidonPermutationGPU::reduce_u160(u128 n_lo, u32 n_hi)
 {
     u128 reduced_hi = (u128)from_noncanonical_u96(n_lo.hi, n_hi).get_val();
     u128 reduced128 = (reduced_hi << 64) + (u128)n_lo.lo;
@@ -617,15 +617,15 @@ __device__ gl64_t PoseidonPermutationGPU::mds_row_shf(u32 r, gl64_t *v)
     u128 res = 0;
     for (u32 i = 0; i < 12; i++)
     {
-        uint64_t tmp1 = GPU_MDS_MATRIX_CIRC[i];
+        u64 tmp1 = GPU_MDS_MATRIX_CIRC[i];
         u128 tmp2 = v[(i + r) % SPONGE_WIDTH];
         res = res + tmp2 * tmp1;
     }
-    uint64_t tmp1 = GPU_MDS_MATRIX_DIAG[r];
+    u64 tmp1 = GPU_MDS_MATRIX_DIAG[r];
     u128 tmp2 = v[r];
     res = res + tmp2 * tmp1;
 
-    return from_noncanonical_u96(uint128_t::u128tou64(res), uint128_t::u128t_hi_ou64(res) & 0xFFFFFFFF);
+    return from_noncanonical_u96(u128::u128tou64(res), u128::u128t_hi_ou64(res) & 0xFFFFFFFF);
 }
 
 __device__ void PoseidonPermutationGPU::mds_layer(gl64_t *state, gl64_t *result)
@@ -665,7 +665,7 @@ __device__ inline void PoseidonPermutationGPU::sbox_layer(gl64_t *state)
 
 __device__ inline void PoseidonPermutationGPU::full_rounds(gl64_t *state, u32 *round_ctr)
 {
-    gl64_t res[12] = {(uint64_t)0u};
+    gl64_t res[12] = {(u64)0u};
     gl64_t *pres = res;
 
     for (int k = 0; k < HALF_N_FULL_ROUNDS; k++)
@@ -682,7 +682,7 @@ __device__ inline void PoseidonPermutationGPU::full_rounds(gl64_t *state, u32 *r
 
 __device__ void PoseidonPermutationGPU::partial_rounds_naive(gl64_t *state, u32 *round_ctr)
 {
-    gl64_t res[12] = {(uint64_t)0u};
+    gl64_t res[12] = {(u64)0u};
     gl64_t *pres = res;
     for (int k = 0; k < N_PARTIAL_ROUNDS; k++)
     {

@@ -1,7 +1,7 @@
 #ifndef UTILS_KERNELS_H
 #define UTILS_KERNELS_H
 
-#include <util/batch_mul.cu>
+#include <utils/batch_mul.cu>
 #define MAX_THREADS_PER_BLOCK 512
 
 #ifndef __CUDA_ARCH__
