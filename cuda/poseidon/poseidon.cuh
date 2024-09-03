@@ -69,19 +69,64 @@ public:
 
     DEVICE void set_from_slice_stride(gl64_t *elts, u32 len, u32 start_idx, u32 stride);
 
-    DEVICE void get_state_as_canonical_u64(u64* out);
+    DEVICE void get_state_as_canonical_u64(u64 *out);
 
     DEVICE void set_state(u32 idx, gl64_t val);
 
     DEVICE void permute();
 
+    DEVICE gl64_t* get_state() { return state; };
+
     DEVICE gl64_t *squeeze(u32 size);
+
+    DEVICE static void gpu_hash_one_with_permutation(gl64_t *inputs, u32 num_inputs, gl64_t *hash, PoseidonPermutationGPU *perm)
+    {
+        // special case
+        if (num_inputs <= NUM_HASH_OUT_ELTS)
+        {
+            u32 i = 0;
+            for (; i < num_inputs; i++)
+            {
+                hash[i] = inputs[i];
+            }
+            for (; i < NUM_HASH_OUT_ELTS; i++)
+            {
+                hash[i].zero();
+            }
+        }
+        else
+        {
+            // absorb all input chunks.
+            for (u32 idx = 0; idx < num_inputs; idx += SPONGE_RATE)
+            {
+                perm->set_from_slice(inputs + idx, MIN(SPONGE_RATE, num_inputs - idx), 0);
+                perm->permute();
+            }
+            gl64_t *ret = perm->squeeze(NUM_HASH_OUT_ELTS);
+            for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
+            {
+                hash[i] = ret[i];
+            }
+        }
+    };
+
+    DEVICE static void gpu_hash_two_with_permutation(gl64_t *hash1, gl64_t *hash2, gl64_t *hash, PoseidonPermutationGPU *perm)
+    {
+        perm->set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
+        perm->set_from_slice(hash2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
+        perm->permute();
+        gl64_t *ret = perm->squeeze(NUM_HASH_OUT_ELTS);
+        for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
+        {
+            hash[i] = ret[i];
+        }
+    }
 };
 
 #ifdef DEBUG
 DEVICE void print_perm(gl64_t *data, int cnt);
 #endif
 
-#endif  // USE_CUDA
+#endif // USE_CUDA
 
 #endif // __POSEIDON_V2_CUH__

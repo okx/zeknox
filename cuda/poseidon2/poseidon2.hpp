@@ -35,7 +35,7 @@ static void cpu_hash_two(u64 *input1, u64 *input2, u64 *output);
 class Poseidon2PermutationGPU : public PoseidonPermutationGPU
 {
 public:
-    DEVICE void permute2();
+    DEVICE void permute();
 };
 #else  // USE_CUDA
 class Poseidon2Permutation : public PoseidonPermutation

@@ -198,22 +198,10 @@ public:
 };
 
 #ifdef USE_CUDA
-DEVICE void PoseidonBN128Hasher::gpu_hash_one(gl64_t *data, u32 data_size, gl64_t *digest)
+DEVICE void PoseidonBN128Hasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
 	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
-
-	// Absorb all input chunks.
-	for (u32 idx = 0; idx < data_size; idx += SPONGE_RATE)
-	{
-		perm.set_from_slice(data + idx, MIN(SPONGE_RATE, data_size - idx), 0);
-		perm.permute();
-	}
-
-	gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-	for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-	{
-		digest[i] = ret[i];
-	}
+	PoseidonPermutationGPU::gpu_hash_one_with_permutation(inputs, num_inputs, hash, &perm);
 }
 #else
 DEVICE void PoseidonBN128Hasher::cpu_hash_one(u64 *input, u64 input_count, u64 *digest)
@@ -227,14 +215,7 @@ DEVICE void PoseidonBN128Hasher::cpu_hash_one(u64 *input, u64 input_count, u64 *
 DEVICE void PoseidonBN128Hasher::gpu_hash_two(gl64_t *digest_left, gl64_t *digest_right, gl64_t *digest)
 {
 	PoseidonPermutationBN128 perm = PoseidonPermutationBN128();
-	perm.set_from_slice(digest_left, NUM_HASH_OUT_ELTS, 0);
-	perm.set_from_slice(digest_right, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
-	perm.permute();
-	gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-	for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-	{
-		digest[i] = ret[i];
-	}
+	PoseidonPermutationGPU::gpu_hash_two_with_permutation(digest_left, digest_right, digest, &perm);
 }
 #else
 DEVICE void PoseidonBN128Hasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)

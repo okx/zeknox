@@ -205,54 +205,21 @@ inline void poseidon2(GoldilocksField *state)
 }
 
 #ifdef USE_CUDA
-__device__ void Poseidon2PermutationGPU::permute2()
+__forceinline__ __device__ void Poseidon2PermutationGPU::permute()
 {
-    poseidon2(state);
+    poseidon2(get_state());
 }
 
 __device__ void Poseidon2Hasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
-    if (num_inputs <= NUM_HASH_OUT_ELTS)
-    {
-        u32 i = 0;
-        for (; i < num_inputs; i++)
-        {
-            hash[i] = inputs[i];
-        }
-        for (; i < NUM_HASH_OUT_ELTS; i++)
-        {
-            hash[i].zero();
-        }
-    }
-    else
-    {
-        Poseidon2PermutationGPU perm = Poseidon2PermutationGPU();
-
-        // Absorb all input chunks.
-        for (u32 idx = 0; idx < num_inputs; idx += SPONGE_RATE)
-        {
-            perm.set_from_slice(inputs + idx, MIN(SPONGE_RATE, num_inputs - idx), 0);
-            perm.permute2();
-        }
-        gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-        for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-        {
-            hash[i] = ret[i];
-        }
-    }
+    Poseidon2PermutationGPU perm = Poseidon2PermutationGPU();
+    PoseidonPermutationGPU::gpu_hash_one_with_permutation(inputs, num_inputs, hash, &perm);
 }
 
 __device__ void Poseidon2Hasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
     Poseidon2PermutationGPU perm = Poseidon2PermutationGPU();
-    perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
-    perm.set_from_slice(hash2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
-    perm.permute2();
-    gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-    for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-    {
-        hash[i] = ret[i];
-    }
+    PoseidonPermutationGPU::gpu_hash_two_with_permutation(hash1, hash2, hash, &perm);
 }
 
 #else // USE_CUDA
