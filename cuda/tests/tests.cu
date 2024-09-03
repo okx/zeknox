@@ -546,12 +546,32 @@ void compare_results(u64 *digests_buf1, u64 *digests_buf2, u32 n_digests, u64 *c
 {
     u64 *ptr1 = digests_buf1;
     u64 *ptr2 = digests_buf2;
+#ifdef DEBUG
+    for (int i = 0; i < n_digests; i++, ptr1+=HASH_SIZE_U64, ptr2+=HASH_SIZE_U64)
+    {
+        printf("Hashes digests\n");
+        printhash(ptr1);
+        printhash(ptr2);
+    }
+    ptr1 = digests_buf1;
+    ptr2 = digests_buf2;
+#endif
     for (int i = 0; i < n_digests * HASH_SIZE_U64; i++, ptr1++, ptr2++)
     {
         assert(*ptr1 == *ptr2);
     }
     ptr1 = cap_buf1;
     ptr2 = cap_buf2;
+#ifdef DEBUG
+    for (int i = 0; i < n_caps; i++, ptr1+=HASH_SIZE_U64, ptr2+=HASH_SIZE_U64)
+    {
+        printf("Hashes digests\n");
+        printhash(ptr1);
+        printhash(ptr2);
+    }
+    ptr1 = cap_buf1;
+    ptr2 = cap_buf2;
+#endif
     for (int i = 0; i < n_caps * HASH_SIZE_U64; i++, ptr1++, ptr2++)
     {
         assert(*ptr1 == *ptr2);
