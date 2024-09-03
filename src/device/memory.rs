@@ -1,5 +1,6 @@
 use crate::device::bindings::{
-    cudaSetDevice, cudaFree, cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind, cudaMemGetInfo
+    cudaFree, cudaMalloc, cudaMallocAsync, cudaMemGetInfo, cudaMemcpy, cudaMemcpyAsync,
+    cudaMemcpyKind, cudaSetDevice,
 };
 use crate::device::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::device::stream::CudaStream;
@@ -90,14 +91,18 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
                 println!("WARNING: not enough free GPU memory (needed: {:?} B, available: {:?} B, total {:?} B)!", size, fmem, tmem);
             }
             cudaMalloc(device_ptr.as_mut_ptr(), size).wrap()?;
-            Ok(Self::Device(device_id, from_raw_parts_mut(
-                device_ptr.assume_init() as *mut T,
-                count,
-            )))
+            Ok(Self::Device(
+                device_id,
+                from_raw_parts_mut(device_ptr.assume_init() as *mut T, count),
+            ))
         }
     }
 
-    pub fn cuda_malloc_async(device_id: i32, count: usize, stream: &CudaStream) -> CudaResult<Self> {
+    pub fn cuda_malloc_async(
+        device_id: i32,
+        count: usize,
+        stream: &CudaStream,
+    ) -> CudaResult<Self> {
         let size = count.checked_mul(size_of::<T>()).unwrap_or(0);
         if size == 0 {
             return Err(CudaError::cudaErrorMemoryAllocation);
@@ -118,16 +123,16 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
                 stream.handle as *mut _ as *mut _,
             )
             .wrap()?;
-            Ok(Self::Device(device_id, from_raw_parts_mut(
-                device_ptr.assume_init() as *mut T,
-                count,
-            )))
+            Ok(Self::Device(
+                device_id,
+                from_raw_parts_mut(device_ptr.assume_init() as *mut T, count),
+            ))
         }
     }
 
-    pub fn copy_from_host(&mut self,  val: &[T]) -> CudaResult<()> {
+    pub fn copy_from_host(&mut self, val: &[T]) -> CudaResult<()> {
         let device_id: i32 = match self {
-            Self::Device(d, _) => {*d}
+            Self::Device(d, _) => *d,
             Self::Host(_) => panic!("Need device memory to copy into, and not host"),
         };
         assert!(
@@ -150,14 +155,9 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         }
         Ok(())
     }
-    pub fn copy_from_host_offset(
-        &self,
-        src: &[T],
-        offset: usize,
-        count: usize,
-    ) -> CudaResult<()> {
+    pub fn copy_from_host_offset(&self, src: &[T], offset: usize, count: usize) -> CudaResult<()> {
         let device_id: i32 = match self {
-            Self::Device(d, _) => {*d}
+            Self::Device(d, _) => *d,
             Self::Host(_) => panic!("Need device memory to copy into, and not host"),
         };
         unsafe {
@@ -176,7 +176,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
 
     pub fn copy_to_host(&self, val: &mut [T], counts: usize) -> CudaResult<()> {
         let device_id: i32 = match self {
-            Self::Device(d, _) => {*d}
+            Self::Device(d, _) => *d,
             Self::Host(_) => panic!("Need device memory to copy from, and not host"),
         };
         let size = size_of::<T>() * counts;
@@ -195,12 +195,16 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         Ok(())
     }
 
-
     /// val: host data pointer
     /// offset: the offset to device
-    pub fn copy_to_host_offset(&self, val: &mut [T],  offset: usize, counts: usize) -> CudaResult<()> {
+    pub fn copy_to_host_offset(
+        &self,
+        val: &mut [T],
+        offset: usize,
+        counts: usize,
+    ) -> CudaResult<()> {
         let device_id: i32 = match self {
-            Self::Device(d, _) => {*d}
+            Self::Device(d, _) => *d,
             Self::Host(_) => panic!("Need device memory to copy from, and not host"),
         };
         // println!("copy from device to host for device id: {:?}, offset: {:?}, count: {:?}", device_id, offset, counts);
@@ -221,8 +225,8 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
     }
 
     pub fn copy_from_host_async(&mut self, val: &[T], stream: &CudaStream) -> CudaResult<()> {
-        let device_id:i32 = match self {
-            Self::Device(d, _) => {*d}
+        let device_id: i32 = match self {
+            Self::Device(d, _) => *d,
             Self::Host(_) => panic!("Need device memory to copy into, and not host"),
         };
         assert!(
@@ -248,7 +252,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
 
     pub fn copy_to_host_async(&self, val: &mut [T], stream: &CudaStream) -> CudaResult<()> {
         let device_id: i32 = match self {
-            Self::Device(d, _) => {*d}
+            Self::Device(d, _) => *d,
             Self::Host(_) => panic!("Need device memory to copy from, and not host"),
         };
         assert!(

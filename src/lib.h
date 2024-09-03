@@ -1,5 +1,5 @@
 #pragma once
-#include <util/rusterror.h>
+#include <utils/rusterror.h>
 #include <ntt/ntt.h>
 #include <vector>
 #if defined(FEATURE_GOLDILOCKS)
@@ -9,11 +9,11 @@
 #else
 #error "no FEATURE"
 #endif
-#include <util/device_context.cuh>
+#include <utils/device_context.cuh>
 
 #include <merkle/merkle.h>
 
-#ifndef FEATURE_GOLDILOCKS
+#ifdef FEATURE_BN254
 #include <ff/alt_bn254.hpp>
 #include <ec/jacobian_t.hpp>
 #include <ec/xyzz_t.hpp>
@@ -43,12 +43,11 @@ typedef Affine<g2_point_field_t> g2_affine_t;
 
 extern "C" RustError::by_value mult_pippenger_g2(g2_projective_t *out, g2_affine_t *points, size_t msm_size, scalar_field_t *scalars, size_t large_bucket_factor, bool on_device,
                                                  bool big_triangle);
-#endif
+#endif  // FEATURE_BN254
 
 extern "C" RustError compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                                  Ntt_Types::InputOutputOrder ntt_order,
-                                 Ntt_Types::Direction ntt_direction,
-                                 Ntt_Types::Type ntt_type);
+                                 Ntt_Types::Direction ntt_direction);
 
 extern "C" RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
                                          Ntt_Types::Direction ntt_direction,

@@ -1,17 +1,17 @@
 #ifndef __POSEIDON2_HPP__
 #define __POSEIDON2_HPP__
 
-#include "int_types.h"
+#include "types/int_types.h"
 #ifdef USE_CUDA
-#include "gl64_t.cuh"
-#include "cuda_utils.cuh"
-#include "poseidon.cuh"
+#include "types/gl64_t.cuh"
+#include "utils/cuda_utils.cuh"
+#include "poseidon/poseidon.cuh"
 #else
-#include "goldilocks.hpp"
-#include "poseidon.hpp"
+#include "poseidon/goldilocks.hpp"
+#include "poseidon/poseidon.hpp"
 #endif
 
-#include "hasher.hpp"
+#include "merkle/hasher.hpp"
 
 class Poseidon2Hasher : public Hasher {
 

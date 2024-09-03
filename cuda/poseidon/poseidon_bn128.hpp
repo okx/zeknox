@@ -1,7 +1,7 @@
 #ifndef _POSEIDON_BN128_HPP_
 #define _POSEIDON_BN128_HPP_
 
-#include "hasher.hpp"
+#include "merkle/hasher.hpp"
 
 class PoseidonBN128Hasher : public Hasher {
 

@@ -1,14 +1,9 @@
 #[allow(dead_code)]
 #[allow(unused_imports)]
-
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 use plonky2_field::goldilocks_field::GoldilocksField;
-use plonky2_field::{
-    fft::fft,
-    polynomial::PolynomialCoeffs,
-    types::Field,
-};
+use plonky2_field::{fft::fft, polynomial::PolynomialCoeffs, types::Field};
 use rand::random;
 
 fn random_fr() -> u64 {

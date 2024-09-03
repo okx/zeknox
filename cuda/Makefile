@@ -11,7 +11,7 @@ CXX := g++
 NVCC := /usr/local/cuda/bin/nvcc
 
 # flags
-INCL := -Itypes -Iposeidon -Iposeidon2 -Imonolith -Ikeccak -Imerkle -Iutil
+INCL := -I.
 
 # for release
 CFLAGS := $(INCL) -Wall -Werror -O3 -march=native -fopenmp -fPIC
@@ -69,3 +69,6 @@ $(LIBNAME).a: $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CUDA)/merkle/merk
 	$(NVCC) $(NVCCFLAGS) -dlink -o $(BUILD_DIR_CUDA)/all_gpu.o $^
 	ar cr $@ $(BUILD_DIR_CUDA)/all_gpu.o $^
 	ranlib $@
+
+tests.exe: $(BUILD_DIR_CUDA)/tests/tests.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
+	$(NVCC) $(NVCCFLAGS) $^ -o $@ -lgomp -lgtest

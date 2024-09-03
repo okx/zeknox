@@ -1,14 +1,13 @@
-#include "monolith.hpp"
-#include "gl64_t.cuh"
+#include "monolith/monolith.hpp"
 
 #define LOOKUP_BITS 8
 #define SPONGE_WIDTH 12
 #define MONOLITH_N_ROUNDS 6
 
 #ifdef USE_CUDA
-__device__ __constant__ uint64_t GPU_MONOLITH_ROUND_CONSTANTS[MONOLITH_N_ROUNDS + 1][SPONGE_WIDTH] = {
+__device__ __constant__ u64 GPU_MONOLITH_ROUND_CONSTANTS[MONOLITH_N_ROUNDS + 1][SPONGE_WIDTH] = {
 #else
-const uint64_t MONOLITH_ROUND_CONSTANTS[N_ROUNDS + 1][SPONGE_WIDTH] = {
+const u64 MONOLITH_ROUND_CONSTANTS[N_ROUNDS + 1][SPONGE_WIDTH] = {
 #endif
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {
@@ -84,9 +83,9 @@ const uint64_t MONOLITH_ROUND_CONSTANTS[N_ROUNDS + 1][SPONGE_WIDTH] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
 #ifdef USE_CUDA
-__device__ __constant__ uint32_t GPU_MONOLITH_MAT_12[SPONGE_WIDTH][SPONGE_WIDTH] = {
+__device__ __constant__ u32 GPU_MONOLITH_MAT_12[SPONGE_WIDTH][SPONGE_WIDTH] = {
 #else
-const uint32_t MONOLITH_MAT_12[SPONGE_WIDTH][SPONGE_WIDTH] = {
+const u32 MONOLITH_MAT_12[SPONGE_WIDTH][SPONGE_WIDTH] = {
 #endif
     {7, 23, 8, 26, 13, 10, 9, 7, 6, 22, 21, 8},
     {8, 7, 23, 8, 26, 13, 10, 9, 7, 6, 22, 21},
@@ -107,15 +106,15 @@ __device__ __forceinline__
 #else
 inline
 #endif
-    uint64_t
-    bar_u64(uint64_t limb)
+    u64
+    bar_u64(u64 limb)
 {
-    uint64_t limbl1 = ((~limb & 0x8080808080808080) >> 7) | ((~limb & 0x7F7F7F7F7F7F7F7F) << 1); // Left rotation by 1
-    uint64_t limbl2 = ((limb & 0xC0C0C0C0C0C0C0C0) >> 6) | ((limb & 0x3F3F3F3F3F3F3F3F) << 2);   // Left rotation by 2
-    uint64_t limbl3 = ((limb & 0xE0E0E0E0E0E0E0E0) >> 5) | ((limb & 0x1F1F1F1F1F1F1F1F) << 3);   // Left rotation by 3
+    u64 limbl1 = ((~limb & 0x8080808080808080) >> 7) | ((~limb & 0x7F7F7F7F7F7F7F7F) << 1); // Left rotation by 1
+    u64 limbl2 = ((limb & 0xC0C0C0C0C0C0C0C0) >> 6) | ((limb & 0x3F3F3F3F3F3F3F3F) << 2);   // Left rotation by 2
+    u64 limbl3 = ((limb & 0xE0E0E0E0E0E0E0E0) >> 5) | ((limb & 0x1F1F1F1F1F1F1F1F) << 3);   // Left rotation by 3
 
     // y_i = x_i + (1 + x_{i+1}) * x_{i+2} * x_{i+3}
-    uint64_t tmp = limb ^ (limbl1 & limbl2 & limbl3);
+    u64 tmp = limb ^ (limbl1 & limbl2 & limbl3);
     return ((tmp & 0x8080808080808080) >> 7) | ((tmp & 0x7F7F7F7F7F7F7F7F) << 1);
 }
 
@@ -125,7 +124,7 @@ __device__ __forceinline__
 inline
 #endif
     void
-    bars(uint64_t *state)
+    bars(u64 *state)
 {
     state[0] = bar_u64(state[0]);
     state[1] = bar_u64(state[1]);
@@ -141,7 +140,7 @@ __device__ __forceinline__
 inline
 #endif
     void
-    bricks_u64(uint64_t *sl, uint32_t *sh)
+    bricks_u64(u64 *sl, u32 *sh)
 {
     // Feistel Type-3
     // Use "& 0xFFFFFFFFFFFFFFFF" to tell the compiler it is dealing with 64-bit values (save
@@ -151,11 +150,11 @@ inline
 #ifdef USE_CUDA
         gl64_t prev = (gl64_t)sl[i - 1];
         gl64_t tmp1 = prev * prev;
-        uint64_t tmp2 = tmp1.get_val();
+        u64 tmp2 = tmp1.get_val();
 #else
         GoldilocksField prev = GoldilocksField(sl[i - 1]);
         GoldilocksField tmp1 = prev * prev;
-        uint64_t tmp2 = tmp1.get_val();
+        u64 tmp2 = tmp1.get_val();
 #endif
         sl[i] += tmp2;
         sh[i] = (sl[i] < tmp2);
@@ -168,33 +167,33 @@ __device__ __forceinline__
 inline
 #endif
     void
-    concrete_u64(uint64_t *sl, uint32_t *sh, const uint64_t *rc)
+    concrete_u64(u64 *sl, u32 *sh, const u64 *rc)
 {
     // temp storage
-    uint64_t ssl[SPONGE_WIDTH];
+    u64 ssl[SPONGE_WIDTH];
 
     for (int row = 0; row < SPONGE_WIDTH; row++)
     {
-        uint128_t res = 0;
+        u128 res = 0;
         for (int column = 0; column < SPONGE_WIDTH; column++)
         {
 #ifdef USE_CUDA
-            res += ((uint128_t)sl[column]) * GPU_MONOLITH_MAT_12[row][column];
-            uint32_t res_h = sh[column] * GPU_MONOLITH_MAT_12[row][column];
+            res += ((u128)sl[column]) * GPU_MONOLITH_MAT_12[row][column];
+            u32 res_h = sh[column] * GPU_MONOLITH_MAT_12[row][column];
 #else
-            res += ((uint128_t)sl[column]) * MONOLITH_MAT_12[row][column];
-            uint32_t res_h = sh[column] * MONOLITH_MAT_12[row][column];
+            res += ((u128)sl[column]) * MONOLITH_MAT_12[row][column];
+            u32 res_h = sh[column] * MONOLITH_MAT_12[row][column];
 #endif
-            res += ((uint128_t)res_h) << 64;
+            res += ((u128)res_h) << 64;
         }
         res += rc[row];
 #ifdef USE_CUDA
-        uint32_t tmp[4] = {
-            (uint32_t)res.lo, (uint32_t)(res.lo >> 32), (uint32_t)res.hi, (uint32_t)(res.hi >> 32)};
+        u32 tmp[4] = {
+            (u32)res.lo, (u32)(res.lo >> 32), (u32)res.hi, (u32)(res.hi >> 32)};
         gl64_t g = gl64_t(tmp);
         ssl[row] = g.get_val();
 #else
-        ssl[row] = GoldilocksField::from_noncanonical_u96((uint64_t)res, (uint32_t)(res >> 64)).get_val();
+        ssl[row] = GoldilocksField::from_noncanonical_u96((u64)res, (u32)(res >> 64)).get_val();
 #endif
     }
     for (int row = 0; row < SPONGE_WIDTH; row++)
@@ -210,9 +209,9 @@ __device__ __forceinline__
 inline
 #endif
     void
-    monolith(uint64_t *state)
+    monolith(u64 *state)
 {
-    uint32_t state_h[SPONGE_WIDTH] = {0};
+    u32 state_h[SPONGE_WIDTH] = {0};
 
 #ifdef USE_CUDA
     concrete_u64(state, state_h, GPU_MONOLITH_ROUND_CONSTANTS[0]);
@@ -234,7 +233,7 @@ inline
 #ifdef USE_CUDA
 __device__ void MonolithPermutationGPU::permute2()
 {
-    monolith((uint64_t *)state);
+    monolith((u64 *)state);
 }
 
 __device__ void MonolithHasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
@@ -286,7 +285,7 @@ __device__ void MonolithHasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_
 
 inline void MonolithPermutation::permute2()
 {
-    monolith((uint64_t *)state);
+    monolith((u64 *)state);
 }
 
 void MonolithHasher::cpu_hash_one(u64 *data, u64 data_size, u64 *digest)

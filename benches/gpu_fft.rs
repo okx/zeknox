@@ -1,9 +1,10 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{types::NTTInputOutputOrder, ntt};
+use cryptography_cuda::{ntt, types::NTTInputOutputOrder};
 use rand::random;
 
 const DEFAULT_GPU: usize = 0;
+
 fn random_fr() -> u64 {
     let fr: u64 = random();
     fr % 0xffffffff00000001

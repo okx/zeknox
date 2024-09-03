@@ -1,13 +1,11 @@
 #ifndef __POSEIDON_V2_CUH__
 #define __POSEIDON_V2_CUH__
 
-#include "int_types.h"
-#include "hasher.hpp"
-#include "cuda_utils.cuh"
-
-#ifdef USE_CUDA
-#include "gl64_t.cuh"
-#endif
+#include "types/int_types.h"
+#include "types/gl64_t.cuh"
+#include "utils/cuda_utils.cuh"
+#include "merkle/hasher.hpp"
+#include "poseidon/poseidon.h"
 
 #define MIN(x, y) (x < y) ? x : y
 
@@ -52,9 +50,9 @@ class PoseidonPermutation
 #endif
 {
 private:
-    DEVICE static gl64_t reduce128(uint128_t x);
+    DEVICE static gl64_t reduce128(u128 x);
 
-    DEVICE static gl64_t reduce_u160(uint128_t n_lo, uint32_t n_hi);
+    DEVICE static gl64_t reduce_u160(u128 n_lo, u32 n_hi);
 
     DEVICE static void add_u160_u128(u128 *x_lo, u32 *x_hi, u128 y);
 

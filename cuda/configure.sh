@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd util/deviceQuery
+cd utils/deviceQuery
 make
 if ! [ -e deviceQuery ]; then
     echo "Error buidling CUDA deviceQuery!"

@@ -1,4 +1,3 @@
-
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub enum NTTInputOutputOrder {
@@ -50,11 +49,10 @@ impl Default for NTTConfig {
             are_outputs_on_device: false,
             with_coset: false,
             is_multi_gpu: false,
-            salt_size: 0
+            salt_size: 0,
         }
     }
 }
-
 
 #[repr(C)]
 #[derive(Clone, Debug)]
@@ -62,7 +60,6 @@ pub struct TransposeConfig {
     pub batches: u32,
     pub are_inputs_on_device: bool, //**< True if inputs are on device and false if they're on host. Default value: false.
     pub are_outputs_on_device: bool, //**< If true, output is preserved on device, otherwise on host. Default value: false.
-
 }
 
 impl Default for TransposeConfig {
@@ -74,4 +71,3 @@ impl Default for TransposeConfig {
         }
     }
 }
-

@@ -4,7 +4,7 @@
 // Based on the Poseidon implementation from Plonky2
 // (https://github.com/okx/plonky2/blob/main/plonky2/src/hash/poseidon.rs)
 
-#include "goldilocks.hpp"
+#include "poseidon/goldilocks.hpp"
 
 #ifdef DEBUG
 #include <stdio.h>
@@ -1479,7 +1479,7 @@ EXTERNC HashOut two_to_one(HashOut left, HashOut right);
 
 EXTERNC void test_MDS(GoldilocksField *inputs, u64 num_inputs);
 
-#include "hasher.hpp"
+#include "merkle/hasher.hpp"
 
 class PoseidonHasher : public Hasher {
 public:

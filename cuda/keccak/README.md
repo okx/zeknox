@@ -3,10 +3,3 @@ Based on some comments in the Rust code, Keccak implementation in Plonky2 is bas
 Our C version is taken from [saarinen-keccak](https://github.com/coruus/saarinen-keccak/blob/master/readable_keccak/keccak.c).
 
 The CUDA version is a simple adaptation.
-
-```
-make test_keccak_cpu
-./test_keccak_cpu
-make test_keccak_gpu
-./test_keccak_gpu
-```

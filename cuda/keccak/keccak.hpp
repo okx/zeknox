@@ -1,7 +1,7 @@
 #ifndef _KECCAK_HPP_
 #define _KECCAK_HPP_
 
-#include "hasher.hpp"
+#include "merkle/hasher.hpp"
 
 class KeccakHasher : public Hasher {
 

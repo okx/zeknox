@@ -1,8 +1,8 @@
 #ifndef __ELEMENT_BN128_CUH__
 #define __ELEMENT_BN128_CUH__
 
-#include "int_types.h"
-#include "cuda_utils.cuh"
+#include "types/int_types.h"
+#include "utils/cuda_utils.cuh"
 
 #ifdef USE_CUDA
 extern CONST u64 rSquareGPU[4];

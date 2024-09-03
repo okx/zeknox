@@ -1,17 +1,14 @@
-#include "int_types.h"
+#include "types/int_types.h"
 
-#include "merkle.h"
-#include "merkle_private.h"
-#include "merkle_c.h"
+#include "merkle/merkle.h"
+#include "merkle/merkle_c.h"
 
-#include "hasher.hpp"
-#include "keccak.hpp"
-#include "poseidon.cuh"
-#include "poseidon_bn128.hpp"
-#include "poseidon2.hpp"
-#include "monolith.hpp"
-
-#include "cuda_utils.cuh"
+#include "utils/cuda_utils.cuh"
+#include "poseidon/poseidon.cuh"
+#include "poseidon2/poseidon2.hpp"
+#include "poseidon/poseidon_bn128.hpp"
+#include "keccak/keccak.hpp"
+#include "monolith/monolith.hpp"
 
 // 64 threads per block achives the best performance
 #define TPB 64
@@ -177,13 +174,13 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr(
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height,
-    uint64_t hash_type,
-    uint64_t gpu_id)
+    u64 digests_buf_size,
+    u64 cap_buf_size,
+    u64 leaves_buf_size,
+    u64 leaf_size,
+    u64 cap_height,
+    u64 hash_type,
+    u64 gpu_id)
 {
     CHECKCUDAERR(cudaSetDevice(gpu_id));
 
@@ -271,12 +268,12 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     void *digests_buf_gpu_ptr,
     void *cap_buf_gpu_ptr,
     void *leaves_buf_gpu_ptr,
-    uint64_t digests_buf_size,
-    uint64_t cap_buf_size,
-    uint64_t leaves_buf_size,
-    uint64_t leaf_size,
-    uint64_t cap_height,
-    uint64_t hash_type)
+    u64 digests_buf_size,
+    u64 cap_buf_size,
+    u64 leaves_buf_size,
+    u64 leaf_size,
+    u64 cap_height,
+    u64 hash_type)
 {
     int nDevices = 0;
     CHECKCUDAERR(cudaGetDeviceCount(&nDevices));
@@ -460,239 +457,3 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
         CHECKCUDAERR(cudaFree(gpu_hasher[i]));
     }
 }
-
-// #define TESTING
-#ifdef TESTING
-
-#define LEAF_SIZE_U64 68
-
-#include <time.h>
-#include <sys/time.h>
-#include <omp.h>
-
-int compare_results(u64 *digests_buf1, u64 *digests_buf2, u32 n_digests, u64 *cap_buf1, u64 *cap_buf2, u32 n_caps)
-{
-    int is_diff = 0;
-    u64 *ptr1 = digests_buf1;
-    u64 *ptr2 = digests_buf2;
-    for (int i = 0; i < n_digests * HASH_SIZE_U64; i++, ptr1++, ptr2++)
-    {
-        if (*ptr1 != *ptr2)
-        {
-            is_diff = 1;
-            break;
-        }
-    }
-    ptr1 = cap_buf1;
-    ptr2 = cap_buf2;
-    for (int i = 0; is_diff == 0 && i < n_caps * HASH_SIZE_U64; i++, ptr1++, ptr2++)
-    {
-        if (*ptr1 != *ptr2)
-        {
-            is_diff = 1;
-            break;
-        }
-    }
-    if (is_diff)
-    {
-        printf("Test failed: outputs are different!\n");
-    }
-    else
-    {
-        printf("Test passed: outputs are the same!\n");
-    }
-    return is_diff;
-}
-
-/*
- * Run on GPU and CPU and compare the results. They have to be the same.
- */
-void run_gpu_cpu_verify(u32 log_size)
-{
-    struct timeval t0, t1;
-
-    u64 n_caps = 256;
-    u64 n_leaves = (1 << log_size);
-    u64 n_digests = 2 * (n_leaves - n_caps);
-    u64 rounds = log2(n_digests) + 1;
-    u64 cap_h = log2(n_caps);
-
-    global_digests_buf = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
-    global_cap_buf = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-    global_leaves_buf = (u64 *)malloc(n_leaves * LEAF_SIZE_U64 * sizeof(u64));
-
-    global_cap_buf_end = global_cap_buf + n_caps * HASH_SIZE_U64 + 1;
-    global_digests_buf_end = global_digests_buf + n_digests * HASH_SIZE_U64 + 1;
-    global_leaves_buf_end = global_leaves_buf + n_leaves * 7 + 1;
-
-    // Generate random leaves
-    srand(time(NULL));
-    for (int i = 0; i < n_leaves; i++)
-    {
-        for (int j = 0; j < LEAF_SIZE_U64; j++)
-        {
-            u32 r = rand();
-            global_leaves_buf[i * LEAF_SIZE_U64 + j] = (u64)r << 32 + r * 88958514;
-        }
-    }
-    printf("Leaves count: %ld\n", n_leaves);
-    printf("Leaf size: %d\n", LEAF_SIZE_U64);
-    printf("Digests count: %ld\n", n_digests);
-    printf("Caps count: %ld\n", n_caps);
-    printf("Caps height: %ld\n", cap_h);
-
-    // Compute on GPU
-    u64 *gpu_leaves;
-    u64 *gpu_digests;
-    u32 *gpu_caps;
-
-    u64* digests_buf2 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
-    u64* cap_buf2 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-
-    CHECKCUDAERR(cudaMalloc(&gpu_leaves, n_leaves * LEAF_SIZE_U64 * sizeof(u64)));
-    CHECKCUDAERR(cudaMalloc(&gpu_digests, n_digests * HASH_SIZE_U64 * sizeof(u64)));
-    CHECKCUDAERR(cudaMalloc(&gpu_caps, n_caps * HASH_SIZE_U64 * sizeof(u64)));
-
-    gettimeofday(&t0, 0);
-    CHECKCUDAERR(cudaMemcpy(gpu_leaves, global_leaves_buf, n_leaves * LEAF_SIZE_U64 * sizeof(u64), cudaMemcpyHostToDevice));
-    fill_digests_buf_linear_gpu_with_gpu_ptr(
-        gpu_digests,
-        gpu_caps,
-        gpu_leaves,
-        n_digests,
-        n_caps,
-        n_leaves,
-        LEAF_SIZE_U64,
-        cap_h,
-        HashType::HashPoseidon,
-        0
-    );
-    CHECKCUDAERR(cudaMemcpy(digests_buf2, gpu_digests, n_digests * HASH_SIZE_U64 * sizeof(u64), cudaMemcpyDeviceToHost));
-    CHECKCUDAERR(cudaMemcpy(cap_buf2, gpu_caps, n_caps * HASH_SIZE_U64 * sizeof(u64), cudaMemcpyDeviceToHost));
-    gettimeofday(&t1, 0);
-    long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
-    printf("Time on GPU: %ld us\n", elapsed);
-
-    printf("%lX %lX %lX %lX\n", cap_buf2[0], cap_buf2[1], cap_buf2[2], cap_buf2[3]);
-
-    CHECKCUDAERR(cudaFree(gpu_leaves));
-    CHECKCUDAERR(cudaFree(gpu_digests));
-    CHECKCUDAERR(cudaFree(gpu_caps));
-
-    gettimeofday(&t0, 0);
-    fill_digests_buf_linear_cpu(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, cap_h, HashType::HashPoseidon);
-    gettimeofday(&t1, 0);
-    elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
-    printf("Time on CPU: %ld us\n", elapsed);
-
-    compare_results(global_digests_buf, digests_buf2, n_digests, global_cap_buf, cap_buf2, n_caps);
-    /*
-        printf("After fill...\n");
-        for (int i = 0; i < n_digests; i++)
-            print_hash(global_digests_buf + i * 4);
-
-        printf("Cap...\n");
-        for (int i = 0; i < n_caps; i++)
-            print_hash(global_cap_buf + i * 4);
-    */
-
-    free(global_digests_buf);
-    free(digests_buf2);
-    free(global_cap_buf);
-    free(cap_buf2);
-}
-
-/*
- * Run on GPU, CPU (1 core), CPU (multi-core) and get the execution times.
- */
-/*
-void run_gpu_cpu_comparison(u32 log_size)
-{
-    struct timeval t0, t1;
-
-    u64 n_leaves = (1 << log_size);
-    u64 n_caps = 2;
-    u64 n_digests = 2 * (n_leaves - n_caps);
-    u64 rounds = log2(n_digests) + 1;
-
-    global_digests_buf = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
-    global_cap_buf = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-    global_leaves_buf = (u64 *)malloc(n_leaves * LEAF_SIZE_U64 * sizeof(u64));
-    assert(global_digests_buf != NULL && global_cap_buf != NULL && global_leaves_buf != NULL);
-    global_cap_buf_end = global_cap_buf + (n_caps + 1) * HASH_SIZE_U64;
-    global_digests_buf_end = global_digests_buf + (n_digests + 1) * HASH_SIZE_U64;
-    global_leaves_buf_end = global_leaves_buf + (n_leaves + 1) * LEAF_SIZE_U64;
-
-    // Generate random leaves
-    srand(time(NULL));
-    for (int i = 0; i < n_leaves; i++)
-    {
-        for (int j = 0; j < LEAF_SIZE_U64; j++)
-        {
-            u32 r = rand();
-            global_leaves_buf[i * LEAF_SIZE_U64 + j] = (u64)r << 32 + r * 88958514;
-        }
-    }
-    printf("Number of leaves: %ld\n", n_leaves);
-
-    // 1. Run on GPU
-    init_gpu_functions(0);
-    fill_init_rounds(n_leaves, rounds);
-    gettimeofday(&t0, 0);
-    fill_digests_buf_in_rounds_in_c_on_gpu(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
-    // fill_digests_buf_linear_gpu_v1(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
-    gettimeofday(&t1, 0);
-    long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
-    printf("Time on GPU: %ld us\n", elapsed);
-    fill_delete_rounds();
-
-    u64 *digests_buf2 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
-    memcpy(digests_buf2, global_digests_buf, n_digests * HASH_SIZE_U64 * sizeof(u64));
-    u64 *cap_buf2 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-    memcpy(cap_buf2, global_cap_buf, n_caps * HASH_SIZE_U64 * sizeof(u64));
-
-    // 2. Run on CPU (1 core, not using rounds)
-    gettimeofday(&t0, 0);
-    fill_digests_buf_in_c(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
-    gettimeofday(&t1, 0);
-    elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
-    printf("Time on CPU: %ld us\n", elapsed);
-
-    compare_results(global_digests_buf, digests_buf2, n_digests, global_cap_buf, cap_buf2, n_caps);
-
-    // 3. Run on CPU (nt cores, using rounds)
-    fill_init_rounds(n_leaves, rounds);
-    int nt = 1;
-#pragma omp parallel
-    nt = omp_get_num_threads();
-    gettimeofday(&t0, 0);
-    fill_digests_buf_in_rounds_in_c(n_digests, n_caps, n_leaves, LEAF_SIZE_U64, 1);
-    gettimeofday(&t1, 0);
-    elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
-    printf("Time on CPU parallel %d threads: %ld us\n", nt, elapsed);
-    fill_delete_rounds();
-
-    // free
-    free(global_digests_buf);
-    free(global_cap_buf);
-    free(global_leaves_buf);
-    free(digests_buf2);
-    free(cap_buf2);
-}
-*/
-
-int main(int argc, char **argv)
-{
-    int size = 10;
-    if (argc > 1)
-    {
-        size = atoi(argv[1]);
-    }
-    assert(3 <= size);
-
-    run_gpu_cpu_verify(size);
-
-    return 0;
-}
-
-#endif // TESTING

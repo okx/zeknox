@@ -1,6 +1,6 @@
 use cryptography_cuda::{
-    goldilocks_add_rust, 
-    goldilocks_mul_rust, goldilocks_sub_rust, goldilocks_inverse_rust, goldilocks_rshift_rust, goldilocks_exp_rust,
+    goldilocks_add_rust, goldilocks_exp_rust, goldilocks_inverse_rust, goldilocks_mul_rust,
+    goldilocks_rshift_rust, goldilocks_sub_rust,
 };
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::types::{Field, PrimeField64};
@@ -11,8 +11,8 @@ fn test_goldilocks_add_rust() {
     // (c, carry) = a + b; (tmp, borrow) = c - MOD;
 
     // case 1, carry = false && borrow = false (c> MOD); should use tmp (c - MOD)
-    let mut a:u64 = 0xfffffffc_00000000;
-    let mut b:u64 = 0x00000003_00000002;
+    let mut a: u64 = 0xfffffffc_00000000;
+    let mut b: u64 = 0x00000003_00000002;
     let gpu_ret = goldilocks_add_rust(&mut a, &mut b);
     assert_eq!(gpu_ret, 1);
     let a_cpu = GoldilocksField::from_canonical_u64(a);
@@ -21,8 +21,8 @@ fn test_goldilocks_add_rust() {
     assert_eq!(gpu_ret, cpu_ret);
 
     // case 2, carry = false && borrow = true (c < MOD); should use c
-    let mut a:u64 = 0xfffffff0_00000000;
-    let mut b:u64 = 0x0000000f_00000000;
+    let mut a: u64 = 0xfffffff0_00000000;
+    let mut b: u64 = 0x0000000f_00000000;
     let gpu_ret = goldilocks_add_rust(&mut a, &mut b);
     assert_eq!(gpu_ret, 0xffffffff_00000000);
     let a_cpu = GoldilocksField::from_canonical_u64(a);
@@ -90,35 +90,32 @@ fn test_goldilocks_inverse_rust() {
 #[test]
 fn test_goldilocks_exp_rust() {
     let mut a: u64 = 0x8000000000;
-    let mut pow:u32 = 6;
+    let mut pow: u32 = 6;
     let gpu_ret = goldilocks_exp_rust(&mut a, &mut pow);
-
 
     let a_cpu = GoldilocksField::from_canonical_u64(a);
     let cpu_ret = a_cpu.exp_u64(pow as u64).to_canonical_u64();
     // // TODO: not passed
     // assert_eq!(gpu_ret, cpu_ret);
-    println!("gpu_ret: {:?}, cpu_ret: {:?}", gpu_ret,cpu_ret );
+    println!("gpu_ret: {:?}, cpu_ret: {:?}", gpu_ret, cpu_ret);
 }
 
 #[test]
 fn test_goldilocks_rshift_rust() {
     // even r shift 1
     let mut a: u64 = 0x00000000_1ffffffe;
-    let mut r:u32 = 1;
+    let mut r: u32 = 1;
     let gpu_ret = goldilocks_rshift_rust(&mut a, &mut r);
     assert_eq!(gpu_ret, 0xfffffff);
 
     // odd r shift 1
     let mut a: u64 = 0x00000000_1fffffff;
-    let mut r:u32 = 1;
+    let mut r: u32 = 1;
     let gpu_ret = goldilocks_rshift_rust(&mut a, &mut r);
     assert_eq!(gpu_ret, 0x7fffffff90000000);
 
     let mut a: u64 = 0x00000000_1fffffff;
-    let mut r:u32 = 3;
+    let mut r: u32 = 3;
     let gpu_ret = goldilocks_rshift_rust(&mut a, &mut r);
     assert_eq!(gpu_ret, 0x1fffffffe4000000);
-
 }
-
