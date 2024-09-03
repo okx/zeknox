@@ -247,55 +247,14 @@ void PoseidonPermutation::permute()
     // poseidon(this->state);
 }
 
-void PoseidonHasher::cpu_hash_one(u64 *data, u64 data_size, u64 *digest)
+void PoseidonHasher::cpu_hash_one(u64 *input, u64 input_count, u64 *digest)
 {
-    if (data_size < NUM_HASH_OUT_ELTS)
-    {
-        std::memcpy(digest, data, data_size * sizeof(u64));
-        std::memset(digest + data_size, 0, (NUM_HASH_OUT_ELTS - data_size) * sizeof(u64));
-        return;
-    }
-    if (data_size == NUM_HASH_OUT_ELTS)
-    {
-        std::memcpy(digest, data, data_size * sizeof(u64));
-        return;
-    }
-
-    GoldilocksField *in = new GoldilocksField[data_size];
-    for (u32 i = 0; i < data_size; i++)
-    {
-        in[i] = GoldilocksField(data[i]);
-    }
-
     PoseidonPermutation perm = PoseidonPermutation();
-
-    // Absorb all input chunks.
-    u64 idx = 0;
-    while (idx < data_size)
-    {
-        perm.set_from_slice(in + idx, MIN(PoseidonPermutation::RATE, (data_size - idx)), 0);
-        perm.permute();
-        idx += PoseidonPermutation::RATE;
-    }
-
-    u64 out[12];
-    perm.get_state_as_canonical_u64(out);
-    std::memcpy(digest, out, NUM_HASH_OUT_ELTS * sizeof(u64));
-    delete[] in;
+    PoseidonPermutation::cpu_hash_one_with_permutation(input, input_count, digest, &perm);
 }
 
 void PoseidonHasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
-    GoldilocksField in1[4] = {digest_left[0], digest_left[1], digest_left[2], digest_left[3]};
-    GoldilocksField in2[4] = {digest_right[0], digest_right[1], digest_right[2], digest_right[3]};
-
     PoseidonPermutation perm = PoseidonPermutation();
-    perm.set_from_slice(in1, NUM_HASH_OUT_ELTS, 0);
-    perm.set_from_slice(in2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
-
-    perm.permute();
-
-    u64 out[12];
-    perm.get_state_as_canonical_u64(out);
-    std::memcpy(digest, out, NUM_HASH_OUT_ELTS * sizeof(u64));
+    PoseidonPermutation::cpu_hash_two_with_permutation(digest_left, digest_right, digest, &perm);
 }

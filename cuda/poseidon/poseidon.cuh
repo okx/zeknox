@@ -9,8 +9,6 @@
 
 #define MIN(x, y) (x < y) ? x : y
 
-#define NUM_HASH_OUT_ELTS 4
-
 #define SPONGE_RATE 8
 #define SPONGE_CAPACITY 4
 #define SPONGE_WIDTH 12

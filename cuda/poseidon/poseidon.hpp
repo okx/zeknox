@@ -1159,8 +1159,6 @@ const u64 ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS] = {
     0xbc8dfb627fe558fc,
 };
 
-static const u64 NUM_HASH_OUT_ELTS = 4;
-
 /*
  * Virtual class for Poseidon permutation.
  */

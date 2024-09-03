@@ -48,9 +48,62 @@ public:
 
     void set_state(u32 idx, GoldilocksField val);
 
-    GoldilocksField* get_state();
+    GoldilocksField *get_state();
 
     void permute();
+
+    static void cpu_hash_one_with_permutation(u64 *input, u64 input_count, u64 *output, PoseidonPermutation *perm)
+    {
+        // special cases
+        if (input_count < NUM_HASH_OUT_ELTS)
+        {
+            std::memcpy(output, input, input_count * sizeof(u64));
+            std::memset(output + input_count, 0, (NUM_HASH_OUT_ELTS - input_count) * sizeof(u64));
+            return;
+        }
+        if (input_count == NUM_HASH_OUT_ELTS)
+        {
+            std::memcpy(output, input, input_count * sizeof(u64));
+            return;
+        }
+
+        // prepare input
+        GoldilocksField *in = new GoldilocksField[input_count];
+        for (u32 i = 0; i < input_count; i++)
+        {
+            in[i] = GoldilocksField(input[i]);
+        }
+
+        // absorb all input chunks
+        u64 idx = 0;
+        while (idx < input_count)
+        {
+            perm->set_from_slice(in + idx, MIN(PoseidonPermutation::RATE, (input_count - idx)), 0);
+            perm->permute();
+            idx += PoseidonPermutation::RATE;
+        }
+
+        // set output
+        u64 out[12];
+        perm->get_state_as_canonical_u64(out);
+        std::memcpy(output, out, NUM_HASH_OUT_ELTS * sizeof(u64));
+        delete[] in;
+    }
+
+    static void cpu_hash_two_with_permutation(u64 *digest_left, u64 *digest_right, u64 *digest, PoseidonPermutation *perm)
+    {
+        GoldilocksField in1[4] = {digest_left[0], digest_left[1], digest_left[2], digest_left[3]};
+        GoldilocksField in2[4] = {digest_right[0], digest_right[1], digest_right[2], digest_right[3]};
+
+        perm->set_from_slice(in1, NUM_HASH_OUT_ELTS, 0);
+        perm->set_from_slice(in2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
+
+        perm->permute();
+
+        u64 out[12];
+        perm->get_state_as_canonical_u64(out);
+        std::memcpy(digest, out, NUM_HASH_OUT_ELTS * sizeof(u64));
+    }
 };
 
 #endif // __POSEIDON_PERMUTATION_HPP__
