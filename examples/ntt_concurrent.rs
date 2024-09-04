@@ -1,15 +1,10 @@
 #[allow(dead_code)]
 #[allow(unused_imports)]
-
 #[cfg(not(feature = "no_cuda"))]
-use cryptography_cuda::{intt, init_twiddle_factors_rs, ntt_batch, types::*, ntt};
+use cryptography_cuda::{init_twiddle_factors_rs, intt, ntt, ntt_batch, types::*};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
-use plonky2_field::{
-    fft::fft,
-    polynomial::PolynomialCoeffs,
-    types::{Field},
-};
+use plonky2_field::{fft::fft, polynomial::PolynomialCoeffs, types::Field};
 use rand::random;
 use rayon::prelude::*;
 
@@ -110,18 +105,22 @@ fn gpu_fft_batch(device_id: usize, batches: usize, log_ntt_size: usize) {
     let start = std::time::Instant::now();
 
     let mut device_data: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(device_id as i32, total_elements).unwrap();
+        HostOrDeviceSlice::cuda_malloc(device_id as i32, total_elements).unwrap();
 
-    for i in 0..batches{
+    for i in 0..batches {
         let mut input: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
-        let _ = device_data.copy_from_host_offset(input.as_mut_slice(), i*domain_size, (i+1)*domain_size);
+        let _ = device_data.copy_from_host_offset(
+            input.as_mut_slice(),
+            i * domain_size,
+            (i + 1) * domain_size,
+        );
     }
 
     let mut cfg = NTTConfig::default();
-        cfg.are_inputs_on_device = true;
-        cfg.are_outputs_on_device = true;
-        cfg.batches = batches as u32;
+    cfg.are_inputs_on_device = true;
+    cfg.are_outputs_on_device = true;
+    cfg.batches = batches as u32;
 
     ntt_batch(
         DEFAULT_GPU,
@@ -138,13 +137,13 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
     use cryptography_cuda::device::memory::HostOrDeviceSlice;
 
     let domain_size = 1usize << log_ntt_size;
-    let per_device_batch = (batches + device_nums - 1)/ device_nums;
+    let per_device_batch = (batches + device_nums - 1) / device_nums;
 
     println!("per_device_batch: {:?}", per_device_batch);
 
     let mut gpu_buffers: Vec<HostOrDeviceSlice<'_, u64>> = (0..device_nums)
         .into_iter()
-        .map(|i| HostOrDeviceSlice::cuda_malloc(i as i32, domain_size*per_device_batch).unwrap())
+        .map(|i| HostOrDeviceSlice::cuda_malloc(i as i32, domain_size * per_device_batch).unwrap())
         .collect();
 
     // println!("input: {:?}", gpu_buffers);
@@ -152,19 +151,14 @@ fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_si
     let _: Vec<_> = gpu_buffers
         .par_iter_mut()
         .enumerate()
-        .map(|(device_id, mut input)| {
+        .map(|(device_id, input)| {
             // println!("invoking gpu: {:?}, input: {:?}", device_id, input);
             let mut cfg = NTTConfig::default();
             cfg.are_inputs_on_device = true;
             cfg.are_outputs_on_device = true;
             cfg.batches = per_device_batch as u32;
 
-        ntt_batch(
-            device_id,
-            input.as_mut_ptr(),
-            log_ntt_size,
-            cfg.clone(),
-        );
+            ntt_batch(device_id, input.as_mut_ptr(), log_ntt_size, cfg.clone());
             // println!("invoking gpu: {:?}, output: {:?}", device_id, input);
         })
         .collect();
@@ -191,7 +185,7 @@ fn main() {
     #[cfg(not(feature = "no_cuda"))]
     while device_id < num_devices {
         init_twiddle_factors_rs(device_id, log_ntt_size);
-        init_twiddle_factors_rs(device_id, log_ntt_size+1);
+        init_twiddle_factors_rs(device_id, log_ntt_size + 1);
         device_id = device_id + 1;
     }
 

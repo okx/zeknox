@@ -1,17 +1,16 @@
 #[allow(dead_code)]
-
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
 use cryptography_cuda::{
-    device::memory::HostOrDeviceSlice, 
-    naive_transpose_rev_batch, 
-    transpose_rev_batch, 
-    types::TransposeConfig
+    device::memory::HostOrDeviceSlice, naive_transpose_rev_batch, transpose_rev_batch,
+    types::TransposeConfig,
 };
 
 use rand::random;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
+const DEFAULT_GPU: usize = 0;
 
 fn random_fr() -> u64 {
     let fr: u64 = random();
@@ -21,18 +20,20 @@ fn random_fr() -> u64 {
 #[cfg(not(feature = "no_cuda"))]
 fn bench_transpose_gpu(c: &mut Criterion) {
     let mut group = c.benchmark_group("Transpose");
-    let LOG_NTT_SIZES: Vec<usize> = (20..=20).collect();
+    let log_ntt_sizes: Vec<usize> = (20..=20).collect();
 
-    for log_ntt_size in LOG_NTT_SIZES {
+    for log_ntt_size in log_ntt_sizes {
         let domain_size = 1usize << log_ntt_size;
         let batches = 200;
 
         let total_elements = domain_size * batches;
         // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
         let mut device_data: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements)
+                .unwrap();
         let mut device_data2: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements)
+                .unwrap();
 
         let mut input: Vec<u64> = (0..batches * domain_size).map(|_| random_fr()).collect();
         let _ = device_data.copy_from_host_offset(input.as_mut_slice(), 0, batches * domain_size);
@@ -62,18 +63,20 @@ fn bench_transpose_gpu(c: &mut Criterion) {
 #[cfg(not(feature = "no_cuda"))]
 fn bench_naive_transpose_gpu(c: &mut Criterion) {
     let mut group = c.benchmark_group("Transpose");
-    let LOG_NTT_SIZES: Vec<usize> = (20..=20).collect();
+    let log_ntt_sizes: Vec<usize> = (20..=20).collect();
 
-    for log_ntt_size in LOG_NTT_SIZES {
+    for log_ntt_size in log_ntt_sizes {
         let domain_size = 1usize << log_ntt_size;
         let batches = 200;
 
         let total_elements = domain_size * batches;
         // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
         let mut device_data: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements)
+                .unwrap();
         let mut device_data2: HostOrDeviceSlice<'_, u64> =
-            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements).unwrap();
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU.try_into().unwrap(), total_elements)
+                .unwrap();
 
         let mut input: Vec<u64> = (0..batches * domain_size).map(|_| random_fr()).collect();
         let _ = device_data.copy_from_host_offset(input.as_mut_slice(), 0, batches * domain_size);
@@ -102,7 +105,7 @@ fn bench_naive_transpose_gpu(c: &mut Criterion) {
 
 fn bench_transpose_cpu(c: &mut Criterion) {
     let mut group = c.benchmark_group("Transpose");
-    let log_ntt_sizes: Vec<usize> = (19..=21).collect();
+    let log_ntt_sizes: Vec<usize> = (20..=20).collect();
 
     for log_ntt_size in log_ntt_sizes {
         let domain_size = 1usize << log_ntt_size;
@@ -117,7 +120,7 @@ fn bench_transpose_cpu(c: &mut Criterion) {
 
         group.sample_size(10).bench_function(
             &format!("CPU transpose with n of size 2^{}", log_ntt_size),
-            |b| b.iter(||  transpose(&cpu_buffer, domain_size))
+            |b| b.iter(|| transpose(&cpu_buffer, domain_size)),
         );
     }
 }
@@ -137,8 +140,5 @@ criterion_group!(
     bench_transpose_cpu
 );
 #[cfg(feature = "no_cuda")]
-criterion_group!(
-    benches,
-    bench_transpose_cpu
-);
+criterion_group!(benches, bench_transpose_cpu);
 criterion_main!(benches);

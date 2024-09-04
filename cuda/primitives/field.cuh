@@ -14,9 +14,9 @@
 #ifndef __CRYPTO_PRIMITIVES_FIELD_CUH__
 #define __CRYPTO_PRIMITIVES_FIELD_CUH__
 
-#include "../util/host_math.cuh"
-#include "../util/ptx.cuh"
-#include "../util/storage.cuh"
+#include "utils/host_math.cuh"
+#include "utils/ptx.cuh"
+#include "utils/storage.cuh"
 #include <iomanip>
 #include <iostream>
 #include <random>

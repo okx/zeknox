@@ -1,6 +1,6 @@
 #ifndef __CRYPTO__PRIMITIVES__FIELD__CUH__
 #define __CRYPTO__PRIMITIVES__FIELD__CUH__
-#include <util/storage.cuh>
+#include <utils/storage.cuh>
 
 namespace PARAMS_BN254 {
   struct fp_config {

@@ -215,7 +215,7 @@ static void mult(point_t& ret, const affine_t& point,
     }
 }
 
-#include <util/thread_pool_t.hpp>
+#include <utils/thread_pool_t.hpp>
 
 template <class bucket_t, class point_t, class scalar_t,
           class affine_t = class bucket_t::affine_t>
@@ -362,7 +362,7 @@ static void mult_pippenger(point_t& ret, const std::vector<affine_t>& points,
                                   scalars.data(), mont, da_pool);
 }
 
-#include <util/slice_t.hpp>
+#include <utils/slice_t.hpp>
 
 template <class bucket_t, class point_t, class scalar_t,
           class affine_t = class bucket_t::affine_t>

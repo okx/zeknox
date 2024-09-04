@@ -1,6 +1,6 @@
 use types::{NTTConfig, TransposeConfig};
 
-#[cfg(feature="cuda")]
+#[cfg(feature = "cuda")]
 pub mod device;
 pub mod error;
 pub mod types;
@@ -51,7 +51,7 @@ extern "C" {
         cfg: types::NTTConfig,
         lg_domain_size: usize,
         total_num_input_elements: usize,
-        total_num_output_elements: usize
+        total_num_output_elements: usize,
     ) -> error::Error;
 
     fn compute_transpose_rev(
@@ -94,7 +94,6 @@ extern "C" {
         cap_height: u64,
         hash_type: u64,
     );
-
 
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
@@ -203,13 +202,15 @@ pub fn goldilocks_exp_rust(a: &mut u64, r: &mut u32) -> u64 {
     result
 }
 
-pub fn list_devices_info_rs()  {
-    unsafe { list_devices_info(); }
+pub fn list_devices_info_rs() {
+    unsafe {
+        list_devices_info();
+    }
 }
 
 pub fn get_number_of_gpus_rs() -> usize {
     let mut nums = 0;
-    let err = unsafe { get_number_of_gpus(&mut nums) } ;
+    let err = unsafe { get_number_of_gpus(&mut nums) };
 
     if err.code != 0 {
         panic!("{}", String::from(err));
@@ -219,7 +220,7 @@ pub fn get_number_of_gpus_rs() -> usize {
 
 pub fn lde_batch<T>(
     device_id: usize,
-    output: *mut T, // &mut [T],
+    output: *mut T,  // &mut [T],
     input: *const T, // &mut [T],
     log_n_size: usize,
     cfg: NTTConfig,
@@ -241,13 +242,13 @@ pub fn lde_batch<T>(
 }
 
 pub fn lde_batch_multi_gpu<T>(
-    output:*mut T, // &mut [T],
+    output: *mut T,  // &mut [T],
     input: *const T, // &mut [T],
     num_gpu: usize,
     cfg: NTTConfig,
     log_n_size: usize,
     total_num_input_elements: usize,
-    total_num_output_elements: usize
+    total_num_output_elements: usize,
 ) {
     let err = unsafe {
         // println!("In compute_batched_lde_multi_gpu {:?}", total_num_input_elements);
@@ -259,7 +260,7 @@ pub fn lde_batch_multi_gpu<T>(
             cfg,
             log_n_size,
             total_num_input_elements,
-            total_num_output_elements
+            total_num_output_elements,
         )
     };
 
@@ -290,12 +291,7 @@ pub fn ntt_batch<T>(
     }
 }
 
-pub fn intt_batch<T>(
-    device_id: usize,
-    inout: *mut T,
-    log_n_size: usize,
-    cfg: NTTConfig,
-) {
+pub fn intt_batch<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NTTConfig) {
     let err = unsafe {
         compute_batched_ntt(
             device_id,
@@ -313,11 +309,11 @@ pub fn intt_batch<T>(
 
 pub fn transpose_rev_batch<T>(
     device_id: i32,
-    output: *mut T, // &mut [T],
+    output: *mut T,  // &mut [T],
     input: *const T, // &mut [T],
     log_n_size: usize,
     cfg: TransposeConfig,
-){
+) {
     let err = unsafe {
         compute_transpose_rev(
             device_id,
@@ -335,11 +331,11 @@ pub fn transpose_rev_batch<T>(
 
 pub fn naive_transpose_rev_batch<T>(
     device_id: i32,
-    output: *mut T, // &mut [T],
+    output: *mut T,  // &mut [T],
     input: *const T, // &mut [T],
     log_n_size: usize,
     cfg: TransposeConfig,
-){
+) {
     let err = unsafe {
         compute_naive_transpose_rev(
             device_id,

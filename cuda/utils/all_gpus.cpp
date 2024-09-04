@@ -10,7 +10,7 @@ class gpus_t {
     std::vector<const gpu_t*> gpus;
 public:
     gpus_t()
-    {  
+    {
         int n;
         if (cudaGetDeviceCount(&n) != cudaSuccess)
             return;
@@ -138,8 +138,8 @@ int _ConvertSMVer2Cores(int major, int minor) {
 }
 
 void list_all_gpus_prop()
-{   
-    std::vector<const gpu_t*> gpus = all_gpus();   
+{
+    std::vector<const gpu_t*> gpus = all_gpus();
      for (const gpu_t* gpu : gpus) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, gpu->id());
