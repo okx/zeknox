@@ -3,7 +3,7 @@
 
 #include <keccak/keccak.hpp>
 #include <monolith/monolith.hpp>
-#include <poseidon/poseidon.cuh>
+#include <poseidon/poseidon.hpp>
 #include <poseidon2/poseidon2.hpp>
 #include <poseidon/poseidon_bn128.hpp>
 #include <merkle/merkle.h>
@@ -317,7 +317,7 @@ TEST(LIBCUDA, poseidon_test1)
     CHECKCUDAERR(cudaMalloc(&gpu_hash, 4 * sizeof(u64)));
     CHECKCUDAERR(cudaMemcpy(gpu_leaf, leaf, 6 * sizeof(u64), cudaMemcpyHostToDevice));
 
-    for (int k = 2; k <= 6; k += 2)
+    for (int k = 6; k <= 6; k += 2)
     {
         poseidon_hash<<<1, 1>>>(gpu_leaf, gpu_hash, k);
         CHECKCUDAERR(cudaMemcpy(h2, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));

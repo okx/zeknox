@@ -5,7 +5,7 @@
 #ifdef USE_CUDA
 #include "types/gl64_t.cuh"
 #include "utils/cuda_utils.cuh"
-#include "poseidon/poseidon.cuh"
+#include "poseidon/poseidon_permutation.cuh"
 #else
 #include "poseidon/goldilocks.hpp"
 #include "poseidon/poseidon.hpp"

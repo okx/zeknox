@@ -5,7 +5,7 @@
 #include "utils/cuda_utils.cuh"
 
 #ifdef USE_CUDA
-#include "poseidon/poseidon.cuh"
+#include "poseidon/poseidon_permutation.cuh"
 typedef gl64_t GoldilocksField;
 #else
 #include <cstring>

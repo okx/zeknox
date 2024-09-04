@@ -81,7 +81,11 @@ public:
 
     DEVICE static void gpu_hash_one_with_permutation(gl64_t *inputs, u32 num_inputs, gl64_t *hash, PoseidonPermutationGPU *perm)
     {
-        // special case
+        /*
+         * NOTE: to avoid a branch, we assume the input size is > NUM_HASH_OUT_ELTS. For inputs with size < NUM_HASH_OUT_ELTS,
+         * this function produces incorrect output. This case is filered out by an assert in Merkle Tree building functions.
+         */
+#if 0
         if (num_inputs <= NUM_HASH_OUT_ELTS)
         {
             u32 i = 0;
@@ -96,6 +100,7 @@ public:
         }
         else
         {
+#endif
             // absorb all input chunks.
             for (u32 idx = 0; idx < num_inputs; idx += SPONGE_RATE)
             {
@@ -107,7 +112,9 @@ public:
             {
                 hash[i] = ret[i];
             }
+#if 0
         }
+#endif
     };
 
     DEVICE static void gpu_hash_two_with_permutation(gl64_t *hash1, gl64_t *hash2, gl64_t *hash, PoseidonPermutationGPU *perm)

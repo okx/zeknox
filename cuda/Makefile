@@ -17,6 +17,7 @@ INCL := -I.
 CFLAGS := $(INCL) -Wall -Werror -O3 -march=native -fopenmp -fPIC
 CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native -fopenmp -fPIC
 NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH)
+# NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH) -Xptxas -O3,-v
 
 # for debug
 # CFLAGS := $(INCL) -Wall -Werror -march=native -fopenmp -fPIC -g
