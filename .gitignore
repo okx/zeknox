@@ -6,8 +6,8 @@ package/
 depends/gmp/
 depends/*.tar*
 cuda/CudaArch.mk
-cuda/util/deviceQuery/CudaArch.mk
-cuda/util/deviceQuery/deviceQuery
+cuda/utils/deviceQuery/CudaArch.mk
+cuda/utils/deviceQuery/deviceQuery
 *.o
 *.so
 *.a

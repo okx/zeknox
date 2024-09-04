@@ -2,7 +2,7 @@
 // 19-Nov-11  Markku-Juhani O. Saarinen <mjos@iki.fi>
 // A baseline Keccak (3rd round) implementation.
 
-#include "keccak/keccak.h"
+#include "keccak/keccak.hpp"
 #include "types/int_types.h"
 #include "utils/cuda_utils.cuh"
 
@@ -108,7 +108,7 @@ DEVICE void FUNC(keccak)(const u8 *in, int inlen, u8 *md, int mdlen)
 }
 
 #ifdef USE_CUDA
-__device__ void gpu_keccak_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+__device__ void KeccakHasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
     if (num_inputs < 4) {
         memcpy(hash, inputs, num_inputs * 8);
@@ -118,7 +118,7 @@ __device__ void gpu_keccak_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash
     hash[3] &= 0xFF;
 }
 
-__device__ void gpu_keccak_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+__device__ void KeccakHasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
     u8 input[50];
     u8* ileft = (u8*)hash1;
@@ -131,7 +131,7 @@ __device__ void gpu_keccak_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 
 #else
 
-void cpu_keccak_hash_one(u64* data, u32 data_size, u64* digest) {
+void KeccakHasher::cpu_hash_one(u64* data, u64 data_size, u64* digest) {
     if (data_size < 4) {
         memcpy(digest, data, data_size * 8);
         return;
@@ -140,7 +140,7 @@ void cpu_keccak_hash_one(u64* data, u32 data_size, u64* digest) {
     digest[3] &= 0xFF;
 }
 
-void cpu_keccak_hash_two(u64* digest_left, u64* digest_right, u64* digest) {
+void KeccakHasher::cpu_hash_two(u64* digest_left, u64* digest_right, u64* digest) {
     u8 input[50];
     u8* ileft = (u8*)digest_left;
     u8* iright = (u8*)digest_right;

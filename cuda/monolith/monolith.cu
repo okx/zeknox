@@ -1,4 +1,4 @@
-#include "monolith/monolith.cuh"
+#include "monolith/monolith.hpp"
 
 #define LOOKUP_BITS 8
 #define SPONGE_WIDTH 12
@@ -231,110 +231,36 @@ inline
 }
 
 #ifdef USE_CUDA
-__device__ void MonolithPermutationGPU::permute2()
+
+__forceinline__ __device__ void MonolithPermutationGPU::permute()
 {
-    monolith((u64 *)state);
+    monolith((u64 *)get_state());
 }
 
-__device__ void gpu_monolith_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+__device__ void MonolithHasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
-    if (num_inputs <= NUM_HASH_OUT_ELTS)
-    {
-        u32 i = 0;
-        for (; i < num_inputs; i++)
-        {
-            hash[i] = inputs[i];
-        }
-        for (; i < NUM_HASH_OUT_ELTS; i++)
-        {
-            hash[i].zero();
-        }
-    }
-    else
-    {
-        MonolithPermutationGPU perm = MonolithPermutationGPU();
-
-        // Absorb all input chunks.
-        for (u32 idx = 0; idx < num_inputs; idx += SPONGE_RATE)
-        {
-            perm.set_from_slice(inputs + idx, MIN(SPONGE_RATE, num_inputs - idx), 0);
-            perm.permute2();
-        }
-        gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-        for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-        {
-            hash[i] = ret[i];
-        }
-    }
+    PoseidonPermutationGPU::gpu_hash_one_with_permutation_template<MonolithPermutationGPU>(inputs, num_inputs, hash);
 }
 
-__device__ void gpu_monolith_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+__device__ void MonolithHasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
-    MonolithPermutationGPU perm = MonolithPermutationGPU();
-    perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
-    perm.set_from_slice(hash2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
-    perm.permute2();
-    gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
-    for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-    {
-        hash[i] = ret[i];
-    }
+    PoseidonPermutationGPU::gpu_hash_two_with_permutation_template<MonolithPermutationGPU>(hash1, hash2, hash);
 }
 
 #else  // USE_CUDA
 
-inline void MonolithPermutation::permute2()
+inline void MonolithPermutation::permute()
 {
-    monolith((u64 *)state);
+    monolith((u64 *)get_state());
 }
 
-void cpu_monolith_hash_one(u64 *data, u32 data_size, u64 *digest)
+void MonolithHasher::cpu_hash_one(u64 *input, u64 input_count, u64 *digest)
 {
-    if (data_size <= NUM_HASH_OUT_ELTS)
-    {
-        for (u32 i = 0; i < data_size; i++)
-        {
-            digest[i] = data[i];
-        }
-        for (u32 i = data_size; i < NUM_HASH_OUT_ELTS; i++)
-        {
-            digest[i] = 0;
-        }
-        return;
-    }
-    GoldilocksField *in = (GoldilocksField *)malloc(data_size * sizeof(GoldilocksField));
-    for (u32 i = 0; i < data_size; i++)
-    {
-        in[i] = GoldilocksField(data[i]);
-    }
-    MonolithPermutation perm = MonolithPermutation();
-    u64 idx = 0;
-    while (idx < data_size)
-    {
-        perm.set_from_slice(in + idx, MIN(SPONGE_RATE, (data_size - idx)), 0);
-        perm.permute2();
-        idx += SPONGE_RATE;
-    }
-    HashOut out = perm.squeeze(NUM_HASH_OUT_ELTS);
-    for (u64 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-    {
-        digest[i] = out.elements[i].get_val();
-    }
-    free(in);
+    PoseidonPermutation::cpu_hash_one_with_permutation_template<MonolithPermutation>(input, input_count, digest);
 }
 
-void cpu_monolith_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
+void MonolithHasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
-    HashOut x = HashOut(digest_left, NUM_HASH_OUT_ELTS);
-    HashOut y = HashOut(digest_right, NUM_HASH_OUT_ELTS);
-    MonolithPermutation perm = MonolithPermutation();
-    perm.set_from_slice(x.elements, x.n_elements, 0);
-    perm.set_from_slice(y.elements, y.n_elements, NUM_HASH_OUT_ELTS);
-    perm.permute2();
-    HashOut out = perm.squeeze(NUM_HASH_OUT_ELTS);
-    for (u64 i = 0; i < NUM_HASH_OUT_ELTS; i++)
-    {
-        digest[i] = out.elements[i].get_val();
-    }
+    PoseidonPermutation::cpu_hash_two_with_permutation_template<MonolithPermutation>(digest_left, digest_right, digest);
 }
 #endif // USE_CUDA
