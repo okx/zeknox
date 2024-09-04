@@ -875,14 +875,12 @@ __device__ void gpu_poseidon_hash_one_stride(gl64_t *inputs, u32 num_inputs, gl6
 
 __device__ void PoseidonHasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
-    PoseidonPermutationGPU perm = PoseidonPermutationGPU();
-    PoseidonPermutationGPU::gpu_hash_one_with_permutation(inputs, num_inputs, hash, &perm);
+    PoseidonPermutationGPU::gpu_hash_one_with_permutation_template<PoseidonPermutationGPU>(inputs, num_inputs, hash);
 }
 
 __device__ void PoseidonHasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
-    PoseidonPermutationGPU perm = PoseidonPermutationGPU();
-    PoseidonPermutationGPU::gpu_hash_two_with_permutation(hash1, hash2, hash, &perm);
+    PoseidonPermutationGPU::gpu_hash_two_with_permutation_template<PoseidonPermutationGPU>(hash1, hash2, hash);
 }
 
 #ifdef DEBUG

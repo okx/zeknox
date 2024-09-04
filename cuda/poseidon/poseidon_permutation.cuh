@@ -79,13 +79,14 @@ public:
 
     DEVICE gl64_t *squeeze(u32 size);
 
-    DEVICE static void gpu_hash_one_with_permutation(gl64_t *inputs, u32 num_inputs, gl64_t *hash, PoseidonPermutationGPU *perm)
+    template<class P>
+    DEVICE __forceinline__ static void gpu_hash_one_with_permutation_template(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
     {
         /*
          * NOTE: to avoid a branch, we assume the input size is > NUM_HASH_OUT_ELTS. For inputs with size < NUM_HASH_OUT_ELTS,
          * this function produces incorrect output. This case is filered out by an assert in Merkle Tree building functions.
          */
-#if 0
+#if 1
         if (num_inputs <= NUM_HASH_OUT_ELTS)
         {
             u32 i = 0;
@@ -101,28 +102,30 @@ public:
         else
         {
 #endif
-            // absorb all input chunks.
+            P perm = P();
             for (u32 idx = 0; idx < num_inputs; idx += SPONGE_RATE)
             {
-                perm->set_from_slice(inputs + idx, MIN(SPONGE_RATE, num_inputs - idx), 0);
-                perm->permute();
+                perm.set_from_slice(inputs + idx, MIN(SPONGE_RATE, num_inputs - idx), 0);
+                perm.permute();
             }
-            gl64_t *ret = perm->squeeze(NUM_HASH_OUT_ELTS);
+            gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
             for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
             {
                 hash[i] = ret[i];
             }
-#if 0
+#if 1
         }
 #endif
     };
 
-    DEVICE static void gpu_hash_two_with_permutation(gl64_t *hash1, gl64_t *hash2, gl64_t *hash, PoseidonPermutationGPU *perm)
+    template<class P>
+    DEVICE __forceinline__ static void gpu_hash_two_with_permutation_template(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
     {
-        perm->set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
-        perm->set_from_slice(hash2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
-        perm->permute();
-        gl64_t *ret = perm->squeeze(NUM_HASH_OUT_ELTS);
+        P perm = P();
+        perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);
+        perm.set_from_slice(hash2, NUM_HASH_OUT_ELTS, NUM_HASH_OUT_ELTS);
+        perm.permute();
+        gl64_t *ret = perm.squeeze(NUM_HASH_OUT_ELTS);
         for (u32 i = 0; i < NUM_HASH_OUT_ELTS; i++)
         {
             hash[i] = ret[i];

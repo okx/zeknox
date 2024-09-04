@@ -249,12 +249,10 @@ void PoseidonPermutation::permute()
 
 void PoseidonHasher::cpu_hash_one(u64 *input, u64 input_count, u64 *digest)
 {
-    PoseidonPermutation perm = PoseidonPermutation();
-    PoseidonPermutation::cpu_hash_one_with_permutation(input, input_count, digest, &perm);
+    PoseidonPermutation::cpu_hash_one_with_permutation_template<PoseidonPermutation>(input, input_count, digest);
 }
 
 void PoseidonHasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
-    PoseidonPermutation perm = PoseidonPermutation();
-    PoseidonPermutation::cpu_hash_two_with_permutation(digest_left, digest_right, digest, &perm);
+    PoseidonPermutation::cpu_hash_two_with_permutation_template<PoseidonPermutation>(digest_left, digest_right, digest);
 }

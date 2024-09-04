@@ -45,9 +45,7 @@ __global__ void keccak_gpu_driver(u64 *input, u32 size, u64 *hash)
     if (tid >= 1)
         return;
 
-    KeccakHasher* hasher = new KeccakHasher;
-    hasher->gpu_hash_one((gl64_t *)input, size, (gl64_t *)hash);
-    delete hasher;
+    KeccakHasher::gpu_hash_one((gl64_t *)input, size, (gl64_t *)hash);
 }
 
 void keccak_hash_on_gpu(u64 *input, u32 size, u64 *hash)
@@ -68,8 +66,7 @@ __global__ void monolith_hash(u64 *in, u64 *out, u32 n)
     if (tid > 0)
         return;
 
-    MonolithHasher* hasher = new MonolithHasher;
-    hasher->gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
+    MonolithHasher::gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
 }
 
 __global__ void monolith_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
@@ -78,8 +75,7 @@ __global__ void monolith_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
     if (tid >= len)
         return;
 
-    MonolithHasher* hasher = new MonolithHasher;
-    hasher->gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    MonolithHasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void monolith_hash_step2(u64 *in, u64 *out, u32 len)
@@ -88,8 +84,7 @@ __global__ void monolith_hash_step2(u64 *in, u64 *out, u32 len)
     if (tid >= len)
         return;
 
-    MonolithHasher* hasher = new MonolithHasher;
-    hasher->gpu_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
+    MonolithHasher::gpu_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void poseidon_hash(u64 *in, u64 *out, u32 n)
@@ -98,8 +93,7 @@ __global__ void poseidon_hash(u64 *in, u64 *out, u32 n)
     if (tid > 0)
         return;
 
-    PoseidonHasher* hasher = new PoseidonHasher;
-    hasher->gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
+    PoseidonHasher::gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
 }
 
 __global__ void poseidon_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
@@ -108,8 +102,7 @@ __global__ void poseidon_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
     if (tid >= len)
         return;
 
-    PoseidonHasher* hasher = new PoseidonHasher;
-    hasher->gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    PoseidonHasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void poseidon_hash_step2(u64 *in, u64 *out, u32 len)
@@ -118,8 +111,7 @@ __global__ void poseidon_hash_step2(u64 *in, u64 *out, u32 len)
     if (tid >= len)
         return;
 
-    PoseidonHasher* hasher = new PoseidonHasher;
-    hasher->gpu_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
+    PoseidonHasher::gpu_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void poseidon2_hash(u64 *in, u64 *out, u32 n)
@@ -128,8 +120,7 @@ __global__ void poseidon2_hash(u64 *in, u64 *out, u32 n)
     if (tid > 0)
         return;
 
-    Poseidon2Hasher* hasher = new Poseidon2Hasher;
-    hasher->gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
+    Poseidon2Hasher::gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
 }
 
 __global__ void poseidon2_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
@@ -138,8 +129,7 @@ __global__ void poseidon2_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
     if (tid >= len)
         return;
 
-    Poseidon2Hasher* hasher = new Poseidon2Hasher;
-    hasher->gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    Poseidon2Hasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void poseidon2_hash_step2(u64 *in, u64 *out, u32 len)
@@ -148,8 +138,7 @@ __global__ void poseidon2_hash_step2(u64 *in, u64 *out, u32 len)
     if (tid >= len)
         return;
 
-    Poseidon2Hasher* hasher = new Poseidon2Hasher;
-    hasher->gpu_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
+    Poseidon2Hasher::gpu_hash_two((gl64_t *)(in + 8 * tid), (gl64_t *)(in + 8 * tid + 4), (gl64_t *)(out + 4 * tid));
 }
 
 __global__ void poseidonbn128_hash(u64 *in, u64 *out, u32 n)
@@ -158,8 +147,7 @@ __global__ void poseidonbn128_hash(u64 *in, u64 *out, u32 n)
     if (tid > 0)
         return;
 
-    PoseidonBN128Hasher* hasher = new PoseidonBN128Hasher;
-    hasher->gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
+    PoseidonBN128Hasher::gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
 }
 #endif
 
@@ -179,11 +167,9 @@ TEST(LIBCUDA, keccak_test)
     u64 h1[4] = {0u};
     u64 h2[4] = {0u};
 
-    KeccakHasher* hasher = new KeccakHasher;
-
     for (int size = 1; size <= 6; size++)
     {
-        hasher->cpu_hash_one(data, size, h1);
+        KeccakHasher::cpu_hash_one(data, size, h1);
 #ifdef USE_CUDA
         keccak_hash_on_gpu(data, size, h2);
 #endif
@@ -208,8 +194,7 @@ TEST(LIBCUDA, monolith_test1)
     u64 h1[4] = {0u};
     u64 h2[4] = {0u};
 
-    MonolithHasher* hasher = new MonolithHasher;
-    hasher->cpu_hash_one(inp, 12, h1);
+    MonolithHasher::cpu_hash_one(inp, 12, h1);
 #ifdef DEBUG
     printhash(h1);
 #endif
@@ -249,14 +234,13 @@ TEST(LIBCUDA, monolith_test2)
     // CPU
     u64 tree1[28] = {0ul};
 
-    MonolithHasher* hasher = new MonolithHasher;
     for (u32 i = 0; i < 4; i++)
     {
-        hasher->cpu_hash_one(test_leaves + 7 * i, 7, tree1 + 4 * i);
+        MonolithHasher::cpu_hash_one(test_leaves + 7 * i, 7, tree1 + 4 * i);
     }
-    hasher->cpu_hash_two(tree1, tree1 + 4, tree1 + 16);
-    hasher->cpu_hash_two(tree1 + 8, tree1 + 12, tree1 + 20);
-    hasher->cpu_hash_two(tree1 + 16, tree1 + 20, tree1 + 24);
+    MonolithHasher::cpu_hash_two(tree1, tree1 + 4, tree1 + 16);
+    MonolithHasher::cpu_hash_two(tree1 + 8, tree1 + 12, tree1 + 20);
+    MonolithHasher::cpu_hash_two(tree1 + 16, tree1 + 20, tree1 + 24);
 
     // GPU
     u64 tree2[28] = {0ul};
@@ -280,30 +264,30 @@ TEST(LIBCUDA, monolith_test2)
 
 TEST(LIBCUDA, poseidon_test1)
 {
-    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    u64 leaf[9] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027, 16154511938222758243, 3651132590097252162};
 
-    u64 expected[7][4] = {
+    u64 expected[11][4] = {
         {0},
-        {0},
+        {8395359103262935841, 0, 0, 0},
         {8395359103262935841, 1377884553022145855, 0, 0},
-        {0},
+        {8395359103262935841, 1377884553022145855, 2370707998790318766, 0},
         {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162},
-        {0},
+        {3618821072812614426, 8353148445756493727, 4040525329700581442, 15983474240847269257},
         {16643938361881363776, 6653675298471110559, 12562058402463703932, 16154511938222758243},
-    };
+        {7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017},
+        {6835933650993053111, 15978194778874965616, 2024081381896137659, 16520693669262110264},
+        {9429914239539731992, 14881719063945231827, 15528667124986963891, 16465743531992249573},
+        {16643938361881363776, 6653675298471110559, 12562058402463703932, 16154511938222758243}};
 
     u64 h1[4] = {0u};
     u64 h2[4] = {0u};
 
-    PoseidonHasher hasher;
-
-    for (int k = 2; k <= 6; k += 2)
+    for (int k = 1; k <= 9; k++)
     {
-        hasher.cpu_hash_one(leaf, k, h1);
+        PoseidonHasher::cpu_hash_one(leaf, k, h1);
 #ifdef DEBUG
         printhash(h1);
 #endif
-
         for (int j = 0; j < 4; j++)
         {
             assert(h1[j] == expected[k][j]);
@@ -313,18 +297,17 @@ TEST(LIBCUDA, poseidon_test1)
 #ifdef USE_CUDA
     u64 *gpu_leaf;
     u64 *gpu_hash;
-    CHECKCUDAERR(cudaMalloc(&gpu_leaf, 6 * sizeof(u64)));
+    CHECKCUDAERR(cudaMalloc(&gpu_leaf, 9 * sizeof(u64)));
     CHECKCUDAERR(cudaMalloc(&gpu_hash, 4 * sizeof(u64)));
-    CHECKCUDAERR(cudaMemcpy(gpu_leaf, leaf, 6 * sizeof(u64), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpy(gpu_leaf, leaf, 9 * sizeof(u64), cudaMemcpyHostToDevice));
 
-    for (int k = 6; k <= 6; k += 2)
+    for (int k = 1; k <= 9; k++)
     {
         poseidon_hash<<<1, 1>>>(gpu_leaf, gpu_hash, k);
         CHECKCUDAERR(cudaMemcpy(h2, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
 #ifdef DEBUG
         printhash(h2);
 #endif // DEBUG
-
         for (int j = 0; j < 4; j++)
         {
             assert(h2[j] == expected[k][j]);
@@ -351,14 +334,13 @@ TEST(LIBCUDA, poseidon_test2)
     // CPU
     u64 tree1[28] = {0ul};
 
-    PoseidonHasher* hasher = new PoseidonHasher;
     for (u32 i = 0; i < 4; i++)
     {
-        hasher->cpu_hash_one(test_leaves + 7 * i, 7, tree1 + 4 * i);
+        PoseidonHasher::cpu_hash_one(test_leaves + 7 * i, 7, tree1 + 4 * i);
     }
-    hasher->cpu_hash_two(tree1, tree1 + 4, tree1 + 16);
-    hasher->cpu_hash_two(tree1 + 8, tree1 + 12, tree1 + 20);
-    hasher->cpu_hash_two(tree1 + 16, tree1 + 20, tree1 + 24);
+    PoseidonHasher::cpu_hash_two(tree1, tree1 + 4, tree1 + 16);
+    PoseidonHasher::cpu_hash_two(tree1 + 8, tree1 + 12, tree1 + 20);
+    PoseidonHasher::cpu_hash_two(tree1 + 16, tree1 + 20, tree1 + 24);
 
     // GPU
     u64 tree2[28] = {0ul};
@@ -386,8 +368,7 @@ TEST(LIBCUDA, monolith_test3)
     u64 hash[4] = {0};
     u64 ref[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
 
-    MonolithHasher* hasher = new MonolithHasher;
-    hasher->cpu_hash_one(inp, 12, hash);
+    MonolithHasher::cpu_hash_one(inp, 12, hash);
     for (int i = 0; i < 4; i++)
     {
         assert(hash[i] == ref[i]);
@@ -547,7 +528,7 @@ void compare_results(u64 *digests_buf1, u64 *digests_buf2, u32 n_digests, u64 *c
     u64 *ptr1 = digests_buf1;
     u64 *ptr2 = digests_buf2;
 #ifdef DEBUG
-    for (int i = 0; i < n_digests; i++, ptr1+=HASH_SIZE_U64, ptr2+=HASH_SIZE_U64)
+    for (int i = 0; i < n_digests; i++, ptr1 += HASH_SIZE_U64, ptr2 += HASH_SIZE_U64)
     {
         printf("Hashes digests\n");
         printhash(ptr1);
@@ -563,7 +544,7 @@ void compare_results(u64 *digests_buf1, u64 *digests_buf2, u32 n_digests, u64 *c
     ptr1 = cap_buf1;
     ptr2 = cap_buf2;
 #ifdef DEBUG
-    for (int i = 0; i < n_caps; i++, ptr1+=HASH_SIZE_U64, ptr2+=HASH_SIZE_U64)
+    for (int i = 0; i < n_caps; i++, ptr1 += HASH_SIZE_U64, ptr2 += HASH_SIZE_U64)
     {
         printf("Hashes digests\n");
         printhash(ptr1);

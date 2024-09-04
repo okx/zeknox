@@ -212,14 +212,12 @@ __forceinline__ __device__ void Poseidon2PermutationGPU::permute()
 
 __device__ void Poseidon2Hasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
-    Poseidon2PermutationGPU perm = Poseidon2PermutationGPU();
-    PoseidonPermutationGPU::gpu_hash_one_with_permutation(inputs, num_inputs, hash, &perm);
+    PoseidonPermutationGPU::gpu_hash_one_with_permutation_template<Poseidon2PermutationGPU>(inputs, num_inputs, hash);
 }
 
 __device__ void Poseidon2Hasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
 {
-    Poseidon2PermutationGPU perm = Poseidon2PermutationGPU();
-    PoseidonPermutationGPU::gpu_hash_two_with_permutation(hash1, hash2, hash, &perm);
+    PoseidonPermutationGPU::gpu_hash_two_with_permutation_template<Poseidon2PermutationGPU>(hash1, hash2, hash);
 }
 
 #else // USE_CUDA
@@ -231,14 +229,12 @@ inline void Poseidon2Permutation::permute()
 
 void Poseidon2Hasher::cpu_hash_one(u64 *input, u64 input_count, u64 *digest)
 {
-    Poseidon2Permutation perm = Poseidon2Permutation();
-    PoseidonPermutation::cpu_hash_one_with_permutation(input, input_count, digest, &perm);
+    PoseidonPermutation::cpu_hash_one_with_permutation_template<Poseidon2Permutation>(input, input_count, digest);
 }
 
 void Poseidon2Hasher::cpu_hash_two(u64 *digest_left, u64 *digest_right, u64 *digest)
 {
-    Poseidon2Permutation perm = Poseidon2Permutation();
-    PoseidonPermutation::cpu_hash_two_with_permutation(digest_left, digest_right, digest, &perm);
+    PoseidonPermutation::cpu_hash_two_with_permutation_template<Poseidon2Permutation>(digest_left, digest_right, digest);
 }
 
 #endif // USE_CUDA
