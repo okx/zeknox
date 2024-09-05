@@ -195,6 +195,27 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         Ok(())
     }
 
+    pub fn copy_to_host_ptr(&self, ptr: *mut c_void, counts: usize) -> CudaResult<()> {
+        let device_id: i32 = match self {
+            Self::Device(d, _) => *d,
+            Self::Host(_) => panic!("Need device memory to copy from, and not host"),
+        };
+        let size = size_of::<T>() * counts;
+        if size != 0 {
+            unsafe {
+                let _ = cudaSetDevice(device_id);
+                cudaMemcpy(
+                    ptr,
+                    self.as_ptr() as *const c_void,
+                    size,
+                    cudaMemcpyKind::cudaMemcpyDeviceToHost,
+                )
+                .wrap()?
+            }
+        }
+        Ok(())
+    }
+
     /// val: host data pointer
     /// offset: the offset to device
     pub fn copy_to_host_offset(
@@ -265,6 +286,37 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
                 let _ = cudaSetDevice(device_id);
                 cudaMemcpyAsync(
                     val.as_mut_ptr() as *mut c_void,
+                    self.as_ptr() as *const c_void,
+                    size,
+                    cudaMemcpyKind::cudaMemcpyDeviceToHost,
+                    stream.handle as *mut _ as *mut _,
+                )
+                .wrap()?
+            }
+        }
+        Ok(())
+    }
+
+    pub fn copy_to_host_ptr_async(
+        &self,
+        ptr: *mut c_void,
+        len: usize,
+        stream: &CudaStream,
+    ) -> CudaResult<()> {
+        let device_id: i32 = match self {
+            Self::Device(d, _) => *d,
+            Self::Host(_) => panic!("Need device memory to copy from, and not host"),
+        };
+        assert!(
+            self.len() == len,
+            "destination and source slices have different lengths"
+        );
+        let size = size_of::<T>() * self.len();
+        if size != 0 {
+            unsafe {
+                let _ = cudaSetDevice(device_id);
+                cudaMemcpyAsync(
+                    ptr,
                     self.as_ptr() as *const c_void,
                     size,
                     cudaMemcpyKind::cudaMemcpyDeviceToHost,
