@@ -1,7 +1,6 @@
 #include "types/int_types.h"
 
 #include "merkle/merkle.h"
-#include "merkle/merkle_c.h"
 
 #include "utils/cuda_utils.cuh"
 
@@ -467,6 +466,10 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     u64 cap_height,
     u64 hash_type)
 {
+    assert(digests_buf_gpu_ptr != NULL);
+    assert(cap_buf_gpu_ptr != NULL);
+    assert(leaves_buf_gpu_ptr != NULL);
+
     assert(leaf_size > NUM_HASH_OUT_ELTS);
 
     switch (hash_type)

@@ -37,6 +37,28 @@ private:
 
     void partial_rounds(GoldilocksField *state, u32 *round_ctr);
 
+    u64 reduce96(u128 val);
+
+    void block1(const i64 *x, const i64 *y, i64 *z);
+
+    void block2(const i64 *x, const i64 *y, i64 *z);
+
+    void block3(const i64 *x, const i64 *y, i64 *z);
+
+    void fft2_real(const u64 *x, i64 *z);
+
+    void ifft2_real_unreduced(const i64 *y, u64 *z);
+
+    void fft4_real(const u64 *x, i64 *y);
+
+    void ifft4_real_unreduced(const i64 *y, u64 *x);
+
+    u64 reduce128(u128 val);
+
+    void mds_multiply_freq(u64 *state);
+
+    void mds_layer_fast(GoldilocksField *state);
+
     void poseidon(GoldilocksField *inout);
 
 public:
