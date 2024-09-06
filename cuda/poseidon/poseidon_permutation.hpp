@@ -13,53 +13,53 @@ private:
 
     static inline GoldilocksField sbox_monomial(const GoldilocksField &x);
 
-    inline void sbox_layer(GoldilocksField *inout);
+    static inline void sbox_layer(GoldilocksField *inout);
 
-    void mds_layer(GoldilocksField *inout);
+    static inline void mds_layer(GoldilocksField *inout);
 
-    inline void constant_layer(GoldilocksField *inout, u32 *round_ctr);
+    static inline void constant_layer(GoldilocksField *inout, u32 *round_ctr);
 
-    inline void full_rounds(GoldilocksField *inout, u32 *round_ctr);
+    static inline void full_rounds(GoldilocksField *inout, u32 *round_ctr);
 
-    void partial_rounds_naive(GoldilocksField *inout, u32 *round_ctr);
+    static inline void partial_rounds_naive(GoldilocksField *inout, u32 *round_ctr);
 
-    void poseidon_naive(GoldilocksField *inout);
+    static inline void poseidon_naive(GoldilocksField *inout);
 
-    void partial_first_constant_layer(GoldilocksField *state);
+    static inline void partial_first_constant_layer(GoldilocksField *inout);
 
-    void mds_partial_layer_init(GoldilocksField *state);
+    static inline void mds_partial_layer_init(GoldilocksField *inout);
 
     static inline void add_u160_u128(u128 *x_lo, u32 *x_hi, u128 y);
 
     static inline GoldilocksField reduce_u160(u128 n_lo, u32 n_hi);
 
-    void mds_partial_layer_fast(GoldilocksField *state, u32 r);
+    static inline void mds_partial_layer_fast(GoldilocksField *inout, u32 r);
 
-    void partial_rounds(GoldilocksField *state, u32 *round_ctr);
+    static inline void partial_rounds(GoldilocksField *inout, u32 *round_ctr);
 
-    u64 reduce96(u128 val);
+    static inline void block1(const i64 *x, const i64 *y, i64 *z);
 
-    void block1(const i64 *x, const i64 *y, i64 *z);
+    static inline void block2(const i64 *x, const i64 *y, i64 *z);
 
-    void block2(const i64 *x, const i64 *y, i64 *z);
+    static inline void block3(const i64 *x, const i64 *y, i64 *z);
 
-    void block3(const i64 *x, const i64 *y, i64 *z);
+    static inline void fft2_real(const u64 *x, i64 *z);
 
-    void fft2_real(const u64 *x, i64 *z);
+    static inline void ifft2_real_unreduced(const i64 *y, u64 *z);
 
-    void ifft2_real_unreduced(const i64 *y, u64 *z);
+    static inline void fft4_real(const u64 *x, i64 *y);
 
-    void fft4_real(const u64 *x, i64 *y);
+    static inline void ifft4_real_unreduced(const i64 *y, u64 *x);
 
-    void ifft4_real_unreduced(const i64 *y, u64 *x);
+    static inline u64 reduce96(u128 val);
 
-    u64 reduce128(u128 val);
+    static inline u64 reduce128(u128 val);
 
-    void mds_multiply_freq(u64 *state);
+    static inline void mds_multiply_freq(u64 *inout);
 
-    void mds_layer_fast(GoldilocksField *state);
+    static inline void mds_layer_fast(GoldilocksField *inout);
 
-    void poseidon(GoldilocksField *inout);
+    static inline void poseidon(GoldilocksField *inout);
 
 public:
     PoseidonPermutation();
@@ -75,7 +75,7 @@ public:
     void permute();
 
     template<class P>
-    static void cpu_hash_one_with_permutation_template(u64 *input, u64 input_count, u64 *output)
+    static inline void cpu_hash_one_with_permutation_template(u64 *input, u64 input_count, u64 *output)
     {
         // special cases
         if (input_count < NUM_HASH_OUT_ELTS)
@@ -116,7 +116,7 @@ public:
     }
 
     template<class P>
-    static void cpu_hash_two_with_permutation_template(u64 *digest_left, u64 *digest_right, u64 *digest)
+    static inline void cpu_hash_two_with_permutation_template(u64 *digest_left, u64 *digest_right, u64 *digest)
     {
         GoldilocksField in1[4] = {digest_left[0], digest_left[1], digest_left[2], digest_left[3]};
         GoldilocksField in2[4] = {digest_right[0], digest_right[1], digest_right[2], digest_right[3]};

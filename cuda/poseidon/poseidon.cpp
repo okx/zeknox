@@ -41,7 +41,7 @@ inline void PoseidonPermutation::sbox_layer(GoldilocksField *inout)
     }
 }
 
-void PoseidonPermutation::mds_layer(GoldilocksField *inout)
+inline void PoseidonPermutation::mds_layer(GoldilocksField *inout)
 {
     u64 s[SPONGE_WIDTH] = {0};
 
@@ -81,7 +81,7 @@ inline void PoseidonPermutation::full_rounds(GoldilocksField *inout, u32 *round_
     }
 }
 
-void PoseidonPermutation::partial_rounds_naive(GoldilocksField *inout, u32 *round_ctr)
+inline void PoseidonPermutation::partial_rounds_naive(GoldilocksField *inout, u32 *round_ctr)
 {
     for (u64 k = 0; k < N_PARTIAL_ROUNDS; k++)
     {
@@ -92,29 +92,29 @@ void PoseidonPermutation::partial_rounds_naive(GoldilocksField *inout, u32 *roun
     }
 }
 
-// Arrys of size SPIONGE_WIDTH
-void PoseidonPermutation::poseidon_naive(GoldilocksField *inout)
+// NOTE: inout should point to an array of size SPIONGE_WIDTH
+inline void PoseidonPermutation::poseidon_naive(GoldilocksField *inout)
 {
     u32 round_ctr = 0;
 
     full_rounds(inout, &round_ctr);
-    // print_perm(state, SPONGE_WIDTH);
+    // print_perm(inout, SPONGE_WIDTH);
     partial_rounds_naive(inout, &round_ctr);
-    // print_perm(state, SPONGE_WIDTH);
+    // print_perm(inout, SPONGE_WIDTH);
     full_rounds(inout, &round_ctr);
-    // print_perm(state, SPONGE_WIDTH);
+    // print_perm(inout, SPONGE_WIDTH);
     assert(round_ctr == N_ROUNDS);
 }
 
-void PoseidonPermutation::partial_first_constant_layer(GoldilocksField *state)
+inline void PoseidonPermutation::partial_first_constant_layer(GoldilocksField *inout)
 {
     for (u32 i = 0; i < SPONGE_WIDTH; i++)
     {
-        state[i] = state[i] + state[i].from_canonical_u64(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]);
+        inout[i] = inout[i] + inout[i].from_canonical_u64(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]);
     }
 }
 
-void PoseidonPermutation::mds_partial_layer_init(GoldilocksField *state)
+inline void PoseidonPermutation::mds_partial_layer_init(GoldilocksField *inout)
 {
     GoldilocksField result[SPONGE_WIDTH] = {GoldilocksField::Zero()};
 
@@ -124,12 +124,12 @@ void PoseidonPermutation::mds_partial_layer_init(GoldilocksField *state)
         {
             GoldilocksField t = GoldilocksField::from_canonical_u64(
                 FAST_PARTIAL_ROUND_INITIAL_MATRIX[r - 1][c - 1]);
-            result[c] = result[c] + state[r] * t;
+            result[c] = result[c] + inout[r] * t;
         }
     }
     for (u32 i = 1; i < SPONGE_WIDTH; i++)
     {
-        state[i] = result[i];
+        inout[i] = result[i];
     }
 }
 
@@ -156,7 +156,7 @@ inline GoldilocksField PoseidonPermutation::reduce_u160(u128 n_lo, u32 n_hi)
     return GoldilocksField::from_noncanonical_u128(reduced128);
 }
 
-void PoseidonPermutation::mds_partial_layer_fast(GoldilocksField *state, u32 r)
+inline void PoseidonPermutation::mds_partial_layer_fast(GoldilocksField *inout, u32 r)
 {
     // u169 accumulator
     u128 d_sum_lo = 0;
@@ -164,10 +164,10 @@ void PoseidonPermutation::mds_partial_layer_fast(GoldilocksField *state, u32 r)
     for (u32 i = 1; i < 12; i++)
     {
         u128 t = (u128)FAST_PARTIAL_ROUND_W_HATS[r][i - 1];
-        u128 si = (u128)state[i].to_noncanonical_u64();
+        u128 si = (u128)inout[i].to_noncanonical_u64();
         add_u160_u128(&d_sum_lo, &d_sum_hi, si * t);
     }
-    u128 s0 = (u128)state[0].to_noncanonical_u64();
+    u128 s0 = (u128)inout[0].to_noncanonical_u64();
     u128 mds0to0 = (u128)(MDS_MATRIX_CIRC[0] + MDS_MATRIX_DIAG[0]);
     add_u160_u128(&d_sum_lo, &d_sum_hi, s0 * mds0to0);
     GoldilocksField d = reduce_u160(d_sum_lo, d_sum_hi);
@@ -177,24 +177,24 @@ void PoseidonPermutation::mds_partial_layer_fast(GoldilocksField *state, u32 r)
     for (u32 i = 1; i < SPONGE_WIDTH; i++)
     {
         GoldilocksField t = GoldilocksField::from_canonical_u64(FAST_PARTIAL_ROUND_VS[r][i - 1]);
-        result[i] = state[i].multiply_accumulate(state[0], t);
+        result[i] = inout[i].multiply_accumulate(inout[0], t);
     }
     for (u32 i = 0; i < SPONGE_WIDTH; i++)
     {
-        state[i] = result[i];
+        inout[i] = result[i];
     }
 }
 
-void PoseidonPermutation::partial_rounds(GoldilocksField *state, u32 *round_ctr)
+inline void PoseidonPermutation::partial_rounds(GoldilocksField *inout, u32 *round_ctr)
 {
-    partial_first_constant_layer(state);
-    mds_partial_layer_init(state);
+    partial_first_constant_layer(inout);
+    mds_partial_layer_init(inout);
 
     for (u32 i = 0; i < N_PARTIAL_ROUNDS; i++)
     {
-        state[0] = sbox_monomial(state[0]);
-        state[0] = state[0].add_canonical_u64(FAST_PARTIAL_ROUND_CONSTANTS[i]);
-        mds_partial_layer_fast(state, i);
+        inout[0] = sbox_monomial(inout[0]);
+        inout[0] = inout[0].add_canonical_u64(FAST_PARTIAL_ROUND_CONSTANTS[i]);
+        mds_partial_layer_fast(inout, i);
     }
     *round_ctr += N_PARTIAL_ROUNDS;
 }
@@ -358,11 +358,11 @@ inline u64 PoseidonPermutation::reduce128(u128 val)
     */
 }
 
-inline void PoseidonPermutation::mds_multiply_freq(u64 *state)
+inline void PoseidonPermutation::mds_multiply_freq(u64 *inout)
 {
-    u64 sa[4] = {state[0], state[3], state[6], state[9]};
-    u64 sb[4] = {state[1], state[4], state[7], state[10]};
-    u64 sc[4] = {state[2], state[5], state[8], state[11]};
+    u64 sa[4] = {inout[0], inout[3], inout[6], inout[9]};
+    u64 sb[4] = {inout[1], inout[4], inout[7], inout[10]};
+    u64 sc[4] = {inout[2], inout[5], inout[8], inout[11]};
 
     i64 u[12];
     fft4_real(sa, &u[0]);
@@ -388,44 +388,44 @@ inline void PoseidonPermutation::mds_multiply_freq(u64 *state)
     ifft4_real_unreduced(vb, sb);
     ifft4_real_unreduced(vc, sc);
 
-    state[0] = sa[0];
-    state[1] = sb[0];
-    state[2] = sc[0];
-    state[3] = sa[1];
-    state[4] = sb[1];
-    state[5] = sc[1];
-    state[6] = sa[2];
-    state[7] = sb[2];
-    state[8] = sc[2];
-    state[9] = sa[3];
-    state[10] = sb[3];
-    state[11] = sc[3];
+    inout[0] = sa[0];
+    inout[1] = sb[0];
+    inout[2] = sc[0];
+    inout[3] = sa[1];
+    inout[4] = sb[1];
+    inout[5] = sc[1];
+    inout[6] = sa[2];
+    inout[7] = sb[2];
+    inout[8] = sc[2];
+    inout[9] = sa[3];
+    inout[10] = sb[3];
+    inout[11] = sc[3];
 }
 
-inline void PoseidonPermutation::mds_layer_fast(GoldilocksField *state)
+inline void PoseidonPermutation::mds_layer_fast(GoldilocksField *inout)
 {
     u64 state_l[SPONGE_WIDTH], state_h[SPONGE_WIDTH];
 
     for (uint32_t r = 0; r < SPONGE_WIDTH; r++)
     {
-        state_h[r] = state[r].get_val() >> 32;
-        state_l[r] = state[r].get_val() & 0xFFFFFFFF;
+        state_h[r] = inout[r].get_val() >> 32;
+        state_l[r] = inout[r].get_val() & 0xFFFFFFFF;
     }
 
     mds_multiply_freq(state_h);
     mds_multiply_freq(state_l);
 
-    // MDS_MATRIX_DIAG[0] is 8, so we shift state[0] by 3
-    u128 s0 = ((u128)state[0].get_val()) << 3;
+    // MDS_MATRIX_DIAG[0] is 8, so we shift inout[0] by 3
+    u128 s0 = ((u128)inout[0].get_val()) << 3;
 
     for (uint32_t r = 0; r < SPONGE_WIDTH; r++)
     {
         u128 s = (u128)state_l[r] + (((u128)state_h[r]) << 32);
-        state[r] = reduce96(s);
+        inout[r] = reduce96(s);
     }
 
     u64 s0u64 = reduce96(s0);
-    state[0] = state[0] + s0u64;
+    inout[0] = inout[0] + s0u64;
 }
 
 // Arrys of size SPIONGE_WIDTH
@@ -460,19 +460,19 @@ void PoseidonPermutation::get_state_as_canonical_u64(u64 *out)
     assert(out != 0);
     for (u32 i = 0; i < SPONGE_WIDTH; i++)
     {
-        out[i] = state[i].to_noncanonical_u64();
+        out[i] = this->state[i].to_noncanonical_u64();
     }
 }
 
 GoldilocksField *PoseidonPermutation::get_state()
 {
-    return state;
+    return this->state;
 }
 
 void PoseidonPermutation::set_state(u32 idx, GoldilocksField val)
 {
     assert(idx < SPONGE_WIDTH);
-    state[idx] = val;
+    this->state[idx] = val;
 }
 
 void PoseidonPermutation::permute()
