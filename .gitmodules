@@ -7,6 +7,3 @@
 [submodule "depends/goldilocks"]
 	path = depends/goldilocks
 	url = https://github.com/okx/goldilocks.git
-[submodule "depends/goldilock"]
-	path = depends/goldilock
-	url = https://github.com/okx/goldilocks
