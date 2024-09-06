@@ -11,11 +11,13 @@ CXX := g++
 NVCC := /usr/local/cuda/bin/nvcc
 
 # flags
-INCL := -I.
+INCL := -I. -I../depends/goldilocks/src
+
+# for AVX use: -D__USE_AVX__ -D__AVX512__ -D__NO_GMP__
 
 # for release
 CFLAGS := $(INCL) -Wall -Werror -O3 -march=native -fopenmp -fPIC -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -O3 -march=native -fopenmp -fPIC -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++17 -O3 -march=native -fopenmp -fPIC -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
 NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH) -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
 # NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH) -Xptxas -O3,-v -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
 
@@ -45,7 +47,7 @@ OBJS_CUDA := $(SRCS:%=$(BUILD_DIR_CUDA)/%.o)
 # c++ source
 $(BUILD_DIR_CXX)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR_CXX)/%.c.o: %.c
 	$(MKDIR_P) $(dir $@)
@@ -57,19 +59,19 @@ $(BUILD_DIR_CXX)/%.cu.o: %.cu
 
 $(BUILD_DIR_CUDA)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR_CUDA)/%.cu.o: %.cu
 	$(MKDIR_P) $(dir $@)
 	$(NVCC) -DUSE_CUDA $(NVCCFLAGS) $< -dc -o $@
 
-$(LIBNAME).so: $(BUILD_DIR_CUDA)/lib.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
+$(LIBNAME).so: $(BUILD_DIR_CUDA)/lib.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CXX)/merkle/merkle_avx.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
 	$(NVCC) $(NVCCFLAGS) -shared -o $@ $^
 
-$(LIBNAME).a: $(BUILD_DIR_CUDA)/lib.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
+$(LIBNAME).a: $(BUILD_DIR_CUDA)/lib.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CXX)/merkle/merkle_avx.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
 	$(NVCC) $(NVCCFLAGS) -dlink -o $(BUILD_DIR_CUDA)/all_gpu.o $^
 	ar cr $@ $(BUILD_DIR_CUDA)/all_gpu.o $^
 	ranlib $@
 
-tests.exe: $(BUILD_DIR_CUDA)/tests/tests.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
+tests.exe: $(BUILD_DIR_CUDA)/tests/tests.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CXX)/merkle/merkle_avx.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
 	$(NVCC) $(NVCCFLAGS) $^ -o $@ -lgomp -lgtest

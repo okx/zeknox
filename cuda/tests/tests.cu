@@ -667,8 +667,9 @@ TEST(LIBCUDA, merkle_test3)
     u64 rounds = log2(n_digests) + 1;
     u64 cap_h = log2(n_caps);
 
-    u64 *digests_buf1 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
+    // u64 *digests_buf1 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
     u64 *cap_buf1 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
+    u64* digests_buf1 = cap_buf1;
     u64 *leaves_buf = (u64 *)malloc(n_leaves * leaf_size * sizeof(u64));
 
     u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
@@ -697,9 +698,109 @@ TEST(LIBCUDA, merkle_test3)
         printhash(cap_buf1 + i * HASH_SIZE_U64);
     }
 #endif
-    free(digests_buf1);
     free(cap_buf1);
+    free(leaves_buf);
 }
+
+#ifdef __USE_AVX__
+TEST(LIBCUDA, merkle_avx_test3)
+{
+#ifdef TIMING
+    struct timeval t0, t1;
+#endif
+
+    u64 leaf_size = 7;
+    u64 n_leaves = 4;
+    u64 n_caps = n_leaves;
+    u64 n_digests = 2 * (n_leaves - n_caps);
+    u64 rounds = log2(n_digests) + 1;
+    u64 cap_h = log2(n_caps);
+
+    // u64 *digests_buf1 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
+    u64 *cap_buf1 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
+    u64* digests_buf1 = cap_buf1;
+    u64 *leaves_buf = (u64 *)malloc(n_leaves * leaf_size * sizeof(u64));
+
+    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    memcpy(leaves_buf, leaf, 7 * sizeof(u64));
+    memcpy(leaves_buf + 7, leaf, 7 * sizeof(u64));
+    memcpy(leaves_buf + 14, leaf, 7 * sizeof(u64));
+    memcpy(leaves_buf + 21, leaf, 7 * sizeof(u64));
+
+#ifdef TIMING
+    gettimeofday(&t0, 0);
+#endif
+    fill_digests_buf_linear_cpu_avx(digests_buf1, cap_buf1, leaves_buf, n_digests, n_caps, n_leaves, leaf_size, cap_h, HashType::HashPoseidon);
+#ifdef TIMING
+    gettimeofday(&t1, 0);
+    elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
+    printf("Time on CPU: %ld us\n", elapsed);
+#endif
+
+#ifdef DEBUG
+    printf("Digests:\n");
+    for (int i = 0; i < n_digests; i++) {
+        printhash(digests_buf1 + i * HASH_SIZE_U64);
+    }
+    printf("Caps:\n");
+    for (int i = 0; i < n_caps; i++) {
+        printhash(cap_buf1 + i * HASH_SIZE_U64);
+    }
+#endif
+    free(cap_buf1);
+    free(leaves_buf);
+}
+#endif // __USE_AVX__
+
+#ifdef __AVX512__
+TEST(LIBCUDA, merkle_avx512_test3)
+{
+#ifdef TIMING
+    struct timeval t0, t1;
+#endif
+
+    u64 leaf_size = 7;
+    u64 n_leaves = 4;
+    u64 n_caps = n_leaves;
+    u64 n_digests = 2 * (n_leaves - n_caps);
+    u64 rounds = log2(n_digests) + 1;
+    u64 cap_h = log2(n_caps);
+
+    // u64 *digests_buf1 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
+    u64 *cap_buf1 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
+    u64* digests_buf1 = cap_buf1;
+    u64 *leaves_buf = (u64 *)malloc(n_leaves * leaf_size * sizeof(u64));
+
+    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    memcpy(leaves_buf, leaf, 7 * sizeof(u64));
+    memcpy(leaves_buf + 7, leaf, 7 * sizeof(u64));
+    memcpy(leaves_buf + 14, leaf, 7 * sizeof(u64));
+    memcpy(leaves_buf + 21, leaf, 7 * sizeof(u64));
+
+#ifdef TIMING
+    gettimeofday(&t0, 0);
+#endif
+    fill_digests_buf_linear_cpu_avx512(digests_buf1, cap_buf1, leaves_buf, n_digests, n_caps, n_leaves, leaf_size, cap_h, HashType::HashPoseidon);
+#ifdef TIMING
+    gettimeofday(&t1, 0);
+    elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
+    printf("Time on CPU: %ld us\n", elapsed);
+#endif
+
+#ifdef DEBUG
+    printf("Digests:\n");
+    for (int i = 0; i < n_digests; i++) {
+        printhash(digests_buf1 + i * HASH_SIZE_U64);
+    }
+    printf("Caps:\n");
+    for (int i = 0; i < n_caps; i++) {
+        printhash(cap_buf1 + i * HASH_SIZE_U64);
+    }
+#endif
+    free(cap_buf1);
+    free(leaves_buf);
+}
+#endif // __AVX512__
 
 int main(int argc, char **argv)
 {
