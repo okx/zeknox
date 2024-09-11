@@ -7,7 +7,7 @@
 #include "utils/cuda_utils.cuh"
 #include "poseidon/poseidon_permutation.cuh"
 #else
-#include "poseidon/goldilocks.hpp"
+#include "types/goldilocks.hpp"
 #include "poseidon/poseidon.hpp"
 #include "poseidon/poseidon_permutation.hpp"
 #include <cstring>

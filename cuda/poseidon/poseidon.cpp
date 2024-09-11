@@ -1,6 +1,6 @@
 #include "poseidon/poseidon.hpp"
 #include "poseidon/poseidon_permutation.hpp"
-#include "poseidon/goldilocks.hpp"
+#include "types/goldilocks.hpp"
 #include <cstring>
 
 const static i64 MDS_FREQ_BLOCK_ONE[3] = {16, 32, 16};
@@ -408,15 +408,15 @@ inline void PoseidonPermutation::mds_layer_fast(GoldilocksField *inout)
 
     for (uint32_t r = 0; r < SPONGE_WIDTH; r++)
     {
-        state_h[r] = inout[r].get_val() >> 32;
-        state_l[r] = inout[r].get_val() & 0xFFFFFFFF;
+        state_h[r] = inout[r].value() >> 32;
+        state_l[r] = inout[r].value() & 0xFFFFFFFF;
     }
 
     mds_multiply_freq(state_h);
     mds_multiply_freq(state_l);
 
     // MDS_MATRIX_DIAG[0] is 8, so we shift inout[0] by 3
-    u128 s0 = ((u128)inout[0].get_val()) << 3;
+    u128 s0 = ((u128)inout[0].value()) << 3;
 
     for (uint32_t r = 0; r < SPONGE_WIDTH; r++)
     {

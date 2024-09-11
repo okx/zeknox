@@ -1,4 +1,6 @@
 #include "poseidon2.hpp"
+#include "poseidon2_constants.hpp"
+#include "assert.h"
 
 #ifdef USE_CUDA
 __device__ __constant__ u64 GPU_MATRIX_DIAG_12_GOLDILOCKS[12] = {
@@ -203,6 +205,136 @@ inline void poseidon2(GoldilocksField *state)
         ext_permute_mut(state);
     }
 }
+
+template <typename F, const u64 WIDTH>
+DEVICE INLINE void DiffusionMatrixGoldilocks<F, WIDTH>::permute_mut(F *state)
+{
+    u64 *mat = NULL;
+    switch (WIDTH)
+    {
+    case 8:
+#ifdef USE_CUDA
+        mat = (u64 *)GPU_MATRIX_DIAG_8_GOLDILOCKS_U64;
+#else
+        mat = (u64 *)MATRIX_DIAG_8_GOLDILOCKS_U64;
+#endif
+        break;
+    case 12:
+#ifdef USE_CUDA
+        mat = (u64 *)GPU_MATRIX_DIAG_12_GOLDILOCKS_U64;
+#else
+        mat = (u64 *)MATRIX_DIAG_12_GOLDILOCKS_U64;
+#endif
+        break;
+    case 16:
+#ifdef USE_CUDA
+        mat = (u64 *)GPU_MATRIX_DIAG_16_GOLDILOCKS_U64;
+#else
+        mat = (u64 *)MATRIX_DIAG_16_GOLDILOCKS_U64;
+#endif
+        break;
+    case 20:
+#ifdef USE_CUDA
+        mat = (u64 *)GPU_MATRIX_DIAG_20_GOLDILOCKS_U64;
+#else
+        mat = (u64 *)MATRIX_DIAG_20_GOLDILOCKS_U64;
+#endif
+        break;
+    default:
+        printf("Unsupported width %lu\n", WIDTH);
+        assert(0);
+    }
+    F matf[WIDTH];
+    for (u64 i = 0; i < WIDTH; i++)
+    {
+        matf[i] = F(mat[i]);
+    }
+    matmul_internal_<F, WIDTH>(state, matf);
+}
+
+#ifdef USE_CUDA
+__device__ void hl_poseidon2_goldilocks_width_8(gl64_t *input)
+{
+    const u64 _width = 8;
+    const u64 _exponent = 7;
+    const u64 _rounds_f = 8;
+    const u64 _rounds_p = 22;
+
+    gl64_t ext_const[_rounds_f * _width];
+    for (u64 i = 0; i < _rounds_f; i++)
+    {
+        for (u64 j = 0; j < _width; j++)
+        {
+            ext_const[i * _width + j] = gl64_t(GPU_HL_GOLDILOCKS_8_EXTERNAL_ROUND_CONSTANTS[i][j]);
+        }
+    }
+    gl64_t int_const[_rounds_p];
+    for (u64 i = 0; i < _rounds_p; i++)
+    {
+        int_const[i] = gl64_t(GPU_HL_GOLDILOCKS_8_INTERNAL_ROUND_CONSTANTS[i]);
+    }
+
+    // Our Poseidon2 implementation.
+    auto ext_layer = Poseidon2ExternalMatrixHL<gl64_t, _width>();
+    auto int_layer = DiffusionMatrixGoldilocks<gl64_t, _width>();
+
+    auto poseidon2 = Poseidon2<
+        gl64_t,
+        Poseidon2ExternalMatrixHL<gl64_t, _width>,
+        DiffusionMatrixGoldilocks<gl64_t, _width>,
+        _width,
+        _exponent>(
+        _rounds_f,
+        ext_const,
+        ext_layer,
+        _rounds_p,
+        int_const,
+        int_layer);
+
+    poseidon2.permute_mut(input);
+}
+#else
+void hl_poseidon2_goldilocks_width_8(GoldilocksField *input)
+{
+    const u64 _width = 8;
+    const u64 _exponent = 7;
+    const u64 _rounds_f = 8;
+    const u64 _rounds_p = 22;
+
+    GoldilocksField ext_const[_rounds_f * _width];
+    for (u64 i = 0; i < _rounds_f; i++)
+    {
+        for (u64 j = 0; j < _width; j++)
+        {
+            ext_const[i * _width + j] = GoldilocksField::from_canonical_u64(HL_GOLDILOCKS_8_EXTERNAL_ROUND_CONSTANTS[i][j]);
+        }
+    }
+    GoldilocksField int_const[_rounds_p];
+    for (u64 i = 0; i < _rounds_p; i++)
+    {
+        int_const[i] = GoldilocksField::from_canonical_u64(HL_GOLDILOCKS_8_INTERNAL_ROUND_CONSTANTS[i]);
+    }
+
+    // Our Poseidon2 implementation.
+    auto ext_layer = Poseidon2ExternalMatrixHL<GoldilocksField, _width>();
+    auto int_layer = DiffusionMatrixGoldilocks<GoldilocksField, _width>();
+
+    auto poseidon2 = Poseidon2<
+        GoldilocksField,
+        Poseidon2ExternalMatrixHL<GoldilocksField, _width>,
+        DiffusionMatrixGoldilocks<GoldilocksField, _width>,
+        _width,
+        _exponent>(
+        _rounds_f,
+        _rounds_p,
+        ext_const,
+        int_const,
+        ext_layer,
+        int_layer);
+
+    poseidon2.permute_mut(input);
+}
+#endif
 
 #ifdef USE_CUDA
 __forceinline__ __device__ void Poseidon2PermutationGPU::permute()

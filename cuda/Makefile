@@ -22,9 +22,9 @@ NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$
 # NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH) -Xptxas -O3,-v -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
 
 # for debug
-# CFLAGS := $(INCL) -Wall -Werror -march=native -fopenmp -fPIC -g
-# CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++11 -march=native -fopenmp -fPIC -g
-# NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -g -arch=$(CUDA_ARCH) -g
+# CFLAGS := $(INCL) -Wall -Werror -march=native -fopenmp -fPIC -g -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+# CXXFLAGS := $(INCL) -Wall -Wno-error=sign-compare -std=c++17 -march=native -fopenmp -fPIC -g -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+# NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -g -arch=$(CUDA_ARCH) -g -DFEATURE_GOLDILOCKS -DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
 
 all: lib
 
@@ -74,4 +74,7 @@ $(LIBNAME).a: $(BUILD_DIR_CUDA)/lib.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(
 	ranlib $@
 
 tests.exe: $(BUILD_DIR_CUDA)/tests/tests.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CXX)/merkle/merkle_avx.cpp.o $(BUILD_DIR_CUDA)/merkle/merkle.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/keccak/keccak.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CUDA)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CUDA)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o $(BUILD_DIR_CUDA)/monolith/monolith.cu.o
+	$(NVCC) $(NVCCFLAGS) $^ -o $@ -lgomp -lgtest
+
+tests_cpu.exe: $(BUILD_DIR_CXX)/tests/tests.cu.o $(BUILD_DIR_CXX)/merkle/merkle.cpp.o $(BUILD_DIR_CXX)/merkle/merkle_avx.cpp.o $(BUILD_DIR_CXX)/poseidon/poseidon.cpp.o $(BUILD_DIR_CXX)/keccak/keccak.cu.o $(BUILD_DIR_CXX)/poseidon/element_bn128.cu.o $(BUILD_DIR_CXX)/poseidon/poseidon_bn128.cu.o $(BUILD_DIR_CXX)/poseidon2/poseidon2.cu.o $(BUILD_DIR_CXX)/monolith/monolith.cu.o
 	$(NVCC) $(NVCCFLAGS) $^ -o $@ -lgomp -lgtest

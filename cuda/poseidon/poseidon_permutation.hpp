@@ -2,7 +2,7 @@
 #define __POSEIDON_PERMUTATION_HPP__
 
 #include "poseidon/poseidon.hpp"
-#include "poseidon/goldilocks.hpp"
+#include "types/goldilocks.hpp"
 
 class PoseidonPermutation : public PoseidonPermutationVirtual
 {

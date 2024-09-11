@@ -26,6 +26,11 @@ public:
         this->val = x;
     }
 
+    GoldilocksField(GoldilocksField& x)
+    {
+        this->val = x.val;
+    }
+
     static GoldilocksField Zero()
     {
         return GoldilocksField(0);
@@ -46,7 +51,12 @@ public:
         return GoldilocksField(ORDER - 1);
     };
 
-    u64 get_val() const
+    u64 value() const
+    {
+        return this->val;
+    }
+
+    u64 to_u64() const
     {
         return this->val;
     }
@@ -99,9 +109,15 @@ public:
         return this->val;
     }
 
+    GoldilocksField operator+=(const GoldilocksField &rhs)
+    {
+        this->val = modulo_add(this->val, rhs.value());
+        return *this;
+    }
+
     GoldilocksField operator+(const GoldilocksField &rhs)
     {
-        return GoldilocksField(modulo_add(this->val, rhs.get_val()));
+        return GoldilocksField(modulo_add(this->val, rhs.value()));
     }
 
     GoldilocksField add_canonical_u64(const u64 &rhs)
@@ -172,16 +188,18 @@ public:
 
     GoldilocksField operator*(const GoldilocksField &rhs) const
     {
-        // return GoldilocksField(reduce128((u128)this->val * (u128)rhs.get_val()));
-        // return GoldilocksField(GoldilocksField::mulmod(this->val, rhs.get_val()));
-        // u64 v1 = GoldilocksField::mul(this->val, rhs.get_val());
-        u64 v1 = GoldilocksField::reduce128((u128)this->val * (u128)rhs.get_val());
-        // u64 v2 = GoldilocksField::mulmod(this->val, rhs.get_val());
-        // if (v1 != v2) {
-        //      printf("Diff for %lu * %lu\n", this->val, rhs.get_val());
-        // }
-        // return GoldilocksField(v2);
-        return GoldilocksField(v1);
+        return GoldilocksField(GoldilocksField::reduce128((u128)this->val * (u128)rhs.value()));
+    }
+
+    GoldilocksField operator*(const u64 &rhs) const
+    {
+        return GoldilocksField(GoldilocksField::reduce128((u128)this->val * (u128)rhs));
+    }
+
+    GoldilocksField operator*=(const GoldilocksField &rhs)
+    {
+        this->val = GoldilocksField::reduce128((u128)this->val * (u128)rhs.value());
+        return *this;
     }
 
     inline GoldilocksField multiply_accumulate(GoldilocksField x, GoldilocksField y)

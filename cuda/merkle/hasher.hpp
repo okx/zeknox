@@ -9,7 +9,7 @@
 #ifdef USE_CUDA
 #include "types/gl64_t.cuh"
 #else
-#include "poseidon/goldilocks.hpp"
+#include "types/goldilocks.hpp"
 #endif
 
 class Hasher {};

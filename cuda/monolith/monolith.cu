@@ -154,7 +154,7 @@ inline
 #else
         GoldilocksField prev = GoldilocksField(sl[i - 1]);
         GoldilocksField tmp1 = prev * prev;
-        u64 tmp2 = tmp1.get_val();
+        u64 tmp2 = tmp1.value();
 #endif
         sl[i] += tmp2;
         sh[i] = (sl[i] < tmp2);
@@ -193,7 +193,7 @@ inline
         gl64_t g = gl64_t(tmp);
         ssl[row] = g.get_val();
 #else
-        ssl[row] = GoldilocksField::from_noncanonical_u96((u64)res, (u32)(res >> 64)).get_val();
+        ssl[row] = GoldilocksField::from_noncanonical_u96((u64)res, (u32)(res >> 64)).value();
 #endif
     }
     for (int row = 0; row < SPONGE_WIDTH; row++)
