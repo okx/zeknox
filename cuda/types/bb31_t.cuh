@@ -5,6 +5,10 @@
 #ifndef __SPPARK_FF_BB31_T_CUH__
 #define __SPPARK_FF_BB31_T_CUH__
 
+#include "types/monty.hpp"
+
+typedef MontyField31<BabyBearParameters> BabyBearField;
+/*
 # include <cstdint>
 
 #ifdef __CUDA_ARCH__
@@ -390,4 +394,6 @@ public:
 #  undef inline
 #  undef asm
 # endif
+*/
+
 #endif /* __SPPARK_FF_BB31_T_CUH__ */

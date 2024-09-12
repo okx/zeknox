@@ -1,10 +1,11 @@
 #ifndef __MONTY_HPP__
 #define __MONTY_HPP__
 
+#include "utils/cuda_utils.cuh"
 #include "types/int_types.h"
 
 template <typename MP>
-static u32 monty_reduce(u64 x)
+DEVICE INLINE u32 monty_reduce(u64 x)
 {
     u64 t = (x * (u64)MP::MONTY_MU) & (u64)MP::MONTY_MASK;
     u64 u = t * (u64)MP::PRIME;
@@ -23,75 +24,75 @@ private:
     u32 val;
 
 public:
-    MontyField31() { this->val = 0; };
+    DEVICE MontyField31() { this->val = 0; };
 
-    MontyField31(u32 x, bool is_monty = false) {
+    DEVICE MontyField31(u32 x, bool is_monty = false) {
         if (is_monty)
             this->val = x;
         else
             this->val = to_monty(x);
     };
 
-    static inline u32 to_monty(u32 x)
+    static DEVICE INLINE u32 to_monty(u32 x)
     {
         return (u32)(((u64)x << MP::MONTY_BITS) % (u64)MP::PRIME);
     }
 
-    static inline u32 from_monty(u32 x)
+    static DEVICE INLINE u32 from_monty(u32 x)
     {
         return monty_reduce<MP>((u64)x);
     }
 
-    static inline MontyField31 Zero()
+    static DEVICE INLINE MontyField31 Zero()
     {
         return MontyField31(0);
     }
 
-    u32 value() const
+    DEVICE INLINE u32 value() const
     {
         return this->val;
     }
 
-    u64 to_u64() const
+    DEVICE INLINE u64 to_u64() const
     {
         return (u64)from_monty(val);
     }
 
-    MontyField31 operator+(const MontyField31 &rhs)
+    DEVICE MontyField31 operator+(const MontyField31 &rhs)
     {
         u64 sum = (u64)val + (u64)rhs.value();
         u32 v = sum < (u64)MP::PRIME ? (u32)sum : (u32)(sum - MP::PRIME);
         return MontyField31(v, true);
     }
 
-    MontyField31 operator+=(const MontyField31 &rhs)
+    DEVICE MontyField31 operator+=(const MontyField31 &rhs)
     {
         u64 sum = (u64)val + (u64)rhs.value();
         this->val = sum < (u64)MP::PRIME ? (u32)sum : (u32)(sum - MP::PRIME);
         return *this;
     }
 
-    MontyField31 operator-(const MontyField31 &rhs)
+    DEVICE MontyField31 operator-(const MontyField31 &rhs)
     {
         u32 over = val < rhs.value();
         u32 diff = over ? (u32)((u64)val + (u64)MP::PRIME - rhs.value()) : val - rhs.value();
         return MontyField31(diff, true);
     }
 
-    MontyField31 operator-=(const MontyField31 &rhs)
+    DEVICE MontyField31 operator-=(const MontyField31 &rhs)
     {
         u32 over = val < rhs.value();
         this->diff = over ? (u32)((u64)val + (u64)MP::PRIME - rhs.value()) : val - rhs.value();
         return *this;
     }
 
-    MontyField31 operator*(const MontyField31 &rhs)
+    DEVICE MontyField31 operator*(const MontyField31 &rhs)
     {
         u64 prod = (u64)val * (u64)rhs.value();
         return MontyField31(monty_reduce<MP>(prod), true);
     }
 
-    MontyField31 operator*=(const MontyField31 &rhs)
+    DEVICE MontyField31 operator*=(const MontyField31 &rhs)
     {
         u64 prod = (u64)val * (u64)rhs.value();
         this-> val = monty_reduce<MP>(prod);

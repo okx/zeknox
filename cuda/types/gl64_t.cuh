@@ -47,14 +47,19 @@ public:
     inline const uint64_t& operator[](size_t i) const   { return val; }
     inline size_t len() const                           { return 1;   }
 
-    inline gl64_t()                                     {}
+    inline gl64_t()                                     { val = 0; }
     inline gl64_t(const uint64_t a)                     { val = a;  to(); }
     inline gl64_t(const uint64_t *p)                    { val = *p; to(); }
-    inline gl64_t(uint32_t val_u128[4])                      { val = 0; reduce(val_u128); }
+    inline gl64_t(uint32_t val_u128[4])                 { val = 0; reduce(val_u128); }
 
-    static inline gl64_t Zero()        { return gl64_t((uint64_t)0); }
+    static inline gl64_t Zero()        { gl64_t ret = gl64_t(); ret.zero(); return ret; }
 
     inline uint64_t get_val() const { return val; }
+
+    inline u64 to_u64() const
+    {
+        return this->val;
+    }
 
     inline operator uint64_t() const
     {   auto ret = *this; ret.from(); return ret.val;   }

@@ -7,6 +7,7 @@
 #include <poseidon2/poseidon2.hpp>
 #include <poseidon/poseidon_bn128.hpp>
 #include <merkle/merkle.h>
+#include <poseidon2/poseidon2_constants.hpp>
 
 /**
  * define DEBUG for printing
@@ -34,6 +35,9 @@ void printhash(u64 *h)
 }
 #endif
 
+/*
+ * CUDA Kernels
+ */
 #ifdef USE_CUDA
 
 #include <utils/cuda_utils.cuh>
@@ -148,7 +152,104 @@ __global__ void poseidonbn128_hash(u64 *in, u64 *out, u32 n)
 
     PoseidonBN128Hasher::gpu_hash_one((gl64_t *)in, n, (gl64_t *)out);
 }
-#endif
+
+__global__ void poseidon2_goldilocks_width_8_zeroes(u64 *ptr)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > 0)
+        return;
+
+    gl64_t state[8];
+
+    hl_poseidon2_goldilocks_width_8(state);
+
+    for (u64 i = 0; i < 8; i++)
+    {
+        ptr[i] = state[i].to_u64();
+    }
+}
+
+__global__ void poseidon2_goldilocks_width_8_range(u64 *ptr)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > 0)
+        return;
+
+    gl64_t state[8];
+    for (u64 i = 0; i < 8; i++)
+    {
+        state[i] = gl64_t(i);
+    }
+
+    hl_poseidon2_goldilocks_width_8(state);
+
+    for (u64 i = 0; i < 8; i++)
+    {
+        ptr[i] = state[i].to_u64();
+    }
+}
+
+__global__ void poseidon2_goldilocks_width_8_random(u64 *ptr)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > 0)
+        return;
+
+    gl64_t state[8];
+    for (u64 i = 0; i < 8; i++)
+    {
+        state[i] = gl64_t(ptr[i]);
+    }
+
+    hl_poseidon2_goldilocks_width_8(state);
+
+    for (u64 i = 0; i < 8; i++)
+    {
+        ptr[i] = state[i].to_u64();
+    }
+}
+
+template <const u64 WIDTH>
+__global__ void poseidon2_babybear_random(u64 *ptr)
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > 0)
+        return;
+
+    u32 *external_consts_ptr = (WIDTH == 16) ? GPU_BABYBEAR_WIDTH_16_EXT_CONST_P3 : GPU_BABYBEAR_WIDTH_24_EXT_CONST_P3;
+    u32 *internal_consts_ptr = (WIDTH == 16) ? GPU_BABYBEAR_WIDTH_16_INT_CONST_P3 : GPU_BABYBEAR_WIDTH_24_INT_CONST_P3;
+
+    const u64 internal_consts_size = (WIDTH == 16) ? 13 : 21;
+
+    BabyBearField external_consts[8 * WIDTH];
+    for (u64 i = 0; i < 8 * WIDTH; i++)
+    {
+        external_consts[i] = BabyBearField(external_consts_ptr[i]);
+    }
+    BabyBearField internal_consts[internal_consts_size];
+    for (u64 i = 0; i < internal_consts_size; i++)
+    {
+        internal_consts[i] = BabyBearField(internal_consts_ptr[i]);
+    }
+    BabyBearField state[WIDTH];
+    for (u64 i = 0; i < WIDTH; i++)
+    {
+        state[i] = BabyBearField((u32)ptr[i]);
+    }
+
+    auto external_matrix = Poseidon2ExternalMatrixGeneral<BabyBearField, WIDTH>();
+    auto diffusion_matrix = BabyBearDiffusionMatrix<WIDTH>();
+    auto poseidon2 = Poseidon2<BabyBearField, Poseidon2ExternalMatrixGeneral<BabyBearField, WIDTH>, BabyBearDiffusionMatrix<WIDTH>, WIDTH, 7>((u64)8, (u64)internal_consts_size, external_consts, internal_consts, external_matrix, diffusion_matrix);
+
+    poseidon2.permute_mut(state);
+
+    for (u64 i = 0; i < WIDTH; i++)
+    {
+        ptr[i] = state[i].to_u64();
+    }
+}
+
+#endif // USE_CUDA
 
 TEST(LIBCUDA, keccak_test)
 {
@@ -437,7 +538,152 @@ TEST(LIBCUDA, poseidon2_test1)
 #endif
 }
 
-#ifndef USE_CUDA
+#ifdef USE_CUDA
+
+TEST(LIBCUDA, cuda_poseidon2_goldilocks_width_8_zeroes)
+{
+    u64 out[8] = {0};
+
+    u64 expected[8] = {
+        4214787979728720400,
+        12324939279576102560,
+        10353596058419792404,
+        15456793487362310586,
+        10065219879212154722,
+        16227496357546636742,
+        2959271128466640042,
+        14285409611125725709,
+    };
+
+    u64 *gpu_out;
+    CHECKCUDAERR(cudaMalloc(&gpu_out, 8 * sizeof(u64)));
+    poseidon2_goldilocks_width_8_zeroes<<<1, 1>>>(gpu_out);
+    CHECKCUDAERR(cudaMemcpy(out, gpu_out, 8 * sizeof(u64), cudaMemcpyDeviceToHost));
+
+    for (u64 i = 0; i < 8; i++)
+    {
+        assert(out[i] == expected[i]);
+    }
+}
+
+TEST(LIBCUDA, cuda_poseidon2_goldilocks_width_8_range)
+{
+    u64 out[8] = {0};
+
+    u64 expected[8] = {
+        14266028122062624699,
+        5353147180106052723,
+        15203350112844181434,
+        17630919042639565165,
+        16601551015858213987,
+        10184091939013874068,
+        16774100645754596496,
+        12047415603622314780,
+    };
+
+    u64 *gpu_out;
+    CHECKCUDAERR(cudaMalloc(&gpu_out, 8 * sizeof(u64)));
+    poseidon2_goldilocks_width_8_range<<<1, 1>>>(gpu_out);
+    CHECKCUDAERR(cudaMemcpy(out, gpu_out, 8 * sizeof(u64), cudaMemcpyDeviceToHost));
+
+    for (u64 i = 0; i < 8; i++)
+    {
+        assert(out[i] == expected[i]);
+    }
+}
+
+TEST(LIBCUDA, cuda_poseidon2_goldilocks_width_8_random)
+{
+    u64 input[8] = {
+        5116996373749832116,
+        8931548647907683339,
+        17132360229780760684,
+        11280040044015983889,
+        11957737519043010992,
+        15695650327991256125,
+        17604752143022812942,
+        543194415197607509};
+
+    u64 expected[8] = {
+        1831346684315917658,
+        13497752062035433374,
+        12149460647271516589,
+        15656333994315312197,
+        4671534937670455565,
+        3140092508031220630,
+        4251208148861706881,
+        6973971209430822232,
+    };
+
+    u64 *gpu_out;
+    CHECKCUDAERR(cudaMalloc(&gpu_out, 8 * sizeof(u64)));
+    CHECKCUDAERR(cudaMemcpy(gpu_out, input, 8 * sizeof(u64), cudaMemcpyHostToDevice));
+    poseidon2_goldilocks_width_8_random<<<1, 1>>>(gpu_out);
+    CHECKCUDAERR(cudaMemcpy(input, gpu_out, 8 * sizeof(u64), cudaMemcpyDeviceToHost));
+
+    for (u64 i = 0; i < 8; i++)
+    {
+        assert(input[i] == expected[i]);
+    }
+}
+
+TEST(LIBCUDA, cuda_poseidon2_babybear_width_16_random)
+{
+    constexpr u64 _width = 16;
+
+    u64 input[_width] = {
+        894848333, 1437655012, 1200606629, 1690012884, 71131202, 1749206695, 1717947831,
+        120589055, 19776022, 42382981, 1831865506, 724844064, 171220207, 1299207443, 227047920,
+        1783754913};
+
+    u64 expected[_width] = {
+        512585766, 975869435, 1921378527, 1238606951, 899635794, 132650430, 1426417547,
+        1734425242, 57415409, 67173027, 1535042492, 1318033394, 1070659233, 17258943,
+        856719028, 1500534995};
+
+    u64 *gpu_out;
+    CHECKCUDAERR(cudaMalloc(&gpu_out, _width * sizeof(u64)));
+    CHECKCUDAERR(cudaMemcpy(gpu_out, input, _width * sizeof(u64), cudaMemcpyHostToDevice));
+    poseidon2_babybear_random<_width><<<1, 1>>>(gpu_out);
+    CHECKCUDAERR(cudaMemcpy(input, gpu_out, _width * sizeof(u64), cudaMemcpyDeviceToHost));
+    CHECKCUDAERR(cudaFree(gpu_out));
+
+    for (u64 i = 0; i < _width; i++)
+    {
+        assert(input[i] == expected[i]);
+    }
+}
+
+TEST(LIBCUDA, cuda_poseidon2_babybear_width_24_random)
+{
+    constexpr u64 _width = 24;
+
+    u64 input[_width] = {
+        886409618, 1327899896, 1902407911, 591953491, 648428576, 1844789031, 1198336108,
+        355597330, 1799586834, 59617783, 790334801, 1968791836, 559272107, 31054313,
+        1042221543, 474748436, 135686258, 263665994, 1962340735, 1741539604, 449439011,
+        1131357108, 50869465, 1589724894};
+
+    u64 expected[_width] = {
+        162275163, 462059149, 1096991565, 924509284, 300323988, 608502870, 427093935,
+        733126108, 1676785000, 669115065, 441326760, 60861458, 124006210, 687842154, 270552480,
+        1279931581, 1030167257, 126690434, 1291783486, 669126431, 1320670824, 1121967237,
+        458234203, 142219603};
+
+    u64 *gpu_out;
+    CHECKCUDAERR(cudaMalloc(&gpu_out, _width * sizeof(u64)));
+    CHECKCUDAERR(cudaMemcpy(gpu_out, input, _width * sizeof(u64), cudaMemcpyHostToDevice));
+    poseidon2_babybear_random<_width><<<1, 1>>>(gpu_out);
+    CHECKCUDAERR(cudaMemcpy(input, gpu_out, _width * sizeof(u64), cudaMemcpyDeviceToHost));
+    CHECKCUDAERR(cudaFree(gpu_out));
+
+    for (u64 i = 0; i < _width; i++)
+    {
+        assert(input[i] == expected[i]);
+    }
+}
+
+#else // USE_CUDA
 
 TEST(LIBCUDA, poseidon2_goldilocks_test_width_8_zeroes)
 {
@@ -533,142 +779,20 @@ TEST(LIBCUDA, poseidon2_babybear_width_16_random)
         1734425242, 57415409, 67173027, 1535042492, 1318033394, 1070659233, 17258943,
         856719028, 1500534995};
 
-    BabyBearField external_consts[8 * 16] = {
-        0x4EC2680C,
-        0x110279CB,
-        0x332D1F04,
-        0x7DA39A8,
-        0x20D60D25,
-        0x6837F03,
-        0x5C499950,
-        0x11D53B04,
-        0x4769DFB8,
-        0x4D9FB1BF,
-        0x21DD1576,
-        0x58811E55,
-        0x4D9AA329,
-        0x2B412236,
-        0x3822164A,
-        0x1345CE59,
-        0x3E8B66A4,
-        0x3104F884,
-        0x53CF147F,
-        0x4C3C5D00,
-        0xCCE8ACB,
-        0x35EB8AB9,
-        0x4EB90117,
-        0xB0AB74,
-        0x3DC5CED0,
-        0x57E20602,
-        0x5543D924,
-        0x6A06354,
-        0x4305BF7B,
-        0x516D38B,
-        0x288628B2,
-        0xE801D9D,
-        0x4FC7D3F6,
-        0x5AC756E3,
-        0x6DBC7A1D,
-        0x22768C25,
-        0x2D798FD,
-        0x6AB7F8C8,
-        0x610A3FA1,
-        0x664B611A,
-        0x61807B01,
-        0x4277C420,
-        0x429C112E,
-        0x2873398E,
-        0x74FD36A3,
-        0x5180E3B0,
-        0xB25B05,
-        0x744737A6,
-        0x1F828B47,
-        0x73760EFB,
-        0x571450E7,
-        0x471CDEB5,
-        0x48D335C3,
-        0x46913BAD,
-        0x19D6C553,
-        0x72F92FBD,
-        0x1E25480B,
-        0x110700EF,
-        0x3E6C0276,
-        0x363288DE,
-        0x4B0A4DD6,
-        0x338B375D,
-        0x124CD27E,
-        0x1E178795,
-        0x5777F011,
-        0x68948CEB,
-        0x19C2A7BC,
-        0x5691B910,
-        0x3491DC1C,
-        0x20C91A20,
-        0x56442FD6,
-        0x37FE675F,
-        0x6A4822D6,
-        0x458DA37C,
-        0x6688B5A,
-        0x2299FBFF,
-        0x776837E8,
-        0x32EE44AA,
-        0x37B964B7,
-        0x3B4B31B4,
-        0x6DBD1269,
-        0x1A1F74C6,
-        0x5C6B1DB1,
-        0x3670308A,
-        0x23D18114,
-        0x22BFE022,
-        0x4B432285,
-        0x64E58ED,
-        0x108AF480,
-        0xA298030,
-        0x15CE7F03,
-        0x5831987C,
-        0x56E222BA,
-        0x61818A80,
-        0x1DC0806D,
-        0x2C2E3A27,
-        0x26D36BF6,
-        0x1BB4B661,
-        0x558A76B,
-        0x1575D881,
-        0xDBA9003,
-        0x69AFCEC8,
-        0x52436DEB,
-        0x2C6805C3,
-        0x2F4B7A6E,
-        0x512367CC,
-        0x560DC002,
-        0x3139B8A,
-        0x2B987ECA,
-        0x40D2C58A,
-        0x4BEED74D,
-        0x12925C15,
-        0x29E264AA,
-        0x57CFF845,
-        0x7DFD045,
-        0x505CD248,
-        0x1C6B0406,
-        0x55C4A053,
-        0x252590,
-        0x506BA70E,
-        0x747EDFDA,
-        0x690819DF,
-        0x4BC54E23,
-        0x5EF7512C,
-        0x33870D43,
-        0x84B39D1,
-        0x3EC935D6,
-        0x19340FFB,
-    };
-
-    BabyBearField internal_consts[13] = {0x1801CCD8, 0x131D9E83, 0x42EC25EE, 0x5FC787D, 0xC1356DB, 0x491AAE7C, 0x40E3021A, 0x3D25F0A, 0x68BDAFC, 0x2B32678F, 0x631CE19F, 0x2F8CC233, 0x401CE61F};
+    BabyBearField external_consts[128];
+    for (u64 i = 0; i < 128; i++)
+    {
+        external_consts[i] = BabyBearField(BABYBEAR_WIDTH_16_EXT_CONST_P3[i]);
+    }
+    BabyBearField internal_consts[13];
+    for (u64 i = 0; i < 13; i++)
+    {
+        internal_consts[i] = BabyBearField(BABYBEAR_WIDTH_16_INT_CONST_P3[i]);
+    }
 
     auto external_matrix = Poseidon2ExternalMatrixGeneral<BabyBearField, 16>();
-    auto diffusion_matrix = BabyBearDiffusionMatrix16();
-    auto poseidon2 = Poseidon2<BabyBearField, Poseidon2ExternalMatrixGeneral<BabyBearField, 16>, BabyBearDiffusionMatrix16, 16, 7>((u64)8, (u64)13, external_consts, internal_consts, external_matrix, diffusion_matrix);
+    auto diffusion_matrix = BabyBearDiffusionMatrix<16>();
+    auto poseidon2 = Poseidon2<BabyBearField, Poseidon2ExternalMatrixGeneral<BabyBearField, 16>, BabyBearDiffusionMatrix<16>, 16, 7>((u64)8, (u64)13, external_consts, internal_consts, external_matrix, diffusion_matrix);
 
     poseidon2.permute_mut(input);
 
@@ -692,35 +816,20 @@ TEST(LIBCUDA, poseidon2_babybear_width_24_random)
         1279931581, 1030167257, 126690434, 1291783486, 669126431, 1320670824, 1121967237,
         458234203, 142219603};
 
-    BabyBearField external_consts[8 * 24] = {
-        0x4EC2680C, 0x110279CB, 0x332D1F04, 0x7DA39A8, 0x20D60D25, 0x6837F03, 0x5C499950, 0x11D53B04, 0x4769DFB8, 0x4D9FB1BF, 0x21DD1576, 0x58811E55, 0x4D9AA329, 0x2B412236, 0x3822164A, 0x1345CE59, 0x3E8B66A4, 0x3104F884, 0x53CF147F, 0x4C3C5D00, 0xCCE8ACB, 0x35EB8AB9, 0x4EB90117, 0xB0AB74, 0x3DC5CED0, 0x57E20602, 0x5543D924, 0x6A06354, 0x4305BF7B, 0x516D38B, 0x288628B2, 0xE801D9D, 0x4FC7D3F6, 0x5AC756E3, 0x6DBC7A1D, 0x22768C25, 0x2D798FD, 0x6AB7F8C8, 0x610A3FA1, 0x664B611A, 0x61807B01, 0x4277C420, 0x429C112E, 0x2873398E, 0x74FD36A3, 0x5180E3B0, 0xB25B05, 0x744737A6, 0x1F828B47, 0x73760EFB, 0x571450E7, 0x471CDEB5, 0x48D335C3, 0x46913BAD, 0x19D6C553, 0x72F92FBD, 0x1E25480B, 0x110700EF, 0x3E6C0276, 0x363288DE, 0x4B0A4DD6, 0x338B375D, 0x124CD27E, 0x1E178795, 0x5777F011, 0x68948CEB, 0x19C2A7BC, 0x5691B910, 0x3491DC1C, 0x20C91A20, 0x56442FD6, 0x37FE675F, 0x6A4822D6, 0x458DA37C, 0x6688B5A, 0x2299FBFF, 0x776837E8, 0x32EE44AA, 0x37B964B7, 0x3B4B31B4, 0x6DBD1269, 0x1A1F74C6, 0x5C6B1DB1, 0x3670308A, 0x23D18114, 0x22BFE022, 0x4B432285, 0x64E58ED, 0x108AF480, 0xA298030, 0x15CE7F03, 0x5831987C, 0x56E222BA, 0x61818A80, 0x1DC0806D, 0x2C2E3A27, 0x26D36BF6, 0x1BB4B661, 0x558A76B, 0x1575D881, 0xDBA9003, 0x69AFCEC8, 0x52436DEB, 0x2C6805C3, 0x2F4B7A6E, 0x512367CC, 0x560DC002, 0x3139B8A, 0x2B987ECA, 0x40D2C58A, 0x4BEED74D, 0x12925C15, 0x29E264AA, 0x57CFF845, 0x7DFD045, 0x505CD248, 0x1C6B0406, 0x55C4A053, 0x252590, 0x506BA70E, 0x747EDFDA, 0x690819DF, 0x4BC54E23, 0x5EF7512C, 0x33870D43, 0x84B39D1, 0x3EC935D6, 0x19340FFB, 0x1801CCD8, 0x131D9E83, 0x42EC25EE, 0x5FC787D, 0xC1356DB, 0x491AAE7C, 0x40E3021A, 0x3D25F0A, 0x68BDAFC, 0x2B32678F, 0x631CE19F, 0x2F8CC233, 0x401CE61F, 0x5DE64A96, 0x15CD53A1, 0x24021AD3, 0x7466B2AB, 0x5DFBA9DE, 0x3F3B5642, 0x4DD9BBC1, 0x9CDE2AA, 0x73827615, 0x677A602B, 0x69BFF5DF, 0x6BCA4452, 0x538EACBB, 0x21695E2F, 0x48FD28A5, 0x53DB5C4C, 0x39AB7ABE, 0x60226CA8, 0x6F39CE27, 0x6DD72702, 0x61C72CA5, 0xB2ABE90, 0x3673352A, 0x36298C76, 0x50DE59D, 0x4169C3EE, 0x63258D2A, 0x59C45549, 0x3EB0408A, 0x72CE8221, 0x7372C616, 0x346F1D76, 0x42B0E84C, 0x271CB214, 0xF64F596, 0x2DEC45DF, 0x27FC1A0, 0x3C938ABF, 0x61BAD871, 0x6E5FD31D, 0x6F36A6D4, 0x544B3F0E, 0x18F27FA1, 0x34451992, 0x2417883F, 0x5157A5B6, 0x2EEB111E, 0x150135D7, 0x355925A3, 0x33329A06, 0x460CB30C};
-
-    BabyBearField internal_consts[21] = {
-        0x24D2AF3B,
-        0x766ABFC3,
-        0x4A4BBF41,
-        0x18DEDD7,
-        0x37A4705,
-        0x27666A5D,
-        0x3475E251,
-        0xF0CB909,
-        0x68ACF372,
-        0x22CEC228,
-        0x164774DC,
-        0x59034D05,
-        0x752865FD,
-        0x64E74AD,
-        0x5233240A,
-        0x39C32A85,
-        0x89480D7,
-        0x3C439665,
-        0x70908112,
-        0x2C664E9E,
-        0x647B04AC};
+    BabyBearField external_consts[192];
+    for (u64 i = 0; i < 192; i++)
+    {
+        external_consts[i] = BabyBearField(BABYBEAR_WIDTH_24_EXT_CONST_P3[i]);
+    }
+    BabyBearField internal_consts[21];
+    for (u64 i = 0; i < 21; i++)
+    {
+        internal_consts[i] = BabyBearField(BABYBEAR_WIDTH_24_INT_CONST_P3[i]);
+    }
 
     auto external_matrix = Poseidon2ExternalMatrixGeneral<BabyBearField, 24>();
-    auto diffusion_matrix = BabyBearDiffusionMatrix24();
-    auto poseidon2 = Poseidon2<BabyBearField, Poseidon2ExternalMatrixGeneral<BabyBearField, 24>, BabyBearDiffusionMatrix24, 24, 7>((u64)8, (u64)21, external_consts, internal_consts, external_matrix, diffusion_matrix);
+    auto diffusion_matrix = BabyBearDiffusionMatrix<24>();
+    auto poseidon2 = Poseidon2<BabyBearField, Poseidon2ExternalMatrixGeneral<BabyBearField, 24>, BabyBearDiffusionMatrix<24>, 24, 7>((u64)8, (u64)21, external_consts, internal_consts, external_matrix, diffusion_matrix);
 
     poseidon2.permute_mut(input);
 

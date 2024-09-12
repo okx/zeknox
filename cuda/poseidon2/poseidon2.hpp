@@ -544,7 +544,7 @@ DEVICE INLINE void matmul_internal_(F *state, F *mat_internal_diag_m_1)
 }
 
 template <const u64 WIDTH>
-DEVICE INLINE void permute_state(BabyBearField *state, u32 *ids)
+DEVICE void permute_state(BabyBearField *state, const u32 *internal_diag_shifts)
 {
     u64 part_sum = state[1].value();
     for (u64 i = 2; i < WIDTH; i++)
@@ -558,7 +558,7 @@ DEVICE INLINE void permute_state(BabyBearField *state, u32 *ids)
 
     for (u64 i = 0; i < WIDTH - 1; i++)
     {
-        u64 si = full_sum + ((u64)state[i + 1].value() << ids[i]);
+        u64 si = full_sum + ((u64)state[i + 1].value() << internal_diag_shifts[i]);
         state[i + 1] = BabyBearField(monty_reduce<BabyBearParameters>(si), true);
     }
 }
@@ -574,13 +574,25 @@ template <const u64 WIDTH>
 class BabyBearDiffusionMatrix
 {
 private:
-    u32 INTERNAL_DIAG_SHIFTS[WIDTH - 1];
-    BabyBearField INTERNAL_DIAG_MONTY[WIDTH];
+    u32 INTERNAL_DIAG_SHIFTS_16[15] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15};
+    u32 INTERNAL_DIAG_SHIFTS_24[23] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23};
 
 public:
-    virtual DEVICE INLINE void permute_mut(BabyBearField *state) = 0;
+    DEVICE INLINE void permute_mut(BabyBearField *state)
+    {
+        switch (WIDTH)
+        {
+        case 16:
+            return permute_state<16>(state, INTERNAL_DIAG_SHIFTS_16);
+        case 24:
+            return permute_state<24>(state, INTERNAL_DIAG_SHIFTS_24);
+        default:
+            return;
+        }
+    }
 };
 
+/*
 class BabyBearDiffusionMatrix16 : public BabyBearDiffusionMatrix<16>
 {
 private:
@@ -652,6 +664,7 @@ public:
         permute_state<24>(state, INTERNAL_DIAG_SHIFTS);
     }
 };
+*/
 
 #ifdef USE_CUDA
 __device__ void hl_poseidon2_goldilocks_width_8(gl64_t *input);
