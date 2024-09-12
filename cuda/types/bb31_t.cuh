@@ -5,7 +5,7 @@
 #ifndef __SPPARK_FF_BB31_T_CUH__
 #define __SPPARK_FF_BB31_T_CUH__
 
-#include "types/monty.hpp"
+#include "types/monty31.hpp"
 
 typedef MontyField31<BabyBearParameters> BabyBearField;
 /*

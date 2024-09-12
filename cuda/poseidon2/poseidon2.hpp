@@ -3,7 +3,7 @@
 
 #include "types/int_types.h"
 #include "utils/cuda_utils.cuh"
-#include "types/monty.hpp"
+#include "types/monty31.hpp"
 #include <random>
 
 #ifdef USE_CUDA
