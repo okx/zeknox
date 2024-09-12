@@ -210,6 +210,9 @@ inline void poseidon2_round_numbers_128(u64 width, u64 d, u64 *round_f, u64 *rou
     }
 }
 
+/*
+ * Poseidon2 implementation as in Plonky3.
+ */
 template <typename F, typename MdsLight, typename Diffusion, const u64 WIDTH, const u64 D>
 class Poseidon2
 {

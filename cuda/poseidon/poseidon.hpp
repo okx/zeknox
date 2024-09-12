@@ -14,6 +14,7 @@
 #define EXTERNC
 #endif
 
+#include "utils/cuda_utils.cuh"
 #include "types/int_types.h"
 
 #define MIN(x, y) (x < y) ? x : y
@@ -1196,6 +1197,109 @@ public:
     static void cpu_hash_one(u64 *input, u64 size, u64 *output);
     static void cpu_hash_two(u64 *input1, u64 *input2, u64 *output);
 #endif
+};
+
+/*
+ * Poseidon implementation as in Plonky3.
+ */
+template <typename F, typename Mds, const u64 WIDTH, const u64 ALPHA>
+class Poseidon
+{
+private:
+    u64 half_num_full_rounds;
+    u64 num_partial_rounds;
+    F *constants;
+    Mds mds;
+
+    DEVICE INLINE void exp_const_u64(F *x)
+    {
+        switch (ALPHA)
+        {
+        case 1:
+            break;
+        case 2:
+            *x = (*x) * (*x);
+            break;
+        case 3:
+            *x = (*x) * (*x) * (*x);
+            break;
+        case 4:
+        {
+            F x2 = (*x) * (*x);
+            *x = x2 * x2;
+        }
+        break;
+        case 5:
+        {
+            F x2 = (*x) * (*x);
+            F x4 = x2 * x2;
+            *x = (*x) * x4;
+        }
+        break;
+        case 6:
+        {
+            F x2 = (*x) * (*x);
+            F x4 = x2 * x2;
+            *x = x2 * x4;
+        }
+        break;
+        case 7:
+        {
+            F x2 = (*x) * (*x);
+            F x4 = x2 * x2;
+            F x3 = (*x) * x2;
+            *x = x3 * x4;
+        }
+        break;
+        default:
+            printf("Invalid power value!\n");
+            assert(0);
+        }
+    }
+
+    DEVICE INLINE void constant_layer(F* state, u64 round)
+    {
+        for (u64 i = 0; i < WIDTH; i++)
+        {
+            state[i] += constants[round * WIDTH + i];
+        }
+    }
+
+    DEVICE INLINE void full_sbox_layer(F *state)
+    {
+        for (u64 i = 0; i < WIDTH; i++)
+        {
+            exp_const_u64(&state[i]);
+        }
+    }
+
+public:
+    DEVICE INLINE void permute_mut(F *state)
+    {
+        // half_full_rounds
+        for (u64 r = 0; r < half_num_full_rounds; r++)
+        {
+            constant_layer(state, r);
+            full_sbox_layer(state);
+            mds.permute_mut(state);
+        }
+
+        // partial_rounds
+        for (u64 r = half_num_full_rounds; r < half_num_full_rounds + num_partial_rounds; r++)
+        {
+            constant_layer(state, r);
+            exp_const_u64(&state[0]);
+            mds.permute_mut(state);
+        }
+
+        // half_full_rounds
+        for (u64 r = half_num_full_rounds + num_partial_rounds; r < num_partial_rounds + 2 * half_num_full_rounds; r++)
+        {
+            constant_layer(state, r);
+            full_sbox_layer(state);
+            mds.permute_mut(state);
+        }
+    }
 };
 
 #endif // __POSEIDON_HPP__
