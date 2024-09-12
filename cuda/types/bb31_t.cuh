@@ -5,13 +5,16 @@
 #ifndef __SPPARK_FF_BB31_T_CUH__
 #define __SPPARK_FF_BB31_T_CUH__
 
-#include "types/monty31.hpp"
+#if 1
 
+#include "types/monty31.hpp"
 typedef MontyField31<BabyBearParameters> BabyBearField;
-/*
+
+#else
+
 # include <cstdint>
 
-#ifdef __CUDA_ARCH__
+#ifdef USE_CUDA
 # define inline __device__ __forceinline__
 # ifdef __GNUC__
 #  define asm __asm__ __volatile__
@@ -48,6 +51,10 @@ public:
     inline operator uint32_t() const        { return mul_by_1(); }
     inline void store(uint32_t *p) const    { *p = mul_by_1();   }
     inline bb31_t& operator=(uint32_t b)    { val = b; to(); return *this; }
+
+    inline uint32_t value() const           { return val; }
+
+    static inline bb31_t Zero() { return bb31_t{0}; }
 
     inline bb31_t& operator+=(const bb31_t b)
     {
@@ -391,9 +398,11 @@ public:
     {   val = __shfl_xor_sync(0xFFFFFFFF, val, laneMask);   }
 };
 
+typedef bb31_t BabyBearField;
+
 #  undef inline
 #  undef asm
-# endif
-*/
+# endif     // USE_CUDA
+#endif
 
 #endif /* __SPPARK_FF_BB31_T_CUH__ */
