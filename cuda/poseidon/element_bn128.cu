@@ -11,7 +11,7 @@ CONST u64 rSquare[4]
         10108755138030829701u,
         150537098327114917u};
 
-INLINE void FFE::mul64(u64 a, u64 b, u64 *h, u64 *l)
+DEVICE INLINE void FFE::mul64(u64 a, u64 b, u64 *h, u64 *l)
 {
     u128 c128 = (u128)a * b;
 #ifdef USE_CUDA
@@ -23,7 +23,7 @@ INLINE void FFE::mul64(u64 a, u64 b, u64 *h, u64 *l)
 #endif
 }
 
-INLINE void FFE::add64(u64 a, u64 b, u64 cin, u64 *r, u64 *cout)
+DEVICE INLINE void FFE::add64(u64 a, u64 b, u64 cin, u64 *r, u64 *cout)
 {
     assert(cin == 0 || cin == 1);
 
@@ -48,7 +48,7 @@ INLINE void FFE::add64(u64 a, u64 b, u64 cin, u64 *r, u64 *cout)
     }
 }
 
-INLINE void FFE::sub64(u64 a, u64 b, u64 bin, u64 *r, u64 *bout)
+DEVICE INLINE void FFE::sub64(u64 a, u64 b, u64 bin, u64 *r, u64 *bout)
 {
     if (a < b)
     {
@@ -72,7 +72,7 @@ INLINE void FFE::sub64(u64 a, u64 b, u64 bin, u64 *r, u64 *bout)
 }
 
 // madd0 hi = a*b + c (discards lo bits)
-DEVICE void FFE::madd0(u64 a, u64 b, u64 c, u64 *hi)
+DEVICE INLINE void FFE::madd0(u64 a, u64 b, u64 c, u64 *hi)
 {
     u64 carry, lo, tmp;
     mul64(a, b, hi, &lo);
@@ -81,7 +81,7 @@ DEVICE void FFE::madd0(u64 a, u64 b, u64 c, u64 *hi)
 }
 
 // madd1 hi, lo = a*b + c
-DEVICE void FFE::madd1(u64 a, u64 b, u64 c, u64 *hi, u64 *lo)
+DEVICE INLINE void FFE::madd1(u64 a, u64 b, u64 c, u64 *hi, u64 *lo)
 {
     u64 carry, tmp;
     mul64(a, b, hi, lo);
@@ -90,7 +90,7 @@ DEVICE void FFE::madd1(u64 a, u64 b, u64 c, u64 *hi, u64 *lo)
 }
 
 // madd2 hi, lo = a*b + c + d
-DEVICE void FFE::madd2(u64 a, u64 b, u64 c, u64 d, u64 *hi, u64 *lo)
+DEVICE INLINE void FFE::madd2(u64 a, u64 b, u64 c, u64 d, u64 *hi, u64 *lo)
 {
     u64 carry, tmp;
     mul64(a, b, hi, lo);
@@ -100,7 +100,7 @@ DEVICE void FFE::madd2(u64 a, u64 b, u64 c, u64 d, u64 *hi, u64 *lo)
     add64(*hi, 0, carry, hi, &tmp);
 }
 
-DEVICE void FFE::madd3(u64 a, u64 b, u64 c, u64 d, u64 e, u64 *hi, u64 *lo)
+DEVICE INLINE void FFE::madd3(u64 a, u64 b, u64 c, u64 d, u64 e, u64 *hi, u64 *lo)
 {
     u64 carry, tmp;
     mul64(a, b, hi, lo);
@@ -110,7 +110,7 @@ DEVICE void FFE::madd3(u64 a, u64 b, u64 c, u64 d, u64 e, u64 *hi, u64 *lo)
     add64(*hi, e, carry, hi, &tmp);
 }
 
-DEVICE void FFE::_mulGeneric(u64 *z, u64 *x, u64 *y)
+DEVICE void FFE::mulGeneric(u64 *z, u64 *x, u64 *y)
 {
     u64 t[4];
     u64 c[3];
@@ -179,7 +179,7 @@ DEVICE void FFE::_mulGeneric(u64 *z, u64 *x, u64 *y)
     }
 }
 
-DEVICE void FFE::_addGeneric(u64 *z, u64 *x, u64 *y)
+DEVICE void FFE::addGeneric(u64 *z, u64 *x, u64 *y)
 {
     u64 carry, tmp;
 
@@ -204,7 +204,7 @@ DEVICE void FFE::_addGeneric(u64 *z, u64 *x, u64 *y)
     }
 }
 
-DEVICE void FFE::_fromMontGeneric(u64 *z)
+DEVICE void FFE::fromMontGeneric(u64 *z)
 {
     u64 m = z[0] * 14042775128853446655u;
     u64 c;
@@ -249,4 +249,31 @@ DEVICE void FFE::_fromMontGeneric(u64 *z)
         sub64(z[2], 13281191951274694749u, b, &z[2], &b);
         sub64(z[3], 3486998266802970665u, b, &z[3], &tmp);
     }
+}
+
+DEVICE void FFE::SetUint64(u64 v)
+{
+    z[0] = v;
+    z[1] = 0;
+    z[2] = 0;
+    z[3] = 0;
+
+    u64 r[4];
+#ifdef USE_CUDA
+    mulGeneric(r, z, (u64 *)rSquareGPU);
+#else
+    mulGeneric(r, z, (u64 *)rSquare);
+#endif
+    this->set_vals(r);
+}
+
+DEVICE void FFE::ToMont()
+{
+    u64 r[4];
+#ifdef USE_CUDA
+    mulGeneric(r, z, (u64 *)rSquareGPU);
+#else
+    mulGeneric(r, z, (u64 *)rSquare);
+#endif
+    this->set_vals(r);
 }

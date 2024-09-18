@@ -20,44 +20,41 @@
 #define MAX_WIDTH 12
 
 #ifdef USE_CUDA
-extern __device__ u32 GPU_MDS_MATRIX_CIRC[12];
-extern __device__ u32 GPU_MDS_MATRIX_DIAG[12];
-extern __device__ u64 GPU_ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS];
 
 class PoseidonPermutationGPU : public PoseidonPermutationGPUVirtual
 {
 private:
-    DEVICE static gl64_t reduce128(u128 x);
+    DEVICE INLINE static gl64_t reduce128(u128 x);
 
-    DEVICE static gl64_t reduce_u160(u128 n_lo, u32 n_hi);
+    DEVICE INLINE static gl64_t reduce_u160(u128 n_lo, u32 n_hi);
 
-    DEVICE static void add_u160_u128(u128 *x_lo, u32 *x_hi, u128 y);
+    DEVICE INLINE static void add_u160_u128(u128 *x_lo, u32 *x_hi, u128 y);
 
-    DEVICE static gl64_t from_noncanonical_u96(gl64_t n_lo, gl64_t n_hi);
+    DEVICE INLINE static gl64_t from_noncanonical_u96(gl64_t n_lo, gl64_t n_hi);
 
-    DEVICE static gl64_t from_noncanonical_u128(u128 n);
+    DEVICE INLINE static gl64_t from_noncanonical_u128(u128 n);
 
-    DEVICE void mds_partial_layer_fast(gl64_t *state, u32 r);
+    DEVICE INLINE void mds_partial_layer_fast(gl64_t *state, u32 r);
 
-    DEVICE gl64_t mds_row_shf(u32 r, gl64_t *v);
+    DEVICE INLINE gl64_t mds_row_shf(u32 r, gl64_t *v);
 
-    DEVICE void mds_layer(gl64_t *state, gl64_t *result);
+    DEVICE INLINE void mds_layer(gl64_t *state, gl64_t *result);
 
-    DEVICE void constant_layer(gl64_t *state, u32 *round_ctr);
+    DEVICE INLINE void constant_layer(gl64_t *state, u32 *round_ctr);
 
-    DEVICE static gl64_t sbox_monomial(const gl64_t &x);
+    DEVICE INLINE static gl64_t sbox_monomial(const gl64_t &x);
 
-    DEVICE void sbox_layer(gl64_t *state);
+    DEVICE INLINE void sbox_layer(gl64_t *state);
 
-    DEVICE void full_rounds(gl64_t *state, u32 *round_ctr);
+    DEVICE INLINE void full_rounds(gl64_t *state, u32 *round_ctr);
 
-    DEVICE void partial_rounds_naive(gl64_t *state, u32 *round_ctr);
+    DEVICE INLINE void partial_rounds_naive(gl64_t *state, u32 *round_ctr);
 
-    DEVICE void partial_rounds(gl64_t *state, u32 *round_ctr);
+    DEVICE INLINE void partial_rounds(gl64_t *state, u32 *round_ctr);
 
-    DEVICE gl64_t *poseidon_naive(gl64_t *input);
+    DEVICE INLINE gl64_t *poseidon_naive(gl64_t *input);
 
-    DEVICE gl64_t *poseidon(gl64_t *input);
+    DEVICE INLINE gl64_t *poseidon(gl64_t *input);
 
 protected:
     gl64_t state[SPONGE_WIDTH];
@@ -80,7 +77,7 @@ public:
     DEVICE gl64_t *squeeze(u32 size);
 
     template<class P>
-    DEVICE __forceinline__ static void gpu_hash_one_with_permutation_template(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
+    DEVICE INLINE static void gpu_hash_one_with_permutation_template(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
     {
         /*
          * NOTE: to avoid a branch, we assume the input size is > NUM_HASH_OUT_ELTS. For inputs with size < NUM_HASH_OUT_ELTS,
@@ -119,7 +116,7 @@ public:
     };
 
     template<class P>
-    DEVICE __forceinline__ static void gpu_hash_two_with_permutation_template(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
+    DEVICE INLINE static void gpu_hash_two_with_permutation_template(gl64_t *hash1, gl64_t *hash2, gl64_t *hash)
     {
         P perm = P();
         perm.set_from_slice(hash1, NUM_HASH_OUT_ELTS, 0);

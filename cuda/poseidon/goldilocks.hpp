@@ -20,10 +20,10 @@ public:
         this->val = 0;
     }
 
-    GoldilocksField(u64 val)
+    GoldilocksField(u64 x)
     {
-        assert(val < ORDER);
-        this->val = val;
+        assert(x < ORDER);
+        this->val = x;
     }
 
     static GoldilocksField Zero()

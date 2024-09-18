@@ -5,7 +5,6 @@
 
 #include "types/int_types.h"
 #include "merkle/merkle.h"
-#include "merkle/merkle_c.h"
 #include "merkle/hasher.hpp"
 #include "poseidon/poseidon.hpp"
 #include "poseidon2/poseidon2.hpp"
@@ -15,15 +14,19 @@
 
 template <class H>
 void fill_digests_buf_linear_cpu_template(
-    u64 *digests_buf_ptr,
-    u64 *cap_buf_ptr,
-    u64 *leaves_buf_ptr,
+    void *out_digests_buf_ptr,
+    void *out_cap_buf_ptr,
+    const void *in_leaves_buf_ptr,
     u64 digests_buf_size,
     u64 cap_buf_size,
     u64 leaves_buf_size,
     u64 leaf_size,
     u64 cap_height)
 {
+    u64* digests_buf_ptr = (u64*)out_digests_buf_ptr;
+    u64* cap_buf_ptr = (u64*)out_cap_buf_ptr;
+    u64* leaves_buf_ptr = (u64*)in_leaves_buf_ptr;
+
     if (cap_buf_size == leaves_buf_size)
     {
 #pragma omp parallel for
@@ -117,9 +120,9 @@ void fill_digests_buf_linear_cpu_template(
 }
 
 void fill_digests_buf_linear_cpu(
-    u64 *digests_buf_ptr,
-    u64 *cap_buf_ptr,
-    u64 *leaves_buf_ptr,
+    void *digests_buf_ptr,
+    void *cap_buf_ptr,
+    const void *leaves_buf_ptr,
     u64 digests_buf_size,
     u64 cap_buf_size,
     u64 leaves_buf_size,
@@ -127,6 +130,10 @@ void fill_digests_buf_linear_cpu(
     u64 cap_height,
     u64 hash_type)
 {
+    assert(digests_buf_ptr != nullptr);
+    assert(cap_buf_ptr != nullptr);
+    assert(leaves_buf_ptr != nullptr);
+
     switch (hash_type)
     {
     case HashPoseidon:

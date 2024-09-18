@@ -4,3 +4,6 @@
 [submodule "depends/ffiasm"]
 	path = depends/ffiasm
 	url = git@github.com:okx/ffiasm.git
+[submodule "depends/goldilocks"]
+	path = depends/goldilocks
+	url = https://github.com/okx/goldilocks.git

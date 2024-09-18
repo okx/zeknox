@@ -95,6 +95,18 @@ extern "C" {
         hash_type: u64,
     );
 
+    pub fn fill_digests_buf_linear_cpu(
+        digests_buf_ptr: *mut ::std::os::raw::c_void,
+        cap_buf_ptr: *mut ::std::os::raw::c_void,
+        leaves_buf_ptr: *const ::std::os::raw::c_void,
+        digests_buf_size: u64,
+        cap_buf_size: u64,
+        leaves_buf_size: u64,
+        leaf_size: u64,
+        cap_height: u64,
+        hash_type: u64,
+    );
+
     fn goldilocks_add(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();
 
     fn goldilocks_sub(result: *mut u64, alloc: *mut u64, resbult: *mut u64) -> ();

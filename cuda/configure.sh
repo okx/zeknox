@@ -17,4 +17,5 @@ fi
 
 cd ../..
 
-echo "CUDA_ARCH = sm_$CAP" | tee CudaArch.mk
+echo "CUDA capability: $CAP"
+echo "Usage: cmake .. -DCUDA_ARCH=$CAP"
