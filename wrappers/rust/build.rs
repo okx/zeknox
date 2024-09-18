@@ -75,7 +75,8 @@ fn build_lib() {
     use std::process::Command;
 
     let pwd = env::current_dir().unwrap();
-    let libdir = pwd.join("cuda");
+    let parent = pwd.parent().unwrap().parent().unwrap();
+    let libdir = parent.join("cuda");
     let lib_file = libdir.join("libcryptocuda.a");
 
     if !lib_file.exists() {

@@ -68,23 +68,28 @@ endif()
 find_package(CUDA REQUIRED)
 enable_language("CUDA")
 
-set(PROJECT_CUDA_SOURCE_DIR ${CMAKE_SOURCE_DIR}/cuda)
+get_filename_component(CPP_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+get_filename_component(PROJECT_DIR ${CPP_DIR} DIRECTORY)
+message(STATUS "PROJECT_DIR is: ${PROJECT_DIR}")
+
+set(PROJECT_CUDA_SOURCE_DIR ${PROJECT_DIR}/cuda)
 
 message("USE_ASM=: ${USE_ASM}")
 message("CUDA_INCLUDE_DIRS=: ${CUDA_INCLUDE_DIRS}")
 message("CUDA_TOOLKIT_ROOT_DIR=: ${CUDA_TOOLKIT_ROOT_DIR}")
 message("CMAKE_SOURCE_DIR=: ${CMAKE_SOURCE_DIR}")
-message("CUDA_LIBRARY=: ${CUDA_LIBRARY}")
+# message("CUDA_LIBRARY=: ${CUDA_LIBRARY}")
 message("PROJECT_CUDA_SOURCE_DIR=: ${PROJECT_CUDA_SOURCE_DIR}")
 
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
-include_directories(${PROJECT_CUDA_SOURCE_DIR})
 include_directories("depends/blst/src")  # the cuda library is dependent on blst
 
+message(STATUS "Include directory: ${INCLUDE_DIR}")
+
 set(LIB_SOURCES
-    src/lib.h
-    src/lib.cu
-    cuda/util/all_gpus.cpp
+${PROJECT_CUDA_SOURCE_DIR}/lib.cu
+${PROJECT_CUDA_SOURCE_DIR}/lib.h
+${PROJECT_CUDA_SOURCE_DIR}/utils/all_gpus.cpp
 )
 add_library(cryptography_cuda STATIC ${LIB_SOURCES} )
 
@@ -119,12 +124,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
-add_subdirectory(cpp)
-
-install(TARGETS 
-test_bn254 
-bench_bn254 
-test_gl64 
+install(TARGETS
+# test_bn254
+# bench_bn254
+# test_gl64
 cryptography_cuda
     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app

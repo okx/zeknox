@@ -1,0 +1,8 @@
+- a better naming
+- make debug & release, maybe cmake? lib static/shared selection,
+- unified test framework; cmake (cliff), make(dumi, but only exe)
+- proper cpp & rust wrapper
+- refactor MSM & NTT
+- pipeline & code coverage(optional)
+- poseidon hash parameters to be generated in compile time?
+- selectively build poseidon/keccach/poseidon2/monolish on different fields, e.g poseidon_bn128

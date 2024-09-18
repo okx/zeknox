@@ -56,50 +56,6 @@ make tests.exe
 ./tests.exe
 ```
 
-## Build and run Rust tests
-```
-./run_rust_tests.sh
-```
-
-## Build and run Rust benchmarks
-
-For example:
-
-```
-cargo bench --bench=gpu_fft
-cargo bench --bench=gpu_fft_batch
-cargo bench --bench=lde_batch
-cargo bench --bench=transpose
-```
-
-
-
-# Native (C/C++) usage
-## Build
-```
-git submodule init
-git submodule update
-./build_gmp.sh host
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package -DCURVE=${BN254,GOLDILOCKS} -DG2_ENABLED=OFF
-make -j4 VERBOSE=1 & make install
-```
-
-to enable G2
-```
--DG2_ENABLED=ON
-```
-
-## Test
-- run test
-```
-export LD_LIBRARY_PATH=package/lib/ # if building a shared lib
-./package/bin/test_bn128 --gtest_filter=*xxx*
-```
-
-## Remarks
-- current cuda build time for G2_ENABLED is very slow. therefore G2_ENABLED is not enabled by default.
-
 # License
 
 Apache License, Version 2.0 [LICENSE](LICENSE)

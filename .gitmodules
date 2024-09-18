@@ -1,6 +1,7 @@
-[submodule "depends/blst"]
-	path = depends/blst
+
+[submodule "wrappers/cpp/depends/blst"]
+	path = wrappers/cpp/depends/blst
 	url = git@github.com:supranational/blst.git
-[submodule "depends/ffiasm"]
-	path = depends/ffiasm
+[submodule "wrappers/cpp/depends/ffiasm"]
+	path = wrappers/cpp/depends/ffiasm
 	url = git@github.com:okx/ffiasm.git

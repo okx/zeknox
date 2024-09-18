@@ -135,9 +135,6 @@ pub enum cudaError {
     cudaErrorGraphExecUpdateFailure = 910,
     cudaErrorExternalDevice = 911,
     cudaErrorInvalidClusterSize = 912,
-    cudaErrorFunctionNotLoaded = 913,
-    cudaErrorInvalidResourceType = 914,
-    cudaErrorInvalidResourceConfiguration = 915,
     cudaErrorUnknown = 999,
     cudaErrorApiFailureBase = 10000,
 }
