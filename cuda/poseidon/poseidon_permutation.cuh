@@ -20,9 +20,6 @@
 #define MAX_WIDTH 12
 
 #ifdef USE_CUDA
-extern __device__ u32 GPU_MDS_MATRIX_CIRC[12];
-extern __device__ u32 GPU_MDS_MATRIX_DIAG[12];
-extern __device__ u64 GPU_ALL_ROUND_CONSTANTS[MAX_WIDTH * N_ROUNDS];
 
 class PoseidonPermutationGPU : public PoseidonPermutationGPUVirtual
 {

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <assert.h>
+#include <math.h>
 
 #include <keccak/keccak.hpp>
 #include <monolith/monolith.hpp>
@@ -154,17 +155,19 @@ TEST(LIBCUDA, keccak_test)
 {
     u64 data[6] = {13421290117754017454ul, 7401888676587830362ul, 15316685236050041751ul, 13588825262671526271ul, 13421290117754017454ul, 7401888676587830362ul};
 
-    u64 expected[7][4] = {
-        {0},
-        {13421290117754017454ul, 0, 0, 0},
-        {13421290117754017454ul, 7401888676587830362ul, 0, 0},
-        {13421290117754017454ul, 7401888676587830362ul, 15316685236050041751ul, 0},
-        {9981707860959651334ul, 16351366398560378420ul, 4283762868800363615ul, 101},
-        {708367124667950404ul, 17208681281141108820ul, 8334320481120086961ul, 134},
+    [[maybe_unused]] u64 expected[7][4] = {
+        {0ull},
+        {13421290117754017454ul, 0, 0, 0ull},
+        {13421290117754017454ul, 7401888676587830362ul, 0, 0ull},
+        {13421290117754017454ul, 7401888676587830362ul, 15316685236050041751ul, 0ull},
+        {9981707860959651334ul, 16351366398560378420ul, 4283762868800363615ul, 101ull},
+        {708367124667950404ul, 17208681281141108820ul, 8334320481120086961ul, 134ull},
         {16109761546392287110ul, 4918745475135463511ul, 17110319063854316944ul, 103}};
 
     u64 h1[4] = {0u};
+#ifdef USE_CUDA
     u64 h2[4] = {0u};
+#endif
 
     for (int size = 1; size <= 6; size++)
     {
@@ -180,7 +183,9 @@ TEST(LIBCUDA, keccak_test)
         for (int j = 0; j < 4; j++)
         {
             assert(h1[j] == expected[size][j]);
+#ifdef USE_CUDA
             assert(h2[j] == expected[size][j]);
+#endif
         }
     }
 }
@@ -188,21 +193,21 @@ TEST(LIBCUDA, keccak_test)
 TEST(LIBCUDA, monolith_test1)
 {
     u64 inp[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    u64 exp[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
+    [[maybe_unused]] u64 expected[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
 
     u64 h1[4] = {0u};
-    u64 h2[4] = {0u};
 
     MonolithHasher::cpu_hash_one(inp, 12, h1);
 #ifdef DEBUG
     printhash(h1);
 #endif
-    assert(h1[0] == exp[0]);
-    assert(h1[1] == exp[1]);
-    assert(h1[2] == exp[2]);
-    assert(h1[3] == exp[3]);
+    assert(h1[0] == expected[0]);
+    assert(h1[1] == expected[1]);
+    assert(h1[2] == expected[2]);
+    assert(h1[3] == expected[3]);
 
 #ifdef USE_CUDA
+    u64 h2[4] = {0u};
     u64 *gpu_data;
     u64 *gpu_hash;
     CHECKCUDAERR(cudaMalloc(&gpu_data, 12 * sizeof(u64)));
@@ -213,10 +218,10 @@ TEST(LIBCUDA, monolith_test1)
 #ifdef DEBUG
     printhash(h2);
 #endif
-    assert(h2[0] == exp[0]);
-    assert(h2[1] == exp[1]);
-    assert(h2[2] == exp[2]);
-    assert(h2[3] == exp[3]);
+    assert(h2[0] == expected[0]);
+    assert(h2[1] == expected[1]);
+    assert(h2[2] == expected[2]);
+    assert(h2[3] == expected[3]);
 #endif
 }
 
@@ -263,23 +268,22 @@ TEST(LIBCUDA, monolith_test2)
 
 TEST(LIBCUDA, poseidon_test1)
 {
-    u64 leaf[9] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027, 16154511938222758243, 3651132590097252162};
+    u64 leaf[9] = {8395359103262935841ull, 1377884553022145855ull, 2370707998790318766ull, 3651132590097252162ull, 1141848076261006345ull, 12736915248278257710ull, 9898074228282442027ull, 16154511938222758243ull, 3651132590097252162ull};
 
-    u64 expected[11][4] = {
-        {0},
-        {8395359103262935841, 0, 0, 0},
-        {8395359103262935841, 1377884553022145855, 0, 0},
-        {8395359103262935841, 1377884553022145855, 2370707998790318766, 0},
-        {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162},
-        {3618821072812614426, 8353148445756493727, 4040525329700581442, 15983474240847269257},
-        {16643938361881363776, 6653675298471110559, 12562058402463703932, 16154511938222758243},
-        {7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017},
-        {6835933650993053111, 15978194778874965616, 2024081381896137659, 16520693669262110264},
-        {9429914239539731992, 14881719063945231827, 15528667124986963891, 16465743531992249573},
-        {16643938361881363776, 6653675298471110559, 12562058402463703932, 16154511938222758243}};
+    [[maybe_unused]] u64 expected[11][4] = {
+        {0ull},
+        {8395359103262935841ull, 0ull, 0ull, 0ull},
+        {8395359103262935841ull, 1377884553022145855ull, 0ull, 0ull},
+        {8395359103262935841ull, 1377884553022145855ull, 2370707998790318766ull, 0ull},
+        {8395359103262935841ull, 1377884553022145855ull, 2370707998790318766ull, 3651132590097252162ull},
+        {3618821072812614426ull, 8353148445756493727ull, 4040525329700581442ull, 15983474240847269257ull},
+        {16643938361881363776ull, 6653675298471110559ull, 12562058402463703932ull, 16154511938222758243ull},
+        {7544909477878586743ull, 7431000548126831493ull, 17815668806142634286ull, 13168106265494210017ull},
+        {6835933650993053111ull, 15978194778874965616ull, 2024081381896137659ull, 16520693669262110264ull},
+        {9429914239539731992ull, 14881719063945231827ull, 15528667124986963891ull, 16465743531992249573ull},
+        {16643938361881363776ull, 6653675298471110559ull, 12562058402463703932ull, 16154511938222758243ull}};
 
     u64 h1[4] = {0u};
-    u64 h2[4] = {0u};
 
     for (int k = 1; k <= 9; k++)
     {
@@ -294,6 +298,8 @@ TEST(LIBCUDA, poseidon_test1)
     }
 
 #ifdef USE_CUDA
+    u64 h2[4] = {0u};
+
     u64 *gpu_leaf;
     u64 *gpu_hash;
     CHECKCUDAERR(cudaMalloc(&gpu_leaf, 9 * sizeof(u64)));
@@ -365,12 +371,12 @@ TEST(LIBCUDA, monolith_test3)
 {
     u64 inp[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     u64 hash[4] = {0};
-    u64 ref[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
+    [[maybe_unused]] u64 expected[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
 
     MonolithHasher::cpu_hash_one(inp, 12, hash);
     for (int i = 0; i < 4; i++)
     {
-        assert(hash[i] == ref[i]);
+        assert(hash[i] == expected[i]);
     }
 
 #ifdef USE_CUDA
@@ -383,7 +389,7 @@ TEST(LIBCUDA, monolith_test3)
     CHECKCUDAERR(cudaMemcpy(hash, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
     for (int i = 0; i < 4; i++)
     {
-        assert(hash[i] == ref[i]);
+        assert(hash[i] == expected[i]);
     }
 #endif
 }
@@ -401,7 +407,6 @@ TEST(LIBCUDA, poseidon2_test1)
     }
 
     u64 h1[4] = {0u};
-    u64 h2[4] = {0u};
 
     Poseidon2Hasher hasher;
     hasher.cpu_hash_one(inp, 12, h1);
@@ -415,6 +420,7 @@ TEST(LIBCUDA, poseidon2_test1)
     assert(h1[3] == 0xd16e53672c9832a4);
 
 #ifdef USE_CUDA
+    u64 h2[4] = {0u};
     u64 *gpu_inp;
     u64 *gpu_hash;
     CHECKCUDAERR(cudaMalloc(&gpu_inp, 12 * sizeof(u64)));
@@ -477,14 +483,14 @@ TEST(LIBCUDA, poseidon2_test2)
 
 TEST(LIBCUDA, poseidonbn128_test1)
 {
-    u64 inp[12] = {8917524657281059100u,
-                   13029010200779371910u,
-                   16138660518493481604u,
-                   17277322750214136960u,
-                   1441151880423231822u,
-                   0, 0, 0, 0, 0, 0, 0};
+    u64 inp[12] = {8917524657281059100ull,
+                   13029010200779371910ull,
+                   16138660518493481604ull,
+                   17277322750214136960ull,
+                   1441151880423231822ull,
+                   0ull, 0ull, 0ull, 0ull, 0ull, 0ull, 0ull};
 
-    u64 exp[4] = {2163910501769503938, 9976732063159483418, 662985512748194034, 3626198389901409849};
+    [[maybe_unused]] u64 expected[4] = {2163910501769503938ull, 9976732063159483418ull, 662985512748194034ull, 3626198389901409849ull};
 
     u64 cpu_out[HASH_SIZE_U64];
 
@@ -495,10 +501,10 @@ TEST(LIBCUDA, poseidonbn128_test1)
     printhash(cpu_out);
 #endif
 
-    assert(cpu_out[0] == exp[0]);
-    assert(cpu_out[1] == exp[1]);
-    assert(cpu_out[2] == exp[2]);
-    assert(cpu_out[3] == exp[3]);
+    assert(cpu_out[0] == expected[0]);
+    assert(cpu_out[1] == expected[1]);
+    assert(cpu_out[2] == expected[2]);
+    assert(cpu_out[3] == expected[3]);
 
 #ifdef USE_CUDA
     u64 gpu_out[HASH_SIZE_U64];
@@ -514,10 +520,10 @@ TEST(LIBCUDA, poseidonbn128_test1)
     printhash(gpu_out);
 #endif
 
-    assert(gpu_out[0] == exp[0]);
-    assert(gpu_out[1] == exp[1]);
-    assert(gpu_out[2] == exp[2]);
-    assert(gpu_out[3] == exp[3]);
+    assert(gpu_out[0] == expected[0]);
+    assert(gpu_out[1] == expected[1]);
+    assert(gpu_out[2] == expected[2]);
+    assert(gpu_out[3] == expected[3]);
 #endif // USE_CUDA
 }
 
@@ -664,15 +670,14 @@ TEST(LIBCUDA, merkle_test3)
     u64 n_leaves = 4;
     u64 n_caps = n_leaves;
     u64 n_digests = 2 * (n_leaves - n_caps);
-    u64 rounds = log2(n_digests) + 1;
     u64 cap_h = log2(n_caps);
 
     // u64 *digests_buf1 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
     u64 *cap_buf1 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-    u64* digests_buf1 = cap_buf1;
+    u64 *digests_buf1 = cap_buf1;
     u64 *leaves_buf = (u64 *)malloc(n_leaves * leaf_size * sizeof(u64));
 
-    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    u64 leaf[7] = {8395359103262935841ull, 1377884553022145855ull, 2370707998790318766ull, 3651132590097252162ull, 1141848076261006345ull, 12736915248278257710ull, 9898074228282442027ull};
     memcpy(leaves_buf, leaf, 7 * sizeof(u64));
     memcpy(leaves_buf + 7, leaf, 7 * sizeof(u64));
     memcpy(leaves_buf + 14, leaf, 7 * sizeof(u64));
@@ -690,11 +695,13 @@ TEST(LIBCUDA, merkle_test3)
 
 #ifdef DEBUG
     printf("Digests:\n");
-    for (int i = 0; i < n_digests; i++) {
+    for (int i = 0; i < n_digests; i++)
+    {
         printhash(digests_buf1 + i * HASH_SIZE_U64);
     }
     printf("Caps:\n");
-    for (int i = 0; i < n_caps; i++) {
+    for (int i = 0; i < n_caps; i++)
+    {
         printhash(cap_buf1 + i * HASH_SIZE_U64);
     }
 #endif
@@ -713,15 +720,14 @@ TEST(LIBCUDA, merkle_avx_test3)
     u64 n_leaves = 4;
     u64 n_caps = n_leaves;
     u64 n_digests = 2 * (n_leaves - n_caps);
-    u64 rounds = log2(n_digests) + 1;
     u64 cap_h = log2(n_caps);
 
     // u64 *digests_buf1 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
     u64 *cap_buf1 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-    u64* digests_buf1 = cap_buf1;
+    u64 *digests_buf1 = cap_buf1;
     u64 *leaves_buf = (u64 *)malloc(n_leaves * leaf_size * sizeof(u64));
 
-    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    u64 leaf[7] = {8395359103262935841ull, 1377884553022145855ull, 2370707998790318766ull, 3651132590097252162ull, 1141848076261006345ull, 12736915248278257710ull, 9898074228282442027ull};
     memcpy(leaves_buf, leaf, 7 * sizeof(u64));
     memcpy(leaves_buf + 7, leaf, 7 * sizeof(u64));
     memcpy(leaves_buf + 14, leaf, 7 * sizeof(u64));
@@ -739,11 +745,13 @@ TEST(LIBCUDA, merkle_avx_test3)
 
 #ifdef DEBUG
     printf("Digests:\n");
-    for (int i = 0; i < n_digests; i++) {
+    for (int i = 0; i < n_digests; i++)
+    {
         printhash(digests_buf1 + i * HASH_SIZE_U64);
     }
     printf("Caps:\n");
-    for (int i = 0; i < n_caps; i++) {
+    for (int i = 0; i < n_caps; i++)
+    {
         printhash(cap_buf1 + i * HASH_SIZE_U64);
     }
 #endif
@@ -763,15 +771,14 @@ TEST(LIBCUDA, merkle_avx512_test3)
     u64 n_leaves = 4;
     u64 n_caps = n_leaves;
     u64 n_digests = 2 * (n_leaves - n_caps);
-    u64 rounds = log2(n_digests) + 1;
     u64 cap_h = log2(n_caps);
 
     // u64 *digests_buf1 = (u64 *)malloc(n_digests * HASH_SIZE_U64 * sizeof(u64));
     u64 *cap_buf1 = (u64 *)malloc(n_caps * HASH_SIZE_U64 * sizeof(u64));
-    u64* digests_buf1 = cap_buf1;
+    u64 *digests_buf1 = cap_buf1;
     u64 *leaves_buf = (u64 *)malloc(n_leaves * leaf_size * sizeof(u64));
 
-    u64 leaf[7] = {8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027};
+    u64 leaf[7] = {8395359103262935841ull, 1377884553022145855ull, 2370707998790318766ull, 3651132590097252162ull, 1141848076261006345ull, 12736915248278257710ull, 9898074228282442027ull};
     memcpy(leaves_buf, leaf, 7 * sizeof(u64));
     memcpy(leaves_buf + 7, leaf, 7 * sizeof(u64));
     memcpy(leaves_buf + 14, leaf, 7 * sizeof(u64));
@@ -789,11 +796,13 @@ TEST(LIBCUDA, merkle_avx512_test3)
 
 #ifdef DEBUG
     printf("Digests:\n");
-    for (int i = 0; i < n_digests; i++) {
+    for (int i = 0; i < n_digests; i++)
+    {
         printhash(digests_buf1 + i * HASH_SIZE_U64);
     }
     printf("Caps:\n");
-    for (int i = 0; i < n_caps; i++) {
+    for (int i = 0; i < n_caps; i++)
+    {
         printhash(cap_buf1 + i * HASH_SIZE_U64);
     }
 #endif

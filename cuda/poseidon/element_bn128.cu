@@ -250,3 +250,30 @@ DEVICE void FFE::fromMontGeneric(u64 *z)
         sub64(z[3], 3486998266802970665u, b, &z[3], &tmp);
     }
 }
+
+DEVICE void FFE::SetUint64(u64 v)
+{
+    z[0] = v;
+    z[1] = 0;
+    z[2] = 0;
+    z[3] = 0;
+
+    u64 r[4];
+#ifdef USE_CUDA
+    mulGeneric(r, z, (u64 *)rSquareGPU);
+#else
+    mulGeneric(r, z, (u64 *)rSquare);
+#endif
+    this->set_vals(r);
+}
+
+DEVICE void FFE::ToMont()
+{
+    u64 r[4];
+#ifdef USE_CUDA
+    mulGeneric(r, z, (u64 *)rSquareGPU);
+#else
+    mulGeneric(r, z, (u64 *)rSquare);
+#endif
+    this->set_vals(r);
+}

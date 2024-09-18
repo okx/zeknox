@@ -5,12 +5,6 @@
 #include "types/int_types.h"
 
 #ifdef USE_CUDA
-extern CONST u64 rSquareGPU[4];
-#else
-extern CONST u64 rSquare[4];
-#endif
-
-#ifdef USE_CUDA
 #define FFE FFElementGPU
 #else
 #define FFE FFElement
@@ -85,32 +79,9 @@ public:
         z[3] = 1011752739694698287u;
     }
 
-    DEVICE INLINE void SetUint64(u64 v)
-    {
-        z[0] = v;
-        z[1] = 0;
-        z[2] = 0;
-        z[3] = 0;
-        // z.ToMont()
-        u64 r[4];
-#ifdef USE_CUDA
-        mulGeneric(r, z, (u64 *)rSquareGPU);
-#else
-        mulGeneric(r, z, (u64 *)rSquare);
-#endif
-        this->set_vals(r);
-    }
+    DEVICE void SetUint64(u64 v);
 
-    DEVICE INLINE void ToMont()
-    {
-        u64 r[4];
-#ifdef USE_CUDA
-        mulGeneric(r, z, (u64 *)rSquareGPU);
-#else
-        mulGeneric(r, z, (u64 *)rSquare);
-#endif
-        this->set_vals(r);
-    }
+    DEVICE void ToMont();
 
     DEVICE INLINE void FromMont()
     {

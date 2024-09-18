@@ -1,27 +1,50 @@
 # Build
 
+We use ``cmake`` and ``make`` to build the static library and the tests.
+
 ```
-make lib
+mkdir build
+cd build
+cmake ..
+make -j4
 ```
 
-## Flags
+## cmake options
 
-``USE_CUDA`` - enables the cuda code (on by default)
+```
+option(USE_CUDA "Enable CUDA code (ON by default)" ON)
+set(CUDA_ARCH "86" CACHE STRING "CUDA architecture")
+option(USE_AVX "Enable AVX acceleration" OFF)
+option(USE_AVX512 "Enable AVX512 (and AVX) acceleration" OFF)
+option(BUILD_TESTS "Build tests" OFF)
+```
 
-``FEATURE_GOLDILOCKS`` - enables Goldilocks field support in NTT (on by default)
+## Other flags
 
-``EXPOSE_C_INTERFACE`` - expose C interface to Rust (on by default)
+``FEATURE_GOLDILOCKS`` - enables Goldilocks field support in NTT (set by default)
 
-``TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE`` - error messages are handled in the native code
+``FEATURE_BN254`` - enables BN254 field support in NTT (unset by default)
 
-``__USE_AVX__`` - enable AVX (AVX2) code [currently only for Poseidon hashing]
+``EXPOSE_C_INTERFACE`` - expose C interface to Rust (set by default)
 
-``__AVX512__`` - enable AVX512 code and requires ``__USE_AVX__`` [currently only for Poseidon hashing]
+``TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE`` - error messages are handled in the native code (set by default)
+
+## CUDA arch
+
+To get the CUDA capability of your GPU, run ``./configure.sh`` in this folder. Then, use the output in ``cmake``. Example output:
+
+```
+CUDA capability: 86
+Usage: cmake .. -DCUDA_ARCH=86
+```
 
 # Tests
 
 ```
-make tests.exe
+mkdir build
+cd build
+cmake .. -DBUILD_TESTS=ON
+make -j4
 ./tests.exe
 ```
 
