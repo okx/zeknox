@@ -5,7 +5,9 @@ git submodule init
 git submodule update
 sh build_dep.sh
 mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package -DCURVE=${BN254,GOLDILOCKS} -DG2_ENABLED=OFF
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package -DCURVE=GOLDILOCKS -DG2_ENABLED=OFF
+# or
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package -DCURVE=BN254 -DG2_ENABLED=OFF
 make -j4 VERBOSE=1 & make install
 ```
 

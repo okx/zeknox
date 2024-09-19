@@ -67,6 +67,7 @@ __global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, u
 
 __global__ void gen_random_salt_kernel(fr_t *arr, uint32_t size, uint32_t salt_size, uint64_t seed)
 {
+#if defined(FEATURE_GOLDILOCKS)
     uint32_t tid = (blockIdx.x * blockDim.x) + threadIdx.x;
 
     if (tid >= size)
@@ -85,6 +86,7 @@ __global__ void gen_random_salt_kernel(fr_t *arr, uint32_t size, uint32_t salt_s
         x = (x << 32) | x2;
         arr[k * size + tid] = fr_t(x);
     }
+#endif
 }
 
 /**

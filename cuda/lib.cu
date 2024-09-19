@@ -37,7 +37,6 @@ RustError list_devices_info(){
 #error "no FEATURE"
 #endif
 
-// #include <arithmetic/arithmetic.hpp>
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
 #include <vector>
@@ -56,19 +55,6 @@ extern "C"
     return RustError{cudaSuccess};
 }
 
-#if defined(EXPOSE_C_INTERFACE)
-extern "C"
-#endif
-    RustError
-    compute_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
-                Ntt_Types::InputOutputOrder ntt_order,
-                Ntt_Types::Direction ntt_direction)
-{
-    auto &gpu = select_gpu(device_id);
-
-    return ntt::Base(gpu, inout, lg_domain_size,
-                     ntt_order, ntt_direction);
-}
 
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
@@ -177,6 +163,7 @@ extern "C"
 #endif
 void init_cuda() {
     // This is taken from Plonky2 field (MULTIPLICATIVE_GROUP_GENERATOR = 7)
+#if defined(FEATURE_GOLDILOCKS)
     const fr_t generator = fr_t(7);
 
     size_t num_of_gpus = ngpus();
@@ -189,6 +176,7 @@ void init_cuda() {
             init_twiddle_factors(d, k);
         }
     }
+#endif
 }
 
 #if defined(EXPOSE_C_INTERFACE)
@@ -196,6 +184,7 @@ extern "C"
 #endif
 void init_cuda_degree(uint32_t max_degree) {
     // This is taken from Plonky2 field (MULTIPLICATIVE_GROUP_GENERATOR = 7)
+#if defined(FEATURE_GOLDILOCKS)
     const fr_t generator = fr_t(7);
 
     size_t num_of_gpus = ngpus();
@@ -208,4 +197,5 @@ void init_cuda_degree(uint32_t max_degree) {
             init_twiddle_factors(d, k);
         }
     }
+#endif
 }

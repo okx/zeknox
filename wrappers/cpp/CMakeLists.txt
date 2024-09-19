@@ -219,18 +219,18 @@ include(GoogleTest)
 
 set(BN254_TEST_SOURCES
   test_bn254.cpp
-  ../depends/ffiasm/c/misc.cpp
-  ../depends/ffiasm/c/naf.cpp
-  ../depends/ffiasm/c/splitparstr.cpp
-  ../depends/ffiasm/c/alt_bn128.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/misc.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/naf.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/splitparstr.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/alt_bn128.cpp
 )
 include_directories(
   field/
-  ../depends/ffiasm/c
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
 )
 
 add_executable(test_bn254 ${BN254_TEST_SOURCES})
-# target_compile_definitions(test_bn254 PUBLIC -DFEATURE_BN254)
+target_include_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
 target_link_libraries(test_bn254 cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
@@ -247,17 +247,28 @@ gtest_discover_tests(test_bn254)
 
 set(BN254_BENCH_SOURCES
   bench_bn254.cpp
-  ../depends/ffiasm/c/misc.cpp
-  ../depends/ffiasm/c/naf.cpp
-  ../depends/ffiasm/c/splitparstr.cpp
-  ../depends/ffiasm/c/alt_bn128.cpp
-)
-include_directories(
-  field/
-  ../depends/ffiasm/c
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/misc.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/naf.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/splitparstr.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/alt_bn128.cpp
 )
 
+
 add_executable(bench_bn254 ${BN254_BENCH_SOURCES})
+include_directories(
+  field/
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
+)
+target_include_directories(bench_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
+target_include_directories(
+    bench_bn254 PRIVATE
+    ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
+)
+target_include_directories(
+    bench_bn254 PRIVATE
+    ${CMAKE_SOURCE_DIR}/field/
+)
+
 target_link_libraries(bench_bn254 cryptography_cuda)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")

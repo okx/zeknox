@@ -774,11 +774,13 @@ namespace ntt
                 reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
             }
 
+#if defined(FEATURE_GOLDILOCKS)
             if (cfg.salt_size > 0)
             {
                 uint64_t seed = time(NULL);
                 gen_random_salt(&d_output[size * cfg.batches], size, cfg.salt_size, seed, gpu);
             }
+#endif
 
             if (!cfg.are_outputs_on_device)
             {
