@@ -2,6 +2,7 @@
 node_modules/
 target/
 build/
+docs/worklog/
 package/
 depends/gmp/
 depends/*.tar*
