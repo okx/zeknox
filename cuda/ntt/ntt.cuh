@@ -6,7 +6,6 @@
 #include <utils/rusterror.h>
 #include <utils/batch_mul.cuh>
 #include <ntt/ntt.h>
-#include "parameters.cuh"
 #include "kernels.cu"
 #include <map>
 #include <vector>
@@ -30,27 +29,6 @@ namespace ntt
     const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
-
-    inline void bit_rev(fr_t *d_out, const fr_t *d_inp, uint32_t lg_domain_size, stream_t &stream)
-    {
-        assert(lg_domain_size <= MAX_LG_DOMAIN_SIZE);
-
-        size_t domain_size = (size_t)1 << lg_domain_size;
-        // aim to read 4 cache lines of consecutive data per read
-        const size_t Z_COUNT = 256 / sizeof(fr_t); // 32 for goldilocks
-
-        if (domain_size <= WARP_SZ)
-            bit_rev_permutation<<<1, domain_size, 0, stream>>>(d_out, d_inp, lg_domain_size);
-        else if (d_out == d_inp || domain_size <= Z_COUNT * Z_COUNT)
-            bit_rev_permutation<<<domain_size / WARP_SZ, WARP_SZ, 0, stream>>>(d_out, d_inp, lg_domain_size);
-        else if (domain_size < 128 * Z_COUNT)
-            bit_rev_permutation_aux<<<1, domain_size / Z_COUNT, domain_size * sizeof(fr_t), stream>>>(d_out, d_inp, lg_domain_size);
-        else
-            bit_rev_permutation_aux<<<domain_size / Z_COUNT / 128, 128, Z_COUNT * 128 * sizeof(fr_t),
-                                      stream>>>(d_out, d_inp, lg_domain_size); // Z_COUNT * sizeof(fr_t) is 256 bytes
-
-        CUDA_OK(cudaGetLastError());
-    }
 
     /**
      * Bit-reverses a batch of input arrays in-place inside GPU.
@@ -119,51 +97,6 @@ namespace ntt
         size_t n_extend = (size_t)1 << (logn + extension_rate_bits);
         int number_of_blocks = (n_extend * batch_size + number_of_threads - 1) / number_of_threads;
         degree_extension_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(output, arr, n, n_extend, batch_size);
-    }
-
-    void NTT_internal(fr_t *d_inout, uint32_t lg_domain_size,
-                      InputOutputOrder order, Direction direction,
-                      stream_t &stream)
-    {
-        const bool intt = direction == Direction::inverse;
-        const auto &ntt_parameters = *NTTParameters::all(intt)[stream];
-        // bool bitrev;
-        Algorithm algorithm;
-
-        switch (order)
-        {
-        case InputOutputOrder::NN:
-            bit_rev(d_inout, d_inout, lg_domain_size, stream);
-            // bitrev = true;
-            algorithm = Algorithm::CT;
-            break;
-        case InputOutputOrder::NR:
-            // bitrev = false;
-            algorithm = Algorithm::GS;
-            break;
-        case InputOutputOrder::RN:
-            // bitrev = true;
-            algorithm = Algorithm::CT;
-            break;
-        case InputOutputOrder::RR:
-            // bitrev = true;
-            algorithm = Algorithm::GS;
-            break;
-        default:
-            assert(false);
-        }
-        switch (algorithm)
-        {
-        case Algorithm::GS:
-            // TODO:
-            // GS_NTT(d_inout, lg_domain_size, intt, ntt_parameters, stream);
-            break;
-        case Algorithm::CT:
-            CT_NTT(d_inout, lg_domain_size, intt, ntt_parameters, stream);
-            break;
-        }
-        if (order == InputOutputOrder::RR)
-            bit_rev(d_inout, d_inout, lg_domain_size, stream);
     }
 
     /**
@@ -402,45 +335,6 @@ namespace ntt
         coset_ptr_arr[gpu.id()] = d_coset;
         //  printf("end init coset \n");
         gpu.sync();
-
-        return RustError{cudaSuccess};
-    }
-
-    /**
-     * \param gpu, which gpu to use, default is 0
-     * \param inout, input and output fr array
-     * \param lg_domain_size 2^{lg_domain_size} = N, where N is size of input array
-     * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
-     * \param direction, direction of NTT, farward, or inverse, default is farward
-     * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
-     * \param coset_ext_pow coset_ext_pow
-     */
-    RustError Base(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size,
-                   InputOutputOrder order, Direction direction)
-    {
-        if (lg_domain_size == 0)
-            return RustError{cudaSuccess};
-
-        try
-        {
-
-            gpu.select();
-
-            size_t domain_size = (size_t)1 << lg_domain_size;
-            dev_ptr_t<fr_t> d_inout{domain_size, gpu, true};
-            gpu.HtoD(&d_inout[0], inout, domain_size);
-            NTT_internal(&d_inout[0], lg_domain_size, order, direction, gpu);
-            gpu.DtoH(inout, &d_inout[0], domain_size);
-            gpu.sync();
-        }
-        catch (const cuda_error &e)
-        {
-#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-            return RustError{e.code(), e.what()};
-#else
-            return RustError{e.code()};
-#endif
-        }
 
         return RustError{cudaSuccess};
     }
