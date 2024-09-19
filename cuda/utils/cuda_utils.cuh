@@ -6,7 +6,7 @@
 
 #ifdef USE_CUDA
 
-#define INLINE __device__ __forceinline__
+#define INLINE __forceinline__
 #define CONST __device__
 #define DEVICE __device__
 #define LOCATION gpu
@@ -28,7 +28,7 @@ __host__ inline void checkCudaError(cudaError_t code, const char *file, int line
 
 #define INLINE inline
 #define CONST const
-#define DEVICE 
+#define DEVICE
 #define LOCATION host
 
 #endif // USE_CUDA

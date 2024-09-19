@@ -22,6 +22,12 @@ The following primitives are implemented:
 
 # Building and Testing
 ## Prerequisites
+
+- git submodules
+```
+git submodule update --init
+```
+
 - nvcc > 12.0 (CUDA Tookit). For the latest CUDA toolkit, please see [https://developer.nvidia.com/cuda-toolkit](https://developer.nvidia.com/cuda-toolkit). After installing CUDA, set NVCC environment variable:
 ```
 export NVCC=/usr/local/cuda/bin/nvcc

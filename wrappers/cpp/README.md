@@ -3,7 +3,7 @@
 ```
 git submodule init
 git submodule update
-./build_gmp.sh host
+sh build_dep.sh
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./package -DCURVE=${BN254,GOLDILOCKS} -DG2_ENABLED=OFF
 make -j4 VERBOSE=1 & make install
@@ -18,7 +18,8 @@ to enable G2
 - run test
 ```
 export LD_LIBRARY_PATH=package/lib/ # if building a shared lib
-./package/bin/test_bn128 --gtest_filter=*xxx*
+./test_bn128 --gtest_filter=*xxx*
+./test_gl64 --gtest_filter=*xxx*
 ```
 
 ## Remarks

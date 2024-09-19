@@ -1,7 +1,6 @@
 #include "types/int_types.h"
 
 #include "merkle/merkle.h"
-#include "merkle/merkle_c.h"
 
 #include "utils/cuda_utils.cuh"
 
@@ -181,8 +180,8 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr_template(
     // 2. compute leaf hashes on GPU
     u64 subtree_digests_len = digests_buf_size >> cap_height;
     u64 subtree_leaves_len = leaves_buf_size >> cap_height;
-    u64 digests_chunks = digests_buf_size / subtree_digests_len;
-    u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;
+    [[maybe_unused]] u64 digests_chunks = digests_buf_size / subtree_digests_len;
+    [[maybe_unused]] u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;
     assert(digests_chunks == cap_buf_size);
     assert(digests_chunks == leaves_chunks);
 
@@ -347,8 +346,8 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr_template(
     // 2. compute leaf hashes on GPU
     u64 subtree_digests_len = digests_buf_size >> cap_height;
     u64 subtree_leaves_len = leaves_buf_size >> cap_height;
-    u64 digests_chunks = digests_buf_size / subtree_digests_len;
-    u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;
+    [[maybe_unused]] u64 digests_chunks = digests_buf_size / subtree_digests_len;
+    [[maybe_unused]] u64 leaves_chunks = leaves_buf_size / subtree_leaves_len;
     assert(digests_chunks == cap_buf_size);
     assert(digests_chunks == leaves_chunks);
 
@@ -467,6 +466,10 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     u64 cap_height,
     u64 hash_type)
 {
+    assert(digests_buf_gpu_ptr != NULL);
+    assert(cap_buf_gpu_ptr != NULL);
+    assert(leaves_buf_gpu_ptr != NULL);
+
     assert(leaf_size > NUM_HASH_OUT_ELTS);
 
     switch (hash_type)

@@ -29,20 +29,20 @@ class PoseidonPermutationBN128 : public PoseidonPermutation
 #endif
 {
 private:
-	INLINE static FFE zero()
+	DEVICE INLINE static FFE zero()
 	{
 		return FFE::NewElement();
 	}
 
 	// exp5 performs x^5 mod p
 	// https://eprint.iacr.org/2019/458.pdf page 8
-	INLINE static void exp5(FFE *a)
+	DEVICE INLINE static void exp5(FFE *a)
 	{
 		a->Exp5();
 	}
 
 	// exp5state perform exp5 for whole state
-	INLINE static void exp5state(FFE *state, u32 size)
+	DEVICE INLINE static void exp5state(FFE *state, u32 size)
 	{
 		for (u32 i = 0; i < size; i++)
 		{
@@ -51,7 +51,7 @@ private:
 	}
 
 	// ark computes Add-Round Key, from the paper https://eprint.iacr.org/2019/458.pdf
-	INLINE static void ark(FFE *state, u32 size, const u64 c[100][4], u32 it)
+	DEVICE INLINE static void ark(FFE *state, u32 size, const u64 c[100][4], u32 it)
 	{
 		for (u32 i = 0; i < size; i++)
 		{
@@ -61,7 +61,7 @@ private:
 	}
 
 	// mix returns [[matrix]] * [vector]
-	DEVICE static void mix(FFE *state, u32 size, u32 t, const u64 m[5][5][4], FFE *newState)
+	DEVICE INLINE static void mix(FFE *state, u32 size, u32 t, const u64 m[5][5][4], FFE *newState)
 	{
 		FFE mul;
 
