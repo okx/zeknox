@@ -1,10 +1,10 @@
 #ifndef __CUDA_UTILS_H__
 #define __CUDA_UTILS_H__
 
-#include <cuda.h>
 #include <stdio.h>
 
 #ifdef USE_CUDA
+#include <cuda.h>
 
 #define INLINE __forceinline__
 #define CONST __device__
