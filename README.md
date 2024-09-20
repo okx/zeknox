@@ -10,15 +10,8 @@ The following primitives are implemented:
 - Keccak hashing over Goldilocks elements (in C/C++ and CUDA) - see [cuda/keccak](cuda/keccak).
 - Monolith hashing over Goldilocks elements (in C/C++ and CUDA) - see [cuda/monolith](cuda/monolith).
 - Merkle Tree building (Plonky2 version) using any of the above hashing methods - see [cuda/merkle](cuda/merkle).
-- NTT (including LDE and transpose) over Goldilocks elements - see [cuda/ntt](cuda/ntt).
-- MSM over Goldilocks elements - see [cuda/msm](cuda/msm).
-
-## Algorithms
-- **Goldilocks**: the CUDA implementation for Goldilocks field operations is taken from SupraNational's [sppark](https://github.com/supranational/sppark) project.
-
-- **NTT**: much of the code has been taken from SupraNational's [sppark](https://github.com/supranational/sppark). Only a small portion of the code is actually requied for Plonky2 integration. As a purpose of learning, we implemented the algorithm from scratch, but it is mainly based on the work of SupraNational.
-
-- **MSM**: based on pippenger algorithm, supporting both G1 and G2 curve. Currently, if the input points contains zero points, the kernel will return zero. Therefore, the user should set the corresponding scalar to zero to make the result valid.
+- NTT (including LDE and transpose) over Goldilocks & BN254 elements - see [cuda/ntt](cuda/ntt).
+- MSM over Goldilocks & BN254 elements - see [cuda/msm](cuda/msm).
 
 # Building and Testing
 ## Prerequisites
