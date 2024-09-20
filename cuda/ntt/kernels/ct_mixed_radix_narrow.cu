@@ -16,7 +16,7 @@ void _CT_NTT(const unsigned int radix, const unsigned int lg_domain_size,
     __builtin_assume(iterations <= radix);
     __builtin_assume(stage <= lg_domain_size - iterations);
 #endif
-    
+
     extern __shared__ fr_t shared_exchange[];
 
     index_t tid = threadIdx.x + blockDim.x * (index_t)blockIdx.x;
@@ -95,7 +95,7 @@ void _CT_NTT(const unsigned int radix, const unsigned int lg_domain_size,
         unsigned int thrdMask = (1 << s) - 1;
         unsigned int rank = threadIdx.x & thrdMask;
         bool pos = rank < laneMask;
-        
+
         fr_t root = d_radix6_twiddles[rank << (6 - (s + 1))];
         // printf("d_radix6_twiddles: index:%d, root: %llu \n ", rank << (6 - (s + 1)), root);
 
@@ -251,7 +251,7 @@ public:
         #define NTT_ARGUMENTS radix, lg_domain_size, stage, iterations, \
                 d_inout, ntt_parameters.partial_twiddles, \
                 ntt_parameters.radix6_twiddles, d_radixX_twiddles, \
-                is_intt, domain_size_inverse[lg_domain_size]
+                is_intt, domain_size_inv[lg_domain_size]
 
         if (num_blocks < Z_COUNT)
             _CT_NTT<1><<<num_blocks, block_size, shared_sz, stream>>>(NTT_ARGUMENTS);

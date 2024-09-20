@@ -26,7 +26,7 @@ __device__ __constant__ fr_t inverse_radix6_twiddles[32];
 
 #ifndef __CUDA_ARCH__
 # if defined(FEATURE_GOLDILOCKS)
-#  include "parameters/goldilocks.h"
+#  include "ff/params_gl64.hpp"
 # elif defined(FEATURE_BN254)
 #  include "parameters/alt_bn254.h"
 # endif
@@ -40,11 +40,11 @@ public:
 
     /**
      * radix6_twiddles is of size 1<<5, 32
-     * radix7_twiddles is of size 1<<6, 64 
-     * radix8_twiddles is of size 1<<7, 128 
-     * radix9_twiddles is of size 1<<8, 256 
-     * radix10_twiddles is of size 1<<9, 512 
-    */ 
+     * radix7_twiddles is of size 1<<6, 64
+     * radix8_twiddles is of size 1<<7, 128
+     * radix9_twiddles is of size 1<<8, 256
+     * radix10_twiddles is of size 1<<9, 512
+    */
     fr_t* radix6_twiddles, * radix7_twiddles, * radix8_twiddles,
         * radix9_twiddles, * radix10_twiddles;
 
@@ -52,7 +52,7 @@ public:
     fr_t* radix6_twiddles_6, * radix6_twiddles_12, * radix7_twiddles_7,
         * radix8_twiddles_8, * radix9_twiddles_9;
 #endif
-    
+
     fr_t (*partial_group_gen_powers)[WINDOW_SIZE]; // for LDE
 
 #if !defined(FEATURE_GOLDILOCKS)
@@ -71,21 +71,21 @@ public:
     {
 
         // printf("construct NTTParameters _inverse: %d, WINDOW_NUM: %d, WINDOW_SIZE: %d\n", _inverse, WINDOW_NUM, WINDOW_SIZE);
-        const fr_t* roots = inverse ? inverse_roots_of_unity
-                                    : forward_roots_of_unity;
+        const fr_t* roots = inverse ? (fr_t*)omegas_inv
+                                    : (fr_t*)omegas;
 
         /**
-         * 64 is 1<<6, 128 is 1<<7, etc, corresponding to root7, root8, root9, root10, root6 
+         * 64 is 1<<6, 128 is 1<<7, etc, corresponding to root7, root8, root9, root10, root6
          * Note: radix6_twiddles is at the end
         */
-        const size_t blob_sz = 64 + 128 + 256 + 512 + 32; 
+        const size_t blob_sz = 64 + 128 + 256 + 512 + 32;
 
         CUDA_OK(cudaGetSymbolAddress((void**)&radix6_twiddles,
                                      inverse ? inverse_radix6_twiddles
                                              : forward_radix6_twiddles));
 
-        // radix7_twiddles is at the front, as inside generate_all_twiddles radix7_twiddles is arranged at the front                                   
-        radix7_twiddles = (fr_t*)gpu.Dmalloc(blob_sz * sizeof(fr_t)); 
+        // radix7_twiddles is at the front, as inside generate_all_twiddles radix7_twiddles is arranged at the front
+        radix7_twiddles = (fr_t*)gpu.Dmalloc(blob_sz * sizeof(fr_t));
         radix8_twiddles = radix7_twiddles + 64;
         radix9_twiddles = radix8_twiddles + 128;
         radix10_twiddles = radix9_twiddles + 256;
@@ -143,7 +143,7 @@ public:
     inline void sync() const    { gpu.sync(); }
 
 private:
-    class all_params 
+    class all_params
     {   friend class NTTParameters;
         std::vector<const NTTParameters*> forward;
         std::vector<const NTTParameters*> inverse;
