@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.18)
 
+include(CheckLanguage)
+check_language(CXX)
+enable_language(CXX)
+
 # specify the C++ standard
-set(CMAKE_CXX_COMPILER /usr/bin/g++)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -15,8 +18,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g ${EXTRA_DEFAULT_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3 ${EXTRA_DEFAULT_FLAGS}")
 set(CMAKE_DEBUG_POSTFIX d)
 
-include(CheckLanguage)
-check_language(CXX)
+find_package(OpenMP)
 
 # Options
 option(USE_CUDA "Enable CUDA code (ON by default)" ON)
@@ -64,7 +66,6 @@ set_target_properties(${LIB_CXX_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(${LIB_CXX_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
 target_include_directories(${LIB_CXX_NAME} PRIVATE ${LIB_INC})
 target_compile_options(${LIB_CXX_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-dc>)
-find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(${LIB_CXX_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
@@ -120,6 +121,19 @@ set_target_properties(${EXE_TESTS_CUDA_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMB
 target_compile_options(${EXE_TESTS_CUDA_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-dc>)
 target_link_libraries(${EXE_TESTS_CUDA_NAME} PRIVATE gtest gomp)
 set_target_properties(${EXE_TESTS_CUDA_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(${EXE_TESTS_CUDA_NAME} PUBLIC OpenMP::OpenMP_CXX)
+endif()
+if(USE_AVX)
+    target_include_directories(${EXE_TESTS_CUDA_NAME} PRIVATE ${DEP_GOLDILOCKS_DIR})
+    target_compile_definitions(${EXE_TESTS_CUDA_NAME} PRIVATE __USE_AVX__ __NO_GMP__)
+    target_compile_options(${EXE_TESTS_CUDA_NAME} PRIVATE -mavx2)
+endif()
+if(USE_AVX512)
+    target_include_directories(${EXE_TESTS_CUDA_NAME} PRIVATE ${DEP_GOLDILOCKS_DIR})
+    target_compile_definitions(${EXE_TESTS_CUDA_NAME} PRIVATE __USE_AVX__ __AVX512__ __NO_GMP__)
+    target_compile_options(${EXE_TESTS_CUDA_NAME} PRIVATE -march=native)
+endif()
 endif() # BUILD_TESTS
 
 else() # USE_CUDA
@@ -152,7 +166,6 @@ target_compile_definitions(${LIB_CXX_NAME} PRIVATE FEATURE_GOLDILOCKS)
 set_target_properties(${LIB_CXX_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 set_target_properties(${LIB_CXX_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
 target_include_directories(${LIB_CXX_NAME} PRIVATE ${LIB_INC})
-find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(${LIB_CXX_NAME} PRIVATE OpenMP::OpenMP_CXX)
 endif()

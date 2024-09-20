@@ -5,5 +5,5 @@
 	path = wrappers/cpp/depends/blst
 	url = git@github.com:supranational/blst.git
 [submodule "cuda/depends/goldilocks"]
-	path = cuda/depends/goldilocks
+	path = native/depends/goldilocks
 	url = https://github.com/okx/goldilocks.git

@@ -77,7 +77,7 @@ fn build_lib() {
     let rootdirstr = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let rootdir = PathBuf::from(rootdirstr);
     let parent = rootdir.parent().unwrap().parent().unwrap();
-    let srcdir = parent.join("cuda");
+    let srcdir = parent.join("native");
     let libdir = srcdir.join("build");
     let libfile = libdir.join("libcryptocuda.a");
 
@@ -100,6 +100,8 @@ fn build_lib() {
             .output()
             .expect("failed to execute process");
         assert!(env::set_current_dir(&rootdir).is_ok());
+
+        println!("{:?}", libdir);
     }
 
     // Tell cargo to look for shared libraries in the specified directory

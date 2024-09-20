@@ -4,10 +4,8 @@ target/
 build/
 docs/worklog/
 package/
-depends/gmp/
-depends/*.tar*
-cuda/utils/deviceQuery/CudaArch.mk
-cuda/utils/deviceQuery/deviceQuery
+native/utils/deviceQuery/CudaArch.mk
+native/utils/deviceQuery/deviceQuery
 *.o
 *.so
 *.a
