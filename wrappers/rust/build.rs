@@ -76,7 +76,8 @@ fn build_lib() {
 
     let rootdirstr = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let rootdir = PathBuf::from(rootdirstr);
-    let srcdir= rootdir.join("cuda");
+    let parent = rootdir.parent().unwrap().parent().unwrap();
+    let srcdir = parent.join("cuda");
     let libdir = srcdir.join("build");
     let libfile = libdir.join("libcryptocuda.a");
 

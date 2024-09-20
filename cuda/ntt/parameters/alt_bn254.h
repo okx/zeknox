@@ -1,7 +1,3 @@
-// Copyright Supranational LLC
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
-
 #if defined(__GNUC__) || defined(__clang__)
 # define FR_T(vec_t, ...) fr_t{(vec_t){__VA_ARGS__}}
 #else
