@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #include "ff/goldilocks.hpp"
 
 const fr_t group_gen = fr_t(0x0000000000000007);

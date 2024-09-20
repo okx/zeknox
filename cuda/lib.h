@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #pragma once
 #include <utils/rusterror.h>
 #include <ntt/ntt.h>

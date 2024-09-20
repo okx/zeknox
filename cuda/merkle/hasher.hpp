@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #ifndef _HASHER_CUH_
 #define _HASHER_CUH_
 

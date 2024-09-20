@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #if defined(__NVCC__) && !defined(__CUDA_ARCH__)
 #include <atomic>
 
@@ -5,10 +6,10 @@
 // extern "C"
 // bool cuda_available()
 // {
-    
+
 //     static std::atomic<int> available(0);
 //     int ret = available;
-   
+
 //     cudaDeviceProp prop;
 //     ret = cudaGetDeviceProperties(&prop, 0) == cudaSuccess &&
 //             prop.major >= 7;

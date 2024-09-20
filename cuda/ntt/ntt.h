@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #ifndef __CRYPTO_NTT_NTT_H__
 #define __CRYPTO_NTT_NTT_H__
 #include <map>
