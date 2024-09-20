@@ -1,3 +1,14 @@
+# run and test
+## prerequisites
+- rust. To install Rust, run:
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+Also, set Rust nighly:
+```
+rustup override set nightly
+```
+
 ## run Rust tests
 ```
 ./run_rust_tests.sh
