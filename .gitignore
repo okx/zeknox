@@ -15,4 +15,3 @@ cuda/utils/deviceQuery/deviceQuery
 *.exe
 Cargo.lock
 src/device/bindings.rs
-wrappers/cpp/depends/
