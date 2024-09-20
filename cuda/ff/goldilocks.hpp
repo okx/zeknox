@@ -20,7 +20,7 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
-#include "ff/params_gl64.hpp"
+#include "ff/gl64_params.hpp"
 
 class gl64_t
 {
