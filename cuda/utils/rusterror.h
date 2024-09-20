@@ -1,9 +1,5 @@
-// Copyright Supranational LLC
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
-
-#ifndef __CRYPTO_UTIL_RUSTERROR_H__
-#define __CRYPTO_UTIL_RUSTERROR_H__
+#ifndef ZEKNOX_CUDA_UTIL_RUSTERROR_H_
+#define ZEKNOX_CUDA_UTIL_RUSTERROR_H_
 
 #ifdef __cplusplus
 # include <string>
