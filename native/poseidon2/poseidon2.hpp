@@ -4,7 +4,7 @@
 
 #include "types/int_types.h"
 #ifdef USE_CUDA
-#include "types/gl64_t.cuh"
+#include "ff/gl64_t.cuh"
 #include "utils/cuda_utils.cuh"
 #include "poseidon/poseidon_permutation.cuh"
 #else

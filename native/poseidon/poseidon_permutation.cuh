@@ -2,7 +2,7 @@
 #define __POSEIDON_V2_CUH__
 
 #include "types/int_types.h"
-#include "types/gl64_t.cuh"
+#include "ff/gl64_t.cuh"
 #include "utils/cuda_utils.cuh"
 #include "merkle/hasher.hpp"
 #include "poseidon/poseidon.hpp"

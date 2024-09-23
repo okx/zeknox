@@ -46,7 +46,11 @@ public:
   }
 
   static inline const gl64_t one() { return 1; }
-  static inline const gl64_t zero() { return 0; }
+  static inline const gl64_t zero() { return (uint64_t)0; }
+
+  inline uint64_t get_val() const { return val; }
+
+  inline gl64_t(uint32_t val_u128[4]) {}
 
   inline gl64_t() {}
   inline gl64_t(uint64_t a) : val(a) {}

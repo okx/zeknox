@@ -108,6 +108,7 @@ DEVICE void FUNC(keccak)(const u8 *in, int inlen, u8 *md, int mdlen)
 }
 
 #ifdef USE_CUDA
+#ifdef __CUDA_ARCH__
 __device__ void KeccakHasher::gpu_hash_one(gl64_t *inputs, u32 num_inputs, gl64_t *hash)
 {
     if (num_inputs < 4) {
@@ -128,7 +129,7 @@ __device__ void KeccakHasher::gpu_hash_two(gl64_t *hash1, gl64_t *hash2, gl64_t 
     FUNC(keccak)((u8*)input, 50, (u8*)hash, 32);
     hash[3] &= 0xFF;
 }
-
+#endif
 #else
 
 void KeccakHasher::cpu_hash_one(u64* data, u64 data_size, u64* digest) {

@@ -8,7 +8,7 @@
 #include "types/int_types.h"
 
 #ifdef USE_CUDA
-#include "types/gl64_t.cuh"
+#include "ff/goldilocks.hpp"
 #else
 #include "poseidon/goldilocks.hpp"
 #endif
