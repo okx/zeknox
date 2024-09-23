@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <assert.h>
 #include <math.h>
 
 #include <keccak/keccak.hpp>
@@ -12,6 +11,11 @@
 #include <poseidon2/poseidon2.hpp>
 #include <poseidon/poseidon_bn128.hpp>
 #include <merkle/merkle.h>
+
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+#include <assert.h>
 
 /**
  * define DEBUG for printing
