@@ -1,14 +1,10 @@
-// Copyright Supranational LLC
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
-
-#ifndef __CRYPTO_UTIL_EXCEPTION_CUH__
-#define __CRYPTO_UTIL_EXCEPTION_CUH__
+#ifndef ZEKNOX_CUDA_UTIL_EXCEPTION_CUH_
+#define ZEKNOX_CUDA_UTIL_EXCEPTION_CUH_
 
 #include "exception.hpp"
 #include <iostream>
 
-using cuda_error = sppark_error;
+using cuda_error = zeknox_error;
 
 #define CUDA_OK(expr) do {                                  \
     cudaError_t code = expr;                                \

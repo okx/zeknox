@@ -54,6 +54,12 @@ cd scripts
 python3 new_curve_script.py configs/${field}.json
 ```
 
+## lint
+```
+find cuda -name '*.cpp' -o -name '*.h' | xargs cpplint
+cpplint --filter=-build/header_guard,-legal/copyright,-build/include,-whitespace/line_length
+```
+
 # License
 
 Apache License, Version 2.0 [LICENSE](LICENSE)

@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #ifndef _KECCAK_HPP_
 #define _KECCAK_HPP_
 

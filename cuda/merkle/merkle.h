@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #ifndef __MERKLE_H__
 #define __MERKLE_H__
 

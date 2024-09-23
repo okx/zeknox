@@ -1,5 +1,6 @@
-#ifndef __CRYPTO_NTT_NTT_H__
-#define __CRYPTO_NTT_NTT_H__
+// Copyright 2024 OKX
+#ifndef ZEKNOX_CUDA_NTT_NTT_H_
+#define ZEKNOX_CUDA_NTT_NTT_H_
 #include <map>
 namespace Ntt_Types
 {
@@ -50,4 +51,4 @@ namespace Ntt_Types
 
 }
 
-#endif
+#endif // ZEKNOX_CUDA_NTT_NTT_H_
