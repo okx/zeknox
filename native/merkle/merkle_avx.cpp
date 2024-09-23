@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #ifdef __USE_AVX__
 
 #include <stdlib.h>

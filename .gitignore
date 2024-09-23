@@ -12,3 +12,5 @@ native/utils/deviceQuery/deviceQuery
 *.exe
 Cargo.lock
 wrappers/rust/src/device/bindings.rs
+wrappers/cpp/depends/gmp
+wrappers/cpp/depends/*.xz

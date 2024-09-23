@@ -1,5 +1,6 @@
-#ifndef __CRYPTO_KERNELS_CU__
-#define __CRYPTO_KERNELS_CU__
+// Copyright 2024 OKX
+#ifndef ZEKNOX_CUDA_NTTT_KERNELS_CU_
+#define ZEKNOX_CUDA_NTTT_KERNELS_CU_
 #include <cooperative_groups.h>
 #include <utils/sharedmem.cuh>
 
@@ -7,20 +8,13 @@
 
 #define BLOCK_DIM 32
 
-__global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
-{
+__global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size) {
     int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (threadId < n * batch_size)
     {
         int idx = threadId % n;
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
-
-        // if (threadId == 0 || threadId == n * batch_size - 1)
-        // {
-        //     printf("inside kernel, reverse_order_kernel n: %d, logn: %d, batch_size: %d \n", n, logn, batch_size);
-        //     printf("a: %d, b: %d \n", batch_idx * n + idx, batch_idx * n + idx_reversed);
-        // }
 
         // Check to ensure that the larger index swaps with the smaller one
         if (idx > idx_reversed)
@@ -431,4 +425,4 @@ __device__ __forceinline__ void transpose(fr_t r[z_count])
         r[z] = xchg[y + x][z];
 }
 
-#endif /**__CRYPTO_KERNELS_CU__ */
+#endif /**ZEKNOX_CUDA_NTTT_KERNELS_CU_ */

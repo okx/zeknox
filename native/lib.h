@@ -1,4 +1,6 @@
-#pragma once
+// Copyright 2024 OKX
+#ifndef ZEKNOX_CUDA_LIB_H_
+#define ZEKNOX_CUDA_LIB_H_
 #include <utils/rusterror.h>
 #include <ntt/ntt.h>
 #include <vector>
@@ -70,3 +72,4 @@ extern "C" RustError init_twiddle_factors(size_t device_id, size_t lg_n);
 extern "C" RustError init_coset(size_t device_id, size_t lg_domain_size, fr_t coset_gen);
 
 extern "C" RustError get_number_of_gpus(size_t *ngpus);
+#endif // ZEKNOX_CUDA_LIB_H_

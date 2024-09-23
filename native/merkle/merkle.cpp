@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #include <stdlib.h>
 #include <string.h>
 #include <omp.h>

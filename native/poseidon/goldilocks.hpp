@@ -1,3 +1,4 @@
+// Copyright 2024 OKX
 #ifndef __GOLDILOCKS_H__
 #define __GOLDILOCKS_H__
 
