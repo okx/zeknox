@@ -4,7 +4,7 @@
 
 #include "poseidon/poseidon.hpp"
 #include "poseidon/poseidon_permutation.hpp"
-#include "poseidon/goldilocks.hpp"
+#include "ff/goldilocks.hpp"
 #include <cstring>
 
 const static i64 MDS_FREQ_BLOCK_ONE[3] = {16, 32, 16};
@@ -120,7 +120,7 @@ inline void PoseidonPermutation::partial_first_constant_layer(GoldilocksField *i
 
 inline void PoseidonPermutation::mds_partial_layer_init(GoldilocksField *inout)
 {
-    GoldilocksField result[SPONGE_WIDTH] = {GoldilocksField::Zero()};
+    GoldilocksField result[SPONGE_WIDTH] = {GoldilocksField::zero()};
 
     for (u32 r = 1; r < SPONGE_WIDTH; r++)
     {
@@ -176,7 +176,7 @@ inline void PoseidonPermutation::mds_partial_layer_fast(GoldilocksField *inout, 
     add_u160_u128(&d_sum_lo, &d_sum_hi, s0 * mds0to0);
     GoldilocksField d = reduce_u160(d_sum_lo, d_sum_hi);
 
-    GoldilocksField result[SPONGE_WIDTH] = {GoldilocksField::Zero()};
+    GoldilocksField result[SPONGE_WIDTH] = {GoldilocksField::zero()};
     result[0] = d;
     for (u32 i = 1; i < SPONGE_WIDTH; i++)
     {
@@ -318,48 +318,14 @@ inline void PoseidonPermutation::ifft4_real_unreduced(const i64 *y, u64 *x)
 
 inline u64 PoseidonPermutation::reduce96(u128 val)
 {
-    u64 x_hi = (u64)(val >> 64);
-    u64 x_lo = (u64)val;
-    x_lo -= x_hi;
-    x_lo += (x_hi << 32);
-    if (x_lo >= GoldilocksField::ORDER)
-    {
-        x_lo -= GoldilocksField::ORDER;
-    }
-    return x_lo;
+    gl64_t g = gl64_t::from_noncanonical_u96(val);
+    return g.get_val();
 }
 
 inline u64 PoseidonPermutation::reduce128(u128 val)
 {
-    volatile u64 x_lo = (u64)val;
-    volatile u64 x_hi = (u64)(val >> 64);
-    volatile u64 x_hi_hi = x_hi >> 32;
-    volatile u64 x_hi_lo = x_hi & 0xFFFFFFFF;
-    volatile u64 t1 = x_hi_lo * 0xFFFFFFFF;
-
-    __asm__(
-        "sub %2, %1\n\t"
-        "sbb %%ebx, %%ebx\n\t"
-        "sub %%rbx, %1\n\t"
-        "add %1, %0\n\t"
-        "sbb %%ebx, %%ebx\n\t"
-        "add %%rbx, %0"
-        : "+r"(t1)
-        : "r"(x_lo), "r"(x_hi_hi)
-        : "rbx");
-    return t1;
-
-    /*
-        // Alternative code
-        volatile u64 t0 = x_lo - x_hi_hi;
-        if (t0 > x_lo) {
-            t0 -= 0xFFFFFFFF;
-        }
-        Goldilocks::Element e1 = Goldilocks::fromU64(t1);
-        Goldilocks::Element e2 = Goldilocks::fromU64(t0);
-        e1 = Goldilocks::add(e1, e2);
-        return e1.fe;
-    */
+    gl64_t g = gl64_t::from_noncanonical_u128(val);
+    return g.get_val();
 }
 
 inline void PoseidonPermutation::mds_multiply_freq(u64 *inout)
@@ -428,7 +394,7 @@ inline void PoseidonPermutation::mds_layer_fast(GoldilocksField *inout)
         inout[r] = reduce96(s);
     }
 
-    u64 s0u64 = reduce96(s0);
+    GoldilocksField s0u64 = reduce96(s0);
     inout[0] = inout[0] + s0u64;
 }
 
@@ -446,7 +412,7 @@ PoseidonPermutation::PoseidonPermutation()
 {
     for (u64 i = 0; i < WIDTH; i++)
     {
-        this->state[i] = GoldilocksField::Zero();
+        this->state[i] = GoldilocksField::zero();
     }
 }
 

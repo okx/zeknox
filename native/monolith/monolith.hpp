@@ -6,12 +6,11 @@
 #define __MONOLITH_HPP__
 
 #include "types/int_types.h"
+#include "ff/goldilocks.hpp"
 #ifdef USE_CUDA
-#include "ff/gl64_t.cuh"
 #include "utils/cuda_utils.cuh"
 #include "poseidon/poseidon_permutation.cuh"
 #else
-#include "poseidon/goldilocks.hpp"
 #include "poseidon/poseidon.hpp"
 #include "poseidon/poseidon_permutation.hpp"
 #include <cstring>

@@ -5,8 +5,10 @@
 #ifndef __POSEIDON_PERMUTATION_HPP__
 #define __POSEIDON_PERMUTATION_HPP__
 
+#include "ff/goldilocks.hpp"
 #include "poseidon/poseidon.hpp"
-#include "poseidon/goldilocks.hpp"
+
+typedef gl64_t GoldilocksField;
 
 class PoseidonPermutation : public PoseidonPermutationVirtual
 {

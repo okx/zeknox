@@ -9,12 +9,7 @@
 #include <cstring>
 
 #include "types/int_types.h"
-
-#ifdef USE_CUDA
 #include "ff/goldilocks.hpp"
-#else
-#include "poseidon/goldilocks.hpp"
-#endif
 
 class Hasher {};
 

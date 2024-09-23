@@ -245,6 +245,24 @@ public:
         return ret;
     }
 
+    static inline gl64_t from_noncanonical_u96(u128 x)
+    {
+        u64 x_hi = (u64)(x >> 64);
+        u64 x_lo = (u64)x;
+        return from_noncanonical_u96(x_lo, x_hi);
+    }
+
+    static inline gl64_t from_noncanonical_u96(u64 x_lo, u64 x_hi)
+    {
+        x_lo -= x_hi;
+        x_lo += (x_hi << 32);
+        if (x_lo >= MOD)
+        {
+            x_lo -= MOD;
+        }
+        return x_lo;
+    }
+
 #ifdef GL64_PARTIALLY_REDUCED
     inline bool is_zero() const { return val == 0 | val == MOD; }
     inline bool is_one() const { return val == 1 | val == MOD + 1; }
