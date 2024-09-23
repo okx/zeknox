@@ -1,3 +1,7 @@
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef __CRYPTO_UTIL_DEVICE_CONTEXT_CUH__
 #define __CRYPTO_UTIL_DEVICE_CONTEXT_CUH__
 

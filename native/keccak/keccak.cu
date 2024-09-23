@@ -1,3 +1,7 @@
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from keccak.c
 // 19-Nov-11  Markku-Juhani O. Saarinen <mjos@iki.fi>
 // A baseline Keccak (3rd round) implementation.

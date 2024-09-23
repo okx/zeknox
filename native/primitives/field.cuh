@@ -1,3 +1,7 @@
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * This file contains methods for working with elements of a prime field. It is based on and evolved from Matter Labs'
  * [Zprize

@@ -1,3 +1,7 @@
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #include "poseidon/poseidon_permutation.cuh"
 
 __device__ u32 GPU_MDS_MATRIX_CIRC[12] = {17, 15, 41, 16, 2, 28, 13, 13, 39, 18, 34, 20};

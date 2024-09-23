@@ -1,3 +1,7 @@
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef __UTILS_BATCH_MUL_CU__
 #define __UTILS_BATCH_MUL_CU__
 

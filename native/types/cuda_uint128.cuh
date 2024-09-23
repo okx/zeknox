@@ -1,3 +1,7 @@
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 /*
 
   This header file contains definitions for inline functions and templates
@@ -791,7 +795,7 @@ template <typename T>
                             //  typecasting
                             /////////////////
 #ifdef __CUDA_ARCH__
-  
+
 #endif
 
   #ifdef __CUDA_ARCH__
@@ -902,7 +906,7 @@ template <typename T>
                               //////////////
 
 #ifdef __CUDA_ARCH__
-  
+
 #endif
 
 }; // class uint128_t
@@ -957,7 +961,7 @@ template <typename T>
 }
 
 #ifdef __CUDA_ARCH__
-  
+
 #endif
 
 #ifdef __CUDA_ARCH__
