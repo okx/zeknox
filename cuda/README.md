@@ -50,12 +50,7 @@ make -j4
 
 # Debug with VsCode + CUDA-GDB
 1. Install [Nsight extension](https://marketplace.visualstudio.com/items?itemName=NVIDIA.nsight-vscode-edition)
-2. Build tests in debug mode
-```
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Debug .. -DBUILD_TESTS=ON
-make -j4
-```
+2. Build tests in debug mode `./build-debug.sh`
 3. Set breakpoints in the code [tests.cu](tests/tests.cu)
 4. Enjoy VsCode debugging!
 
