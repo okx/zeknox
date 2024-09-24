@@ -62,3 +62,35 @@ In our version, we replaced this recursive structure with a linear structure. Us
 ## Poseidon
 
 We implemented Plonky2 version of Poseidon hashing in C++ and CUDA. We also modified 0xPolyginHermez [Goldilocks](https://github.com/0xPolygonHermez/goldilocks) Poseidon code (AVX and AVX512) to produce the same results as Plonky2 version. The key difference between Plonky2 (0xPolygonZero) and Goldilocks (0xPolygonHermez) is in the way the internal state (the sponge with 12 elements) is handled across multiple iterations (or permutations): in Plonky2, the old state remains the same and the new 8 elements of the input overwrite the first 8 elements of the state. In Goldilocks, the state is shifted by 8, and then the new 8 elements of the input overwrite the first 8 elements of the state.
+
+## Goldilocks Field Parameters
+
+In a [recent PR](https://github.com/0xPolygonZero/plonky2/pull/1579), 0xPolygonZero updated two Goldilocks field parameters (namely, ``MULTIPLICATIVE_GROUP_GENERATOR`` and ``POWER_OF_TWO_GENERATOR``). Previously, these two parameters have the values ``7`` and ``1753635133440165772``, respectively. Now, they are ``14293326489335486720`` and ``7277203076849721926``, respectively. Our implementation supports both variants (in [scripts/configs/gl64.json](../scripts/configs/gl64.json) and [scripts/configs/gl64_v2.json](../scripts/configs/gl64_v2.json), respectively). By default, we use the initial values. If one wants to use the newer values, please run:
+
+```
+cd scripts
+python3 gen_field_params.py configs/gl64_v2.json
+mkdir -p ../native/build
+cd ../native/build
+cmake .. -DBUILD_TESTS=ON
+make -j4
+```
+
+To use the old values, please run:
+
+```
+cd scripts
+python3 gen_field_params.py configs/gl64.json
+mkdir -p ../native/build
+cd ../native/build
+cmake .. -DBUILD_TESTS=ON
+make -j4
+```
+
+You can test the consistency with Plonky2 as:
+
+```
+cd wrappers/rust
+cargo update
+./run_rust_tests.sh
+```
