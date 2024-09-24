@@ -1,4 +1,5 @@
 // Copyright Supranational LLC
+// Copyright 2024 OKX
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,130 +7,112 @@
 #define __CRYPTO__FF__GL64__HPP__
 
 #include "types/int_types.h"
-
-#include "ff/gl64_t.cuh" // device-side field types
-
-#ifndef __CUDA_ARCH__ // host-side stand-in to make CUDA code compile
-#include <cstdint>    //it also produces correct results for the host-side code
-
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
+#include "ff/gl64_t.cuh"
 #include "ff/gl64_params.hpp"
 
-class gl64_t
+class cpp_gl64_t
 {
 private:
   uint64_t val;
 
 public:
-  using mem_t = gl64_t;
+  using mem_t = cpp_gl64_t;
   static const uint32_t degree = 1;
-  static const uint64_t MOD = 0xffffffff00000001U;
-  static const uint64_t EPSILON = 4294967295;              // ((u64)1 << 32) - 1 = 2^64 % MOD
-  static const uint64_t EPSILON2 = 18446744069414584320ul; // 2^96 % MOD
+  static const uint64_t MOD = 0xffffffff00000001U; // Goldilocks prime
+  static const uint64_t EPSILON = 4294967295;      // ((u64)1 << 32) - 1 = 2^64 % MOD
 
-  inline gl64_t() {}
-  inline gl64_t(uint64_t a) : val(a) {}
+  inline cpp_gl64_t() : val(0) {}
+  inline cpp_gl64_t(uint64_t a) : val(a) {}
 
   // dummy constructor for CUDA compability
-  inline gl64_t(uint32_t val_u128[4]) {}
+  inline cpp_gl64_t(uint32_t val_u128[4]) {}
 
-  static inline const gl64_t one() { return 1; }
-  static inline const gl64_t zero() { return (uint64_t)0; }
-  inline uint64_t get_val() const { return val; }
-  inline uint32_t lo() const { return (uint32_t)(val); }
-  inline uint32_t hi() const { return (uint32_t)(val >> 32); }
-  inline operator uint64_t() const { return val; }
+  static inline const cpp_gl64_t one() { return cpp_gl64_t(1); }
+  static inline const cpp_gl64_t zero() { return cpp_gl64_t((uint64_t)0); }
+  inline uint64_t get_val() const { return this->val; }
+  inline uint32_t lo() const { return (uint32_t)(this->val); }
+  inline uint32_t hi() const { return (uint32_t)(this->val >> 32); }
+  inline operator uint64_t() const { return this->val; }
+  inline void make_zero() { this->val = 0; }
 
-  static inline gl64_t omega(uint32_t logn)
+  static inline cpp_gl64_t omega(uint32_t logn)
   {
     return omegas[logn];
   }
-  static inline gl64_t omega_inv(uint32_t logn)
+  static inline cpp_gl64_t omega_inv(uint32_t logn)
   {
     return omegas_inv[logn];
   }
 
-  static inline const gl64_t inv_log_size(uint32_t logn)
+  static inline const cpp_gl64_t inv_log_size(uint32_t logn)
   {
     return domain_size_inv[logn];
   }
 
-  gl64_t add_canonical_u64(const u64 &rhs)
+  cpp_gl64_t add_canonical_u64(const u64 &rhs)
   {
     this->val = modulo_add(this->val, rhs);
     return *this;
   }
 
-  gl64_t operator+(const gl64_t &rhs)
+  cpp_gl64_t operator+(const cpp_gl64_t &rhs)
   {
-    return gl64_t(modulo_add(this->val, rhs.get_val()));
+    return cpp_gl64_t(modulo_add(this->val, rhs.get_val()));
   }
 
-  inline gl64_t &operator+=(gl64_t b)
+  inline cpp_gl64_t &operator+=(cpp_gl64_t &rhs)
   {
-    this->val = modulo_add(this->val, b.val);
+    this->val = modulo_add(this->val, rhs.get_val());
     return *this;
   }
 
-  gl64_t operator-(const gl64_t &rhs)
+  cpp_gl64_t operator-(const cpp_gl64_t &rhs)
   {
-    return gl64_t(modulo_sub(this->val, rhs.get_val()));
+    return cpp_gl64_t(modulo_sub(this->val, rhs.get_val()));
   }
 
-  inline gl64_t &operator-=(gl64_t b)
+  inline cpp_gl64_t &operator-=(cpp_gl64_t &rhs)
   {
-    this->val = modulo_sub(this->val, b.val);
+    this->val = modulo_sub(this->val, rhs.get_val());
     return *this;
   }
 
-  gl64_t operator*(const gl64_t &rhs) const
+  cpp_gl64_t operator*(const cpp_gl64_t &rhs) const
   {
-
     u64 v1 = reduce128((u128)this->val * (u128)rhs.get_val());
-
-    return gl64_t(v1);
+    return cpp_gl64_t(v1);
   }
 
-  inline gl64_t &operator*=(gl64_t b) { return *this; }
+  inline cpp_gl64_t &operator*=(cpp_gl64_t b)
+  {
+    this->val = reduce128((u128)this->val * (u128)b.val);
+    return *this;
+  }
 
-  inline gl64_t &sqr() { return *this; }
+  inline cpp_gl64_t &sqr() { return *this; }
 
-  static gl64_t from_canonical_u64(u64 x)
+  static cpp_gl64_t from_canonical_u64(u64 x)
   {
     assert(x < MOD);
-    return gl64_t(x);
+    return cpp_gl64_t(x);
   }
 
-  static inline gl64_t from_noncanonical_u96(u128 x)
+  static inline cpp_gl64_t from_noncanonical_u96(u128 x)
   {
     u64 x_hi = (u64)(x >> 64);
     u64 x_lo = (u64)x;
     return from_noncanonical_u96(x_lo, x_hi);
   }
 
-  static inline gl64_t from_noncanonical_u96(u64 x_lo, u64 x_hi)
+  static inline cpp_gl64_t from_noncanonical_u96(u64 x_lo, u64 x_hi)
   {
-    // v1
-    // u64 t1 = ((u64)n_hi) * (u64)EPSILON;
-    // return gl64_t(modulo_add(n_lo, t1));
-
-    // v2
-    x_lo -= x_hi;
-    x_lo += (x_hi << 32);
-    if (x_lo >= MOD)
-    {
-        x_lo -= MOD;
-    }
-    return x_lo;
+    u64 t1 = ((u64)x_hi) * (u64)EPSILON;
+    return cpp_gl64_t(modulo_add(x_lo, t1));
   }
 
-  static inline gl64_t from_noncanonical_u128(u128 n)
+  static inline cpp_gl64_t from_noncanonical_u128(u128 n)
   {
-    return gl64_t(reduce128(n));
+    return cpp_gl64_t(reduce128(n));
   }
 
   u64 to_noncanonical_u64()
@@ -137,14 +120,14 @@ public:
     return this->val;
   }
 
-  inline gl64_t multiply_accumulate(gl64_t x, gl64_t y)
+  inline cpp_gl64_t multiply_accumulate(cpp_gl64_t x, cpp_gl64_t y)
   {
     return *this + x * y;
   }
 
   // dummies
-  inline gl64_t &operator^=(int p) { return *this; }
-  inline gl64_t reciprocal() const { return 1 / (*this); }
+  inline cpp_gl64_t &operator^=(int p) { return *this; }
+  inline cpp_gl64_t reciprocal() const { return 1 / (*this); }
 
 private:
   /*
@@ -180,8 +163,6 @@ private:
 
   static inline u64 reduce128(u128 x)
   {
-    // v1
-    /*
     u64 x_lo = (u64)(x & 0xFFFFFFFFFFFFFFFF);
     u64 x_hi = (u64)(x >> 64);
 
@@ -193,52 +174,19 @@ private:
     u64 t2 = modulo_add(t0, t1);
 
     return t2;
-    */
-
-   // v2
-    volatile u64 x_lo = (u64)x;
-    volatile u64 x_hi = (u64)(x >> 64);
-    volatile u64 x_hi_hi = x_hi >> 32;
-    volatile u64 x_hi_lo = x_hi & 0xFFFFFFFF;
-    volatile u64 t1 = x_hi_lo * 0xFFFFFFFF;
-    __asm__(
-        "sub %2, %1\n\t"
-        "sbb %%ebx, %%ebx\n\t"
-        "sub %%rbx, %1\n\t"
-        "add %1, %0\n\t"
-        "sbb %%ebx, %%ebx\n\t"
-        "add %%rbx, %0"
-        : "+r"(t1)
-        : "r"(x_lo), "r"(x_hi_hi)
-        : "rbx");
-    return t1;
   }
 };
 
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#endif // __CUDA_ARCH__
-
+// typedefs to make the code compile
+#ifndef USE_CUDA
+typedef cpp_gl64_t fr_t;
+#else // USE_CUDA
+#ifndef __CUDA_ARCH__
+typedef cpp_gl64_t gl64_t;
+typedef cpp_gl64_t fr_t;
+#else
 typedef gl64_t fr_t;
+#endif // __CUDA_ARCH__
+#endif // USE_CUDA
 
-/*
-template <>
-struct std::hash<gl64_t>
-{
-  std::size_t operator()(const gl64_t &key) const
-  {
-    std::size_t hash = 0;
-    // boost hashing, see
-    // https://stackoverflow.com/questions/35985960/c-why-is-boosthash-combine-the-best-way-to-combine-hash-values/35991300#35991300
-    // for (int i = 0; i < CONFIG::limbs_count; i++)
-    hash ^= std::hash<uint32_t>()(key.lo()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash ^= std::hash<uint32_t>()(key.hi()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    return hash;
-  }
-};
-*/
-
-// #endif
-#endif
+#endif // __CRYPTO__FF__GL64__HPP__

@@ -97,7 +97,7 @@ public:
             }
             for (; i < NUM_HASH_OUT_ELTS; i++)
             {
-                hash[i].zero();
+                hash[i].make_zero();
             }
         }
         else

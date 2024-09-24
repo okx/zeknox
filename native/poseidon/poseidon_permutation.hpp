@@ -8,7 +8,7 @@
 #include "ff/goldilocks.hpp"
 #include "poseidon/poseidon.hpp"
 
-typedef gl64_t GoldilocksField;
+typedef cpp_gl64_t GoldilocksField;
 
 class PoseidonPermutation : public PoseidonPermutationVirtual
 {

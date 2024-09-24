@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "utils/pow.hpp"
 
+#ifdef USE_CUDA
 #ifdef __CUDA_ARCH__
 
 #define inline __device__ __forceinline__
@@ -276,6 +277,11 @@ public:
         gl64_t ret;
         ret.val = 0;
         return ret;
+    }
+
+    inline void make_zero()
+    {
+        this->val = 0;
     }
 
     friend inline gl64_t czero(const gl64_t &a, int set_z)
@@ -710,7 +716,6 @@ public:
 #endif
 };
 
-typedef gl64_t fr_t;
-
+#endif // __CUDA_ARCH__
 #endif // USE_CUDA
 #endif // __SPPARK_FF_GL64_T_CUH__

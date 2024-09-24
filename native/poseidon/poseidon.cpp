@@ -4,7 +4,6 @@
 
 #include "poseidon/poseidon.hpp"
 #include "poseidon/poseidon_permutation.hpp"
-#include "ff/goldilocks.hpp"
 #include <cstring>
 
 const static i64 MDS_FREQ_BLOCK_ONE[3] = {16, 32, 16};
@@ -318,13 +317,13 @@ inline void PoseidonPermutation::ifft4_real_unreduced(const i64 *y, u64 *x)
 
 inline u64 PoseidonPermutation::reduce96(u128 val)
 {
-    gl64_t g = gl64_t::from_noncanonical_u96(val);
+    GoldilocksField g = GoldilocksField::from_noncanonical_u96(val);
     return g.get_val();
 }
 
 inline u64 PoseidonPermutation::reduce128(u128 val)
 {
-    gl64_t g = gl64_t::from_noncanonical_u128(val);
+    GoldilocksField g = GoldilocksField::from_noncanonical_u128(val);
     return g.get_val();
 }
 

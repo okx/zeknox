@@ -736,7 +736,7 @@ __device__ INLINE void PoseidonPermutationGPU::partial_rounds(gl64_t *state, u32
     for (int i = 0; i < 12; i++)
     {
         state[i] = state[i] + gl64_t(GPU_FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]);
-        res[i].zero();
+        res[i].make_zero();
     }
 
     // mds_partial_layer_init
@@ -794,7 +794,7 @@ __device__ PoseidonPermutationGPU::PoseidonPermutationGPU()
 {
     for (int i = 0; i < SPONGE_WIDTH; i++)
     {
-        state[i].zero();
+        state[i].make_zero();
     }
 }
 
@@ -854,7 +854,7 @@ __device__ INLINE void gpu_poseidon_hash_one_stride(gl64_t *inputs, u32 num_inpu
         }
         for (; i < NUM_HASH_OUT_ELTS; i++)
         {
-            hash[i].zero();
+            hash[i].make_zero();
         }
     }
     else

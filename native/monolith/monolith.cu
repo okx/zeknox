@@ -197,7 +197,7 @@ inline
         gl64_t g = gl64_t(tmp);
         ssl[row] = g.get_val();
 #else
-        gl64_t g = gl64_t::from_noncanonical_u96(res);
+        GoldilocksField g = GoldilocksField::from_noncanonical_u96(res);
         ssl[row] = g.get_val();
 #endif
     }
