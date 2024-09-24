@@ -59,6 +59,8 @@ make -j4
 3. Set breakpoints in the code [tests.cu](tests/tests.cu)
 4. Enjoy VsCode debugging!
 
+<img width="1775" alt="image" src="https://github.com/user-attachments/assets/39319eae-3de8-49a7-b5cd-5f1fad7d5531">
+
 # Algorithms and Data Structures
 
 ## Merkle Tree
