@@ -47,7 +47,7 @@ rayon = "1.8.1"
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
-plonky2_field = {git="https://github.com/okx/plonky2.git"}
+plonky2_field = {git="https://github.com/0xPolygonZero/plonky2.git"}
 
 [build-dependencies]
 cc = "^1.0.70"
