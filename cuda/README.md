@@ -48,6 +48,17 @@ make -j4
 ./tests.exe
 ```
 
+# Debug with VsCode + CUDA-GDB
+1. Install [Nsight extension](https://marketplace.visualstudio.com/items?itemName=NVIDIA.nsight-vscode-edition)
+2. Build tests in debug mode
+```
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Debug .. -DBUILD_TESTS=ON
+make -j4
+```
+3. Set breakpoints in the code [tests.cu](tests/tests.cu)
+4. Enjoy VsCode debugging!
+
 # Algorithms and Data Structures
 
 ## Merkle Tree
