@@ -36,6 +36,13 @@ set(EXE_TESTS_CXX_NAME "tests_cpp.exe")
 # CUDA support
 if(USE_CUDA)
 
+# enable CUDA debug
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+message("debug mode (enable CUDA debug)")
+set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
+set(CUDA_NVCC_FLAGS "-g -G")
+endif()
+
 set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 check_language(CUDA)
 enable_language(CUDA)
