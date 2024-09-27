@@ -24,7 +24,6 @@
 #include <utils/all_gpus.cpp>
 #include "lib.h"
 
-
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
 #endif
@@ -162,31 +161,9 @@ extern "C" RustError::by_value mult_pippenger_g2(g2_projective_t *result, g2_aff
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
 #endif
-void init_cuda() {
-    // This is taken from Plonky2 field (MULTIPLICATIVE_GROUP_GENERATOR = 7)
-#if defined(FEATURE_GOLDILOCKS)
-    const fr_t generator = fr_t(7);
-
-    size_t num_of_gpus = ngpus();
-
-    for (size_t d = 0; d < num_of_gpus; d++)
-    {
-        init_coset(d, 24, generator);
-        for (size_t k = 2; k < 25; k++)
-        {
-            init_twiddle_factors(d, k);
-        }
-    }
-#endif
-}
-
-#if defined(EXPOSE_C_INTERFACE)
-extern "C"
-#endif
 void init_cuda_degree(uint32_t max_degree) {
-    // This is taken from Plonky2 field (MULTIPLICATIVE_GROUP_GENERATOR = 7)
 #if defined(FEATURE_GOLDILOCKS)
-    const fr_t generator = fr_t(7);
+    const fr_t generator = fr_t(group_gen);
 
     size_t num_of_gpus = ngpus();
 
@@ -199,4 +176,11 @@ void init_cuda_degree(uint32_t max_degree) {
         }
     }
 #endif
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+void init_cuda() {
+    init_cuda_degree(24);
 }
