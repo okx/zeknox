@@ -161,20 +161,28 @@ extern "C" RustError::by_value mult_pippenger_g2(g2_projective_t *result, g2_aff
 #if defined(EXPOSE_C_INTERFACE)
 extern "C"
 #endif
-void init_cuda_degree(uint32_t max_degree) {
+void init_cuda_degree_and_generator(const uint32_t max_degree, const fr_t &group_generator) {
 #if defined(FEATURE_GOLDILOCKS)
-    const fr_t generator = fr_t(group_gen);
-
     size_t num_of_gpus = ngpus();
 
     for (size_t d = 0; d < num_of_gpus; d++)
     {
-        init_coset(d, max_degree, generator);
+        init_coset(d, max_degree, group_generator);
         for (size_t k = 2; k <= max_degree; k++)
         {
             init_twiddle_factors(d, k);
         }
     }
+#endif
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+void init_cuda_degree(const uint32_t max_degree) {
+#if defined(FEATURE_GOLDILOCKS)
+    const fr_t generator = fr_t(GROUP_GENERATOR);
+    init_cuda_degree_and_generator(max_degree, generator);
 #endif
 }
 

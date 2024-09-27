@@ -37,16 +37,16 @@ public:
 
   static inline cpp_gl64_t omega(uint32_t logn)
   {
-    return omegas[logn];
+    return OMEGA[logn];
   }
   static inline cpp_gl64_t omega_inv(uint32_t logn)
   {
-    return omegas_inv[logn];
+    return OMEGA_INV[logn];
   }
 
   static inline const cpp_gl64_t inv_log_size(uint32_t logn)
   {
-    return domain_size_inv[logn];
+    return DOMAIN_SIZE_INV[logn];
   }
 
   cpp_gl64_t add_canonical_u64(const u64 &rhs)

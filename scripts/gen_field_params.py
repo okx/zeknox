@@ -33,9 +33,9 @@ def gen_omegas(name, size, root_of_unity, modulus, generator):
         omegas.reverse()
         omegas_inv.reverse()
 
-        omega = "static constexpr uint64_t omegas[{:d}] = {{\n".format(size + 1)
-        omega_inv = "static constexpr uint64_t omegas_inv[{}] = {{\n".format(size + 1)
-        inv_logs = "static constexpr uint64_t domain_size_inv[{}] = {{\n".format(size + 1)
+        omega = "static constexpr uint64_t OMEGA[{:d}] = {{\n".format(size + 1)
+        omega_inv = "static constexpr uint64_t OMEGA_INV[{}] = {{\n".format(size + 1)
+        inv_logs = "static constexpr uint64_t DOMAIN_SIZE_INV[{}] = {{\n".format(size + 1)
 
         omega += "\t" + to_hex(1,limb_size) + ",\n"
         omega_inv += "\t" + to_hex(1,limb_size) + ",\n"
@@ -55,8 +55,8 @@ def gen_omegas(name, size, root_of_unity, modulus, generator):
         f.write("#ifndef __PARAMS_{}_HPP__\n".format(name.upper()))
         f.write("#define __PARAMS_{}_HPP__\n\n".format(name.upper()))
         f.write("#include <cstdint>\n\n")
-        f.write("const uint64_t group_gen = {};\n".format(to_hex(generator, limb_size)))
-        f.write("const uint64_t group_gen_inverse = {};\n\n".format(to_hex(inv(generator, modulus), limb_size)))
+        f.write("const uint64_t GROUP_GENERATOR = {};\n".format(to_hex(generator, limb_size)))
+        f.write("const uint64_t GROUP_GENERATOR_INV = {};\n\n".format(to_hex(inv(generator, modulus), limb_size)))
         f.write(omega)
         f.write(omega_inv)
         f.write(inv_logs)
