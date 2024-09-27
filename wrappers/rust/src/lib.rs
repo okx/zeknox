@@ -17,15 +17,6 @@ extern "C" {
 
     fn init_cuda_degree(max_degree: usize);
 
-    fn compute_ntt(
-        device_id: usize,
-        inout: *mut core::ffi::c_void,
-        lg_domain_size: u32,
-        ntt_order: types::NTTInputOutputOrder,
-        ntt_direction: types::NTTDirection,
-        ntt_type: types::NTTType,
-    ) -> error::Error;
-
     fn compute_batched_ntt(
         device_id: usize,
         inout: *mut core::ffi::c_void,
@@ -106,8 +97,6 @@ extern "C" {
         cap_height: u64,
         hash_type: u64,
     );
-
-
 }
 
 pub fn list_devices_info_rs() {
@@ -284,51 +273,5 @@ pub fn init_cuda_rs() {
 pub fn init_cuda_degree_rs(max_degree: usize) {
     unsafe {
         init_cuda_degree(max_degree);
-    }
-}
-
-#[allow(non_snake_case)]
-pub fn ntt<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
-    let len = inout.len();
-    if (len & (len - 1)) != 0 {
-        panic!("inout.len() is not power of 2");
-    }
-
-    let err = unsafe {
-        compute_ntt(
-            device_id,
-            inout.as_mut_ptr() as *mut core::ffi::c_void,
-            len.trailing_zeros(),
-            order,
-            types::NTTDirection::Forward,
-            types::NTTType::Standard,
-        )
-    };
-
-    if err.code != 0 {
-        panic!("{}", String::from(err));
-    }
-}
-
-#[allow(non_snake_case)]
-pub fn intt<T>(device_id: usize, inout: &mut [T], order: types::NTTInputOutputOrder) {
-    let len = inout.len();
-    if (len & (len - 1)) != 0 {
-        panic!("inout.len() is not power of 2");
-    }
-
-    let err = unsafe {
-        compute_ntt(
-            device_id,
-            inout.as_mut_ptr() as *mut core::ffi::c_void,
-            len.trailing_zeros(),
-            order,
-            types::NTTDirection::Inverse,
-            types::NTTType::Standard,
-        )
-    };
-
-    if err.code != 0 {
-        panic!("{}", String::from(err));
     }
 }

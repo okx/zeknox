@@ -2,8 +2,8 @@ use std::ops::Mul;
 
 use cryptography_cuda::device::memory::HostOrDeviceSlice;
 use cryptography_cuda::{
-    init_coset_rs, init_twiddle_factors_rs, intt, intt_batch, lde_batch, lde_batch_multi_gpu,
-    naive_transpose_rev_batch, ntt, ntt_batch, transpose_rev_batch, types::*,
+    init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch, lde_batch_multi_gpu,
+    naive_transpose_rev_batch, ntt_batch, transpose_rev_batch, types::*,
 };
 use plonky2_field::fft::{fft, ifft};
 use plonky2_field::goldilocks_field::GoldilocksField;
@@ -24,83 +24,6 @@ const DEFAULT_GPU: i32 = 0;
 const DEFAULT_GPU2: i32 = 1;
 const DEFAULT_GPU3: i32 = 2;
 const DEFAULT_GPU4: i32 = 3;
-
-#[test]
-fn test_ntt_intt_gl64_self_consistency() {
-    for lg_domain_size in 1..19 {
-        let domain_size = 1usize << lg_domain_size;
-
-        let v: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-
-        let mut gpu_buffer = v.clone();
-
-        ntt(
-            DEFAULT_GPU as usize,
-            &mut gpu_buffer,
-            NTTInputOutputOrder::NN,
-        );
-
-        intt(
-            DEFAULT_GPU as usize,
-            &mut gpu_buffer,
-            NTTInputOutputOrder::NN,
-        );
-
-        assert_eq!(v, gpu_buffer);
-    }
-}
-
-#[test]
-fn test_ntt_gl64_consistency_with_plonky2() {
-    for lg_domain_size in 1..20 {
-        let domain_size = 1usize << lg_domain_size;
-
-        let v: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-        let mut gpu_buffer = v.clone();
-        ntt(
-            DEFAULT_GPU as usize,
-            &mut gpu_buffer,
-            NTTInputOutputOrder::NN,
-        );
-
-        let plonky2_ntt_input = v.clone();
-        let coeffs = plonky2_ntt_input
-            .iter()
-            .map(|i| GoldilocksField::from_canonical_u64(*i))
-            .collect::<Vec<GoldilocksField>>();
-        let coefficients = PolynomialCoeffs { coeffs };
-        let points = fft(coefficients.clone());
-        let cpu_results: Vec<u64> = points.values.iter().map(|x| x.to_canonical_u64()).collect();
-
-        assert_eq!(gpu_buffer, cpu_results);
-    }
-}
-
-#[test]
-fn test_intt_gl64_consistency_with_plonky2() {
-    for lg_domain_size in 10..20 {
-        let domain_size = 1usize << lg_domain_size;
-
-        let v: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-        let mut gpu_buffer = v.clone();
-        intt(
-            DEFAULT_GPU as usize,
-            &mut gpu_buffer,
-            NTTInputOutputOrder::NN,
-        );
-
-        let plonky2_ntt_input = v.clone();
-        let values = plonky2_ntt_input
-            .iter()
-            .map(|i| GoldilocksField::from_canonical_u64(*i))
-            .collect::<Vec<GoldilocksField>>();
-        let values = PolynomialValues { values };
-        let points = ifft(values.clone());
-        let cpu_results: Vec<u64> = points.coeffs.iter().map(|x| x.to_canonical_u64()).collect();
-
-        assert_eq!(gpu_buffer, cpu_results);
-    }
-}
 
 #[test]
 fn test_ntt_batch_gl64_consistency_with_plonky2() {

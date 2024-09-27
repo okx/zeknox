@@ -71,7 +71,7 @@ get_filename_component(CPP_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
 get_filename_component(PROJECT_DIR ${CPP_DIR} DIRECTORY)
 message(STATUS "PROJECT_DIR is: ${PROJECT_DIR}")
 
-set(PROJECT_CUDA_SOURCE_DIR ${PROJECT_DIR}/cuda)
+set(PROJECT_CUDA_SOURCE_DIR ${PROJECT_DIR}/native)
 
 message("USE_ASM=: ${USE_ASM}")
 message("CUDA_INCLUDE_DIRS=: ${CUDA_INCLUDE_DIRS}")
