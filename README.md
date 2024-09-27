@@ -135,10 +135,12 @@ cd scripts
 ./prove_stdio.sh ../artifacts/witness_b19807080.json
 ```
 
+The following results are from an GCP g2-standard-32 instance with 32 vCPU of Intel Xeon type and one NVIDIA L4 GPU.
+
 Input | CPU-only |	CPU+GPU | Speedup
 --- | --- | --- | ---
-witness_b3_b6.json     | 193.7 ms |  135.6 ms | 1.43 X
-witness_b19807080.json | 294.6 ms |	 212.9 ms | 1.38 X
+witness_b3_b6.json     | 193.7 ms |  111.1 ms | 1.74 X
+witness_b19807080.json | 294.6 ms |	 174.5 ms | 1.69 X
 
 
 # License
