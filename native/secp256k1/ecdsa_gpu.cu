@@ -11,9 +11,11 @@
 #include <assert.h>
 #include <string.h>
 
+#include <sys/time.h>
 #include <sys/random.h>
 
 #include "ecmult_gen.h"
+#include "precomputed_ecmult.h"
 #include "secp256k1_local.h"
 
 #include "../utils/cuda_utils.cuh"
@@ -158,13 +160,17 @@ int main(void) {
      * and the default nonce function should never fail. */
 
     // GPU
-    const int nth = 32;
+    const int nth = (1 << 13);
+    const int tpb = 256;
     unsigned char *gpu_msg;
     unsigned char *gpu_seckey;
     secp256k1_ecdsa_signature *gpu_sig;
     secp256k1_context *gpu_ctx;
     int *gpu_ret;
     int rets[nth];
+    struct timeval start, end;
+
+    gettimeofday(&start, NULL);
     CHECKCUDAERR(cudaMalloc(&gpu_msg, nth * 32));
     CHECKCUDAERR(cudaMalloc(&gpu_seckey, nth * 32));
     CHECKCUDAERR(cudaMalloc(&gpu_sig, nth * sizeof(secp256k1_ecdsa_signature)));
@@ -175,15 +181,31 @@ int main(void) {
         CHECKCUDAERR(cudaMemcpy(gpu_msg + i * 32, msg_hash, 32, cudaMemcpyHostToDevice));
         CHECKCUDAERR(cudaMemcpy(gpu_seckey + i * 32, seckey, 32, cudaMemcpyHostToDevice));
     }
-    CHECKCUDAERR(cudaMemcpy(gpu_ctx, &ctx, sizeof(secp256k1_context), cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpy(gpu_ctx, ctx, sizeof(secp256k1_context), cudaMemcpyHostToDevice));
 
-    secp256k1_ecdsa_sign_batch<<<1, nth>>>(nth, gpu_ctx, gpu_sig, gpu_msg, gpu_seckey, gpu_ret);
+    secp256k1_ecdsa_sign_batch<<<nth/tpb, tpb>>>(nth, gpu_ctx, gpu_sig, gpu_msg, gpu_seckey, gpu_ret);
     CHECKCUDAERR(cudaMemcpy(rets, gpu_ret, nth * sizeof(int), cudaMemcpyDeviceToHost));
     CHECKCUDAERR(cudaMemcpy(&sig_gpu, gpu_sig, sizeof(secp256k1_ecdsa_signature), cudaMemcpyDeviceToHost));
+    gettimeofday(&end, NULL);
+    printf("GPU time: %ld us\n", (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec);
+
+    CHECKCUDAERR(cudaFree(gpu_msg));
+    CHECKCUDAERR(cudaFree(gpu_seckey));
+    CHECKCUDAERR(cudaFree(gpu_sig));
+    CHECKCUDAERR(cudaFree(gpu_ctx));
+    CHECKCUDAERR(cudaFree(gpu_ret));
 
     // CPU
-    return_val = secp256k1_ecdsa_sign(ctx, &sig_cpu, msg_hash, seckey, NULL, NULL);
-    assert(return_val);
+    gettimeofday(&start, NULL);
+
+    // #pragma omp parallel
+    for (int i = 0; i < nth; i++) {
+        return_val = secp256k1_ecdsa_sign(ctx, &sig_cpu, msg_hash, seckey, NULL, NULL);
+        assert(return_val);
+    }
+    gettimeofday(&end, NULL);
+    printf("CPU time: %ld us\n", (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec);
+
 
     /* Serialize the signature in a compact form. Should always return 1
      * according to the documentation in secp256k1.h. */

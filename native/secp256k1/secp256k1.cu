@@ -477,7 +477,7 @@ SECP256K1_FUNC int secp256k1_ecdsa_verify(const secp256k1_context* ctx, const se
             secp256k1_ecdsa_sig_verify(&r, &s, &q, &m));
 }
 
-SECP256K1_FUNC static SECP256K1_INLINE void buffer_append(unsigned char *buf, unsigned int *offset, const void *data, unsigned int len) {
+static SECP256K1_INLINE void buffer_append(unsigned char *buf, unsigned int *offset, const void *data, unsigned int len) {
     memcpy(buf + *offset, data, len);
     *offset += len;
 }
@@ -576,15 +576,15 @@ SECP256K1_FUNC static int secp256k1_ecdsa_sign_inner(const secp256k1_context* ct
 }
 
 SECP256K1_FUNC int secp256k1_ecdsa_sign(const secp256k1_context* ctx, secp256k1_ecdsa_signature *signature, const unsigned char *msghash32, const unsigned char *seckey, secp256k1_nonce_function noncefp, const void* noncedata) {
-    secp256k1_scalar r, s;
+    secp256k1_scalar r = secp256k1_scalar_zero;
+    secp256k1_scalar s = secp256k1_scalar_zero;
     int ret;
-    /*
+
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
     ARG_CHECK(msghash32 != NULL);
     ARG_CHECK(signature != NULL);
     ARG_CHECK(seckey != NULL);
-    */
 
     ret = secp256k1_ecdsa_sign_inner(ctx, &r, &s, NULL, msghash32, seckey, noncefp, noncedata);
     secp256k1_ecdsa_signature_save(signature, &r, &s);
