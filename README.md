@@ -142,6 +142,21 @@ Input | CPU-only |	CPU+GPU | Speedup
 witness_b3_b6.json     | 193.7 ms |  111.1 ms | 1.74 X
 witness_b19807080.json | 294.6 ms |	 174.5 ms | 1.69 X
 
+## Proof-of-Reserves-v2 (OKX)
+
+```
+git clone https://github.com/okx/proof-of-reserves-v2.git
+cd proof-of-reserves-v2.git
+git checkout dev-dumi-v0.1.0
+```
+then follow the steps presented in the [README](https://github.com/okx/proof-of-reserves-v2/blob/dev-dumi-v0.1.0/README.md).
+
+The following results are from an GCP g2-standard-32 instance with 32 vCPU of Intel Xeon type and one NVIDIA L4 GPU, for proving 1,310,720 accounts.
+
+CPU-only |	CPU+GPU | Speedup
+--- | --- | ---
+ | | X
+ | | X
 
 # License
 
