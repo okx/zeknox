@@ -65,6 +65,18 @@ SECP256K1_FUNC static void secp256k1_ecmult_gen(const secp256k1_ecmult_gen_conte
 
     memset(&adds, 0, sizeof(adds));
 
+#ifdef __CUDA_ARCH__
+    __shared__ secp256k1_ge_storage secp256k1_ecmult_gen_prec_table_shared[COMB_BLOCKS][COMB_POINTS];
+    if (threadIdx.x == 0) {
+        for (int i = 0; i < COMB_BLOCKS; i++) {
+            for (int j = 0; j < COMB_POINTS; j++) {
+                secp256k1_ecmult_gen_prec_table_shared[i][j] = secp256k1_ecmult_gen_prec_table[i][j];
+            }
+        }
+    }
+    __syncthreads();
+#endif
+
     /* We want to compute R = gn*G.
      *
      * To blind the scalar used in the computation, we rewrite this to be
@@ -245,7 +257,11 @@ SECP256K1_FUNC static void secp256k1_ecmult_gen(const secp256k1_ecmult_gen_conte
              *    (https://www.tau.ac.il/~tromer/papers/cache.pdf)
              */
             for (index = 0; index < COMB_POINTS; ++index) {
+#ifdef __CUDA_ARCH__
+                secp256k1_ge_storage_cmov(&adds, &secp256k1_ecmult_gen_prec_table_shared[block][index], index == abs);
+#else
                 secp256k1_ge_storage_cmov(&adds, &secp256k1_ecmult_gen_prec_table[block][index], index == abs);
+#endif
             }
 
             /* Set add=adds or add=-adds, in constant time, based on sign. */

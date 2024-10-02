@@ -12,7 +12,7 @@
 #include "scratch.h"
 
 #ifndef ECMULT_WINDOW_SIZE
-#  define ECMULT_WINDOW_SIZE 15
+#  define ECMULT_WINDOW_SIZE 9
 #  ifdef DEBUG_CONFIG
 #     pragma message DEBUG_CONFIG_MSG("ECMULT_WINDOW_SIZE undefined, assuming default value")
 #  endif

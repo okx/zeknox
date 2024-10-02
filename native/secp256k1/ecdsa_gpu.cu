@@ -22,7 +22,8 @@
 
 // #include "examples_util.h"
 
-static void secure_erase(void *ptr, size_t len) {
+static void secure_erase(void *ptr, size_t len)
+{
 #if defined(_MSC_VER)
     /* SecureZeroMemory is guaranteed not to be optimized out by MSVC. */
     SecureZeroMemory(ptr, len);
@@ -47,45 +48,58 @@ static void secure_erase(void *ptr, size_t len) {
 }
 
 /* Returns 1 on success, and 0 on failure. */
-static int fill_random(unsigned char* data, size_t size) {
+static int fill_random(unsigned char *data, size_t size)
+{
 #if defined(_WIN32)
     NTSTATUS res = BCryptGenRandom(NULL, data, size, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-    if (res != STATUS_SUCCESS || size > ULONG_MAX) {
+    if (res != STATUS_SUCCESS || size > ULONG_MAX)
+    {
         return 0;
-    } else {
+    }
+    else
+    {
         return 1;
     }
 #elif defined(__linux__) || defined(__FreeBSD__)
     /* If `getrandom(2)` is not available you should fallback to /dev/urandom */
     ssize_t res = getrandom(data, size, 0);
-    if (res < 0 || (size_t)res != size ) {
+    if (res < 0 || (size_t)res != size)
+    {
         return 0;
-    } else {
+    }
+    else
+    {
         return 1;
     }
 #elif defined(__APPLE__) || defined(__OpenBSD__)
     /* If `getentropy(2)` is not available you should fallback to either
      * `SecRandomCopyBytes` or /dev/urandom */
     int res = getentropy(data, size);
-    if (res == 0) {
+    if (res == 0)
+    {
         return 1;
-    } else {
+    }
+    else
+    {
         return 0;
     }
 #endif
     return 0;
 }
 
-static void print_hex(unsigned char* data, size_t size) {
+static void print_hex(unsigned char *data, size_t size)
+{
     size_t i;
     printf("0x");
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < size; i++)
+    {
         printf("%02x", data[i]);
     }
     printf("\n");
 }
 
-__global__ void secp256k1_ecdsa_sign_batch(int batch_size, const secp256k1_context* ctxs, secp256k1_ecdsa_signature *signatures, const unsigned char *msghash32s, const unsigned char *seckeys, int *rets) {
+__global__ void secp256k1_ecdsa_sign_batch(int batch_size, const secp256k1_context *ctxs, secp256k1_ecdsa_signature *signatures, const unsigned char *msghash32s, const unsigned char *seckeys, int *rets)
+{
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= batch_size)
         return;
@@ -93,30 +107,49 @@ __global__ void secp256k1_ecdsa_sign_batch(int batch_size, const secp256k1_conte
     rets[tid] = secp256k1_ecdsa_sign(ctxs, signatures + tid, msghash32s + tid * 32, seckeys + tid * 32, NULL, NULL);
 }
 
-int main(void) {
-    /* Instead of signing the message directly, we must sign a 32-byte hash.
-     * Here the message is "Hello, world!" and the hash function was SHA-256.
-     * An actual implementation should just call SHA-256, but this example
-     * hardcodes the output to avoid depending on an additional library.
-     * See https://bitcoin.stackexchange.com/questions/81115/if-someone-wanted-to-pretend-to-be-satoshi-by-posting-a-fake-signature-to-defrau/81116#81116 */
-    unsigned char msg_hash[32] = {
-        0x31, 0x5F, 0x5B, 0xDB, 0x76, 0xD0, 0x78, 0xC4,
-        0x3B, 0x8A, 0xC0, 0x06, 0x4E, 0x4A, 0x01, 0x64,
-        0x61, 0x2B, 0x1F, 0xCE, 0x77, 0xC8, 0x69, 0x34,
-        0x5B, 0xFC, 0x94, 0xC7, 0x58, 0x94, 0xED, 0xD3,
-    };
-    unsigned char seckey[32];
+int main(void)
+{
+    constexpr uint32_t batch_size = (1 << 14);
+    constexpr uint32_t hash_size = 32;
+    constexpr uint32_t seckey_size = 32;
+    constexpr uint32_t compressed_pubkey_size = 33;
+    constexpr uint32_t serialized_signature_size = 64;
+
+    // allocate CPU data
+    unsigned char *cpu_msg_hash = (unsigned char *)malloc(hash_size * batch_size);
+    assert(cpu_msg_hash != NULL);
+
+    unsigned char *cpu_seckey = (unsigned char *)malloc(seckey_size * batch_size);
+    assert(cpu_msg_hash != NULL);
+
     unsigned char randomize[32];
-    unsigned char compressed_pubkey[33];
-    unsigned char serialized_signature_cpu[64], serialized_signature_gpu[64];
+
+    unsigned char *cpu_compressed_pubkey = (unsigned char *)malloc(compressed_pubkey_size * batch_size);
+    assert(cpu_compressed_pubkey != NULL);
+
+    unsigned char *cpu_serialized_signature = (unsigned char *)malloc(serialized_signature_size * batch_size);
+    assert(cpu_serialized_signature != NULL);
+
+    unsigned char *gpu_serialized_signature = (unsigned char *)malloc(serialized_signature_size * batch_size);
+    assert(gpu_serialized_signature != NULL);
+
+    secp256k1_pubkey *pubkey = (secp256k1_pubkey *)malloc(sizeof(secp256k1_pubkey) * batch_size);
+    assert(pubkey != NULL);
+
+    secp256k1_ecdsa_signature *cpu_sigs = (secp256k1_ecdsa_signature *)malloc(batch_size * sizeof(secp256k1_ecdsa_signature));
+    assert(cpu_sigs != NULL);
+
+    secp256k1_ecdsa_signature *gpu_sigs = (secp256k1_ecdsa_signature *)malloc(batch_size * sizeof(secp256k1_ecdsa_signature));
+    assert(gpu_sigs != NULL);
+
     size_t len;
     int is_cpu_signature_valid, is_gpu_signature_valid, is_signature_valid2;
     int return_val;
-    secp256k1_pubkey pubkey;
-    secp256k1_ecdsa_signature sig_cpu, sig_gpu;
+
     /* Before we can call actual API functions, we need to create a "context". */
-    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
-    if (!fill_random(randomize, sizeof(randomize))) {
+    secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    if (!fill_random(randomize, sizeof(randomize)))
+    {
         printf("Failed to generate randomness\n");
         return 1;
     }
@@ -131,26 +164,32 @@ int main(void) {
     /* If the secret key is zero or out of range (bigger than secp256k1's
      * order), we try to sample a new key. Note that the probability of this
      * happening is negligible. */
-    while (1) {
-        if (!fill_random(seckey, sizeof(seckey))) {
-            printf("Failed to generate randomness\n");
-            return 1;
+    for (uint32_t i = 0; i < batch_size; i++)
+    {
+        while (1)
+        {
+            if (!fill_random(cpu_seckey + i * seckey_size, seckey_size))
+            {
+                printf("Failed to generate randomness!\n");
+                return 1;
+            }
+            if (secp256k1_ec_seckey_verify(ctx, cpu_seckey + i * seckey_size))
+            {
+                break;
+            }
         }
-        if (secp256k1_ec_seckey_verify(ctx, seckey)) {
-            break;
-        }
+
+        /* Public key creation using a valid context with a verified secret key should never fail */
+        return_val = secp256k1_ec_pubkey_create(ctx, pubkey + i, cpu_seckey + i * seckey_size);
+        assert(return_val);
+
+        /* Serialize the pubkey in a compressed form(33 bytes). Should always return 1. */
+        len = compressed_pubkey_size;
+        return_val = secp256k1_ec_pubkey_serialize(ctx, cpu_compressed_pubkey + i * compressed_pubkey_size, &len, pubkey + i, SECP256K1_EC_COMPRESSED);
+        assert(return_val);
+        /* Should be the same size as the size of the output, because we passed a 33 byte array. */
+        assert(len == compressed_pubkey_size);
     }
-
-    /* Public key creation using a valid context with a verified secret key should never fail */
-    return_val = secp256k1_ec_pubkey_create(ctx, &pubkey, seckey);
-    assert(return_val);
-
-    /* Serialize the pubkey in a compressed form(33 bytes). Should always return 1. */
-    len = sizeof(compressed_pubkey);
-    return_val = secp256k1_ec_pubkey_serialize(ctx, compressed_pubkey, &len, &pubkey, SECP256K1_EC_COMPRESSED);
-    assert(return_val);
-    /* Should be the same size as the size of the output, because we passed a 33 byte array. */
-    assert(len == sizeof(compressed_pubkey));
 
     /*** Signing ***/
 
@@ -160,32 +199,32 @@ int main(void) {
      * and the default nonce function should never fail. */
 
     // GPU
-    const int nth = (1 << 13);
     const int tpb = 256;
     unsigned char *gpu_msg;
     unsigned char *gpu_seckey;
     secp256k1_ecdsa_signature *gpu_sig;
     secp256k1_context *gpu_ctx;
-    int *gpu_ret;
-    int rets[nth];
+    int *gpu_rets;
+    int *cpu_rets = (int *)malloc(batch_size * sizeof(int));
+    assert(cpu_rets != NULL);
     struct timeval start, end;
 
-    gettimeofday(&start, NULL);
-    CHECKCUDAERR(cudaMalloc(&gpu_msg, nth * 32));
-    CHECKCUDAERR(cudaMalloc(&gpu_seckey, nth * 32));
-    CHECKCUDAERR(cudaMalloc(&gpu_sig, nth * sizeof(secp256k1_ecdsa_signature)));
     CHECKCUDAERR(cudaMalloc(&gpu_ctx, sizeof(secp256k1_context)));
-    CHECKCUDAERR(cudaMalloc(&gpu_ret, nth * sizeof(int)));
+    CHECKCUDAERR(cudaMalloc(&gpu_msg, batch_size * hash_size));
+    CHECKCUDAERR(cudaMalloc(&gpu_seckey, batch_size * seckey_size));
+    CHECKCUDAERR(cudaMalloc(&gpu_sig, batch_size * sizeof(secp256k1_ecdsa_signature)));
+    CHECKCUDAERR(cudaMalloc(&gpu_rets, batch_size * sizeof(int)));
 
-    for (int i = 0; i < nth; i++) {
-        CHECKCUDAERR(cudaMemcpy(gpu_msg + i * 32, msg_hash, 32, cudaMemcpyHostToDevice));
-        CHECKCUDAERR(cudaMemcpy(gpu_seckey + i * 32, seckey, 32, cudaMemcpyHostToDevice));
-    }
+    // start timing (include data transfers)
+    printf("Starting GPU signing...\n");
+    gettimeofday(&start, NULL);
+    CHECKCUDAERR(cudaMemcpy(gpu_msg, cpu_msg_hash, batch_size * hash_size, cudaMemcpyHostToDevice));
+    CHECKCUDAERR(cudaMemcpy(gpu_seckey, cpu_seckey, batch_size * seckey_size, cudaMemcpyHostToDevice));
     CHECKCUDAERR(cudaMemcpy(gpu_ctx, ctx, sizeof(secp256k1_context), cudaMemcpyHostToDevice));
 
-    secp256k1_ecdsa_sign_batch<<<nth/tpb, tpb>>>(nth, gpu_ctx, gpu_sig, gpu_msg, gpu_seckey, gpu_ret);
-    CHECKCUDAERR(cudaMemcpy(rets, gpu_ret, nth * sizeof(int), cudaMemcpyDeviceToHost));
-    CHECKCUDAERR(cudaMemcpy(&sig_gpu, gpu_sig, sizeof(secp256k1_ecdsa_signature), cudaMemcpyDeviceToHost));
+    secp256k1_ecdsa_sign_batch<<<batch_size / tpb, tpb>>>(batch_size, gpu_ctx, gpu_sig, gpu_msg, gpu_seckey, gpu_rets);
+    CHECKCUDAERR(cudaMemcpy(cpu_rets, gpu_rets, batch_size * sizeof(int), cudaMemcpyDeviceToHost));
+    CHECKCUDAERR(cudaMemcpy(gpu_sigs, gpu_sig, batch_size * sizeof(secp256k1_ecdsa_signature), cudaMemcpyDeviceToHost));
     gettimeofday(&end, NULL);
     printf("GPU time: %ld us\n", (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec);
 
@@ -193,60 +232,70 @@ int main(void) {
     CHECKCUDAERR(cudaFree(gpu_seckey));
     CHECKCUDAERR(cudaFree(gpu_sig));
     CHECKCUDAERR(cudaFree(gpu_ctx));
-    CHECKCUDAERR(cudaFree(gpu_ret));
+    CHECKCUDAERR(cudaFree(gpu_rets));
 
     // CPU
+    printf("Starting CPU signing...\n");
     gettimeofday(&start, NULL);
 
-    // #pragma omp parallel
-    for (int i = 0; i < nth; i++) {
-        return_val = secp256k1_ecdsa_sign(ctx, &sig_cpu, msg_hash, seckey, NULL, NULL);
+    #pragma omp parallel for
+    for (int i = 0; i < batch_size; i++)
+    {
+        return_val = secp256k1_ecdsa_sign(ctx, &cpu_sigs[i], cpu_msg_hash + i * hash_size, cpu_seckey + i * seckey_size, NULL, NULL);
         assert(return_val);
     }
     gettimeofday(&end, NULL);
     printf("CPU time: %ld us\n", (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec);
 
-
-    /* Serialize the signature in a compact form. Should always return 1
-     * according to the documentation in secp256k1.h. */
-    return_val = secp256k1_ecdsa_signature_serialize_compact(ctx, serialized_signature_cpu, &sig_cpu);
-    assert(return_val);
-    return_val = secp256k1_ecdsa_signature_serialize_compact(ctx, serialized_signature_gpu, &sig_gpu);
-    assert(return_val);
-
-
     /*** Verification ***/
+    for (int i = 0; i < batch_size; i++)
+    {
+        /* Serialize the signature in a compact form. Should always return 1
+         * according to the documentation in secp256k1.h. */
+        return_val = secp256k1_ecdsa_signature_serialize_compact(ctx, cpu_serialized_signature + i * compressed_pubkey_size, cpu_sigs + i);
+        assert(return_val);
+        return_val = secp256k1_ecdsa_signature_serialize_compact(ctx, gpu_serialized_signature + i * compressed_pubkey_size, gpu_sigs + i);
+        assert(return_val);
 
-    /* Deserialize the signature. This will return 0 if the signature can't be parsed correctly. */
-    if (!secp256k1_ecdsa_signature_parse_compact(ctx, &sig_cpu, serialized_signature_cpu)) {
-        printf("Failed parsing the CPU signature\n");
-        return 1;
-    }
-    if (!secp256k1_ecdsa_signature_parse_compact(ctx, &sig_gpu, serialized_signature_gpu)) {
-        printf("Failed parsing the GPU signature\n");
-        return 1;
-    }
+        /* Deserialize the signature. This will return 0 if the signature can't be parsed correctly. */
+        if (!secp256k1_ecdsa_signature_parse_compact(ctx, cpu_sigs + i, cpu_serialized_signature + i * compressed_pubkey_size))
+        {
+            printf("Failed parsing the CPU signature\n");
+            return 1;
+        }
+        if (!secp256k1_ecdsa_signature_parse_compact(ctx, gpu_sigs + i, gpu_serialized_signature + i * compressed_pubkey_size))
+        {
+            printf("Failed parsing the GPU signature\n");
+            return 1;
+        }
 
-    /* Deserialize the public key. This will return 0 if the public key can't be parsed correctly. */
-    if (!secp256k1_ec_pubkey_parse(ctx, &pubkey, compressed_pubkey, sizeof(compressed_pubkey))) {
-        printf("Failed parsing the public key\n");
-        return 1;
+        /* Deserialize the public key. This will return 0 if the public key can't be parsed correctly. */
+        if (!secp256k1_ec_pubkey_parse(ctx, pubkey + i, cpu_compressed_pubkey + i * compressed_pubkey_size, compressed_pubkey_size))
+        {
+            printf("Failed parsing the public key\n");
+            return 1;
+        }
+
+        is_cpu_signature_valid = secp256k1_ecdsa_verify(ctx, cpu_sigs + i, cpu_msg_hash + i * hash_size, pubkey + i);
+        assert(is_cpu_signature_valid);
+        is_gpu_signature_valid = secp256k1_ecdsa_verify(ctx, gpu_sigs + i, cpu_msg_hash, pubkey + i);
+        assert(is_gpu_signature_valid);
     }
 
     /* Verify a signature. This will return 1 if it's valid and 0 if it's not. */
-    is_cpu_signature_valid = secp256k1_ecdsa_verify(ctx, &sig_cpu, msg_hash, &pubkey);
-    is_gpu_signature_valid = secp256k1_ecdsa_verify(ctx, &sig_gpu, msg_hash, &pubkey);
+    is_cpu_signature_valid = secp256k1_ecdsa_verify(ctx, cpu_sigs, cpu_msg_hash, pubkey);
+    is_gpu_signature_valid = secp256k1_ecdsa_verify(ctx, gpu_sigs, cpu_msg_hash, pubkey);
 
     printf("Is the CPU signature valid? %s\n", is_cpu_signature_valid ? "true" : "false");
     printf("Is the GPU signature valid? %s\n", is_gpu_signature_valid ? "true" : "false");
     printf("Secret Key: ");
-    print_hex(seckey, sizeof(seckey));
+    print_hex(cpu_seckey, seckey_size);
     printf("Public Key: ");
-    print_hex(compressed_pubkey, sizeof(compressed_pubkey));
+    print_hex(cpu_compressed_pubkey, compressed_pubkey_size);
     printf("Signature CPU: ");
-    print_hex(serialized_signature_cpu, sizeof(serialized_signature_cpu));
+    print_hex(cpu_serialized_signature, serialized_signature_size);
     printf("Signature GPU: ");
-    print_hex(serialized_signature_gpu, sizeof(serialized_signature_gpu));
+    print_hex(gpu_serialized_signature, serialized_signature_size);
 
     /* This will clear everything from the context and free the memory */
     secp256k1_context_destroy(ctx);
@@ -257,7 +306,7 @@ int main(void) {
        context secp256k1_context_static. See its description in
        include/secp256k1.h for details. */
     is_signature_valid2 = secp256k1_ecdsa_verify(secp256k1_context_static,
-                                                 &sig_cpu, msg_hash, &pubkey);
+                                                 cpu_sigs, cpu_msg_hash, pubkey);
     assert(is_signature_valid2 == is_cpu_signature_valid);
 
     /* It's best practice to try to clear secrets from memory after using them.
@@ -267,7 +316,19 @@ int main(void) {
      *
      * Here we are preventing these writes from being optimized out, as any good compiler
      * will remove any writes that aren't used. */
-    secure_erase(seckey, sizeof(seckey));
+    secure_erase(cpu_seckey, seckey_size);
 
+    // Free memory
+    free(cpu_msg_hash);
+    free(cpu_seckey);
+    free(cpu_compressed_pubkey);
+    free(cpu_serialized_signature);
+    free(gpu_serialized_signature);
+    free(pubkey);
+    free(cpu_sigs);
+    free(gpu_sigs);
+    free(cpu_rets);
+
+    printf("Done.\n");
     return 0;
 }

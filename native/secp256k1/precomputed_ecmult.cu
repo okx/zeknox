@@ -14,7 +14,7 @@
 #endif /* EXHAUSTIVE_TEST_ORDER */
 #define WINDOW_G ECMULT_WINDOW_SIZE
 #ifdef __CUDA_ARCH__
-__device__
+__constant__ __device__
 #else
 const
 #endif
@@ -8239,7 +8239,7 @@ secp256k1_ge_storage secp256k1_pre_g[ECMULT_TABLE_SIZE(WINDOW_G)] = {
 #endif
 };
 #ifdef __CUDA_ARCH__
-__device__
+__constant__ __device__
 #else
 const
 #endif
