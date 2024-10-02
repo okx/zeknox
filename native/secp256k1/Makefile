@@ -5,9 +5,12 @@ NVCC := /usr/local/cuda/bin/nvcc
 
 CUDA_ARCH=sm_86
 
-# for release
-CFLAGS := $(INCL) -O3 -march=native -fopenmp -fPIC -DSECP256K1_WIDEMUL_INT64
-NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH) -DSECP256K1_WIDEMUL_INT64 -DSECP256K1_CPLUSPLUS_TEST_OVERRIDE
+# for release, 64 and 32 bits
+# CFLAGS := $(INCL) -O3 -march=native -fopenmp -fPIC -DSECP256K1_WIDEMUL_INT64
+# NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH) -DSECP256K1_WIDEMUL_INT64 -DSECP256K1_CPLUSPLUS_TEST_OVERRIDE
+# release, 128 and 64 bits
+CFLAGS := $(INCL) -O3 -march=native -fopenmp -fPIC -DSECP256K1_WIDEMUL_INT128 -DSECP256K1_INT128_NATIVE
+NVCCFLAGS := $(INCL) -Xcompiler -fopenmp -Xcompiler -fPIC -Xcompiler -O3 -arch=$(CUDA_ARCH) -DSECP256K1_WIDEMUL_INT128 -DSECP256K1_INT128_NATIVE -DSECP256K1_CPLUSPLUS_TEST_OVERRIDE
 
 MKDIR_P ?= mkdir -p
 

@@ -14,8 +14,6 @@
 #include "secp256k1_local.h"
 #include <sys/random.h>
 
-// #include "examples_util.h"
-
 static void secure_erase(void *ptr, size_t len) {
 #if defined(_MSC_VER)
     /* SecureZeroMemory is guaranteed not to be optimized out by MSVC. */

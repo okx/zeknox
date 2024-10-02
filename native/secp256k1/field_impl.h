@@ -10,9 +10,9 @@
 #include "field.h"
 #include "util.h"
 
-// #if defined(SECP256K1_WIDEMUL_INT128)
-// #include "field_5x52_impl.h"
-#if defined(SECP256K1_WIDEMUL_INT64)
+#if defined(SECP256K1_WIDEMUL_INT128)
+#include "field_5x52_impl.h"
+#elif defined(SECP256K1_WIDEMUL_INT64)
 #include "field_10x26_impl.h"
 #else
 #error "Please select wide multiplication implementation"
