@@ -155,8 +155,7 @@ The following results are from an GCP g2-standard-32 instance with 32 vCPU of In
 
 CPU-only |	CPU+GPU | Speedup
 --- | --- | ---
- | | X
- | | X
+ 2834 s | 1377 s | 2.06 X
 
 # License
 
