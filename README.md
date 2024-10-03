@@ -122,6 +122,22 @@ Poseidon BN128 | 8192  | 404.7 ms  | 73.5 ms  | 5.5 X
 Poseidon BN128 | 16384 | 809.4 ms  | 124.0 ms | 6.5 X
 Poseidon BN128 | 32768 | 1618.4 ms | 239.9 ms | 6.7 X
 
+Next, we show benchmarking results for LDE + MT building with Poseidon, comparing the CPU-only with the CPU+GPU execution. To run these benchmarks, simply:
+```
+git clone https://github.com/okx/plonky2.git
+cd plonky2
+git checkout dev
+cd plonky2
+cargo bench --bench=lde
+cargo bench --bench=lde --features=cuda
+```
+
+LDE size (log) | CPU-only | CPU+GPU | Speedup
+--- | --- | --- | ---
+  13 |  6.5 ms | 3.1 ms | 2.1 X
+  14 | 11.6 ms | 4.2 ms | 2.8 X
+  15 | 22.0 ms | 6.0 ms | 3.7 X
+
 
 ## zk_evm (Type 1 ZK EVM from 0xPolygonZero)
 
