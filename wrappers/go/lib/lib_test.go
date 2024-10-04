@@ -1,8 +1,10 @@
 package lib
 
 import (
+	"math"
 	"testing"
 	"unsafe"
+	"zeknox/device"
 )
 
 func TestListDevicesInfo(t *testing.T) {
@@ -146,5 +148,114 @@ func TestTransposeRevBatch(t *testing.T) {
 	err := TransposeRevBatch(0, pb, pa, logn, cfg)
 	if err != nil {
 		t.Errorf("TransposeRevBatch() error = %v", err)
+	}
+}
+
+func TestMerkleTreeBuildingOutputGpu(t *testing.T) {
+	leaf := []uint64{8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027}
+
+	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
+
+	leaf_size := len(leaf)
+	n_leaves := 4
+	n_caps := n_leaves
+	hash_size := 4
+	n_digests := 2 * (n_leaves - n_caps)
+	cap_h := int(math.Log2(float64(n_caps)))
+
+	leaves := make([]uint64, n_leaves*leaf_size)
+	for i := 0; i < n_leaves; i++ {
+		copy(leaves[i*leaf_size:], leaf)
+	}
+	caps := make([]uint64, n_caps*hash_size)
+
+	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, n_leaves*leaf_size)
+	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
+
+	gpuLeavesBuff.CopyFromHost(leaves)
+
+	FillDigestsBufLinearGPUWithGPUPtr(0, gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), n_digests, n_caps, n_leaves, leaf_size, cap_h, HashPoseidon)
+
+	gpuCapsBuff.CopyToHost(caps)
+	for j := 0; j < n_caps; j++ {
+		for i := 0; i < len(expHash); i++ {
+			if caps[4*j+i] != expHash[i] {
+				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
+			}
+		}
+	}
+}
+
+func TestMerkleTreeBuildingOutputMultiGpu(t *testing.T) {
+	num, err := GetNumberOfGPUs()
+	if err != nil {
+		t.Errorf("GetNumberOfGPUs() error = %v", err)
+	}
+	if num < 2 {
+		t.Skip("not enough GPUs to test LDEBatchMultiGPU")
+	}
+
+	leaf := []uint64{8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027}
+
+	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
+
+	leaf_size := len(leaf)
+	n_leaves := 4
+	n_caps := n_leaves
+	hash_size := 4
+	n_digests := 2 * (n_leaves - n_caps)
+	cap_h := int(math.Log2(float64(n_caps)))
+
+	leaves := make([]uint64, n_leaves*leaf_size)
+	for i := 0; i < n_leaves; i++ {
+		copy(leaves[i*leaf_size:], leaf)
+	}
+	caps := make([]uint64, n_caps*hash_size)
+
+	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, n_leaves*leaf_size)
+	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
+
+	gpuLeavesBuff.CopyFromHost(leaves)
+
+	FillDigestsBufLinearMultiGPUWithGPUPtr(gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), n_digests, n_caps, n_leaves, leaf_size, cap_h, HashPoseidon)
+
+	gpuCapsBuff.CopyToHost(caps)
+	for j := 0; j < n_caps; j++ {
+		for i := 0; i < len(expHash); i++ {
+			if caps[4*j+i] != expHash[i] {
+				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
+			}
+		}
+	}
+}
+
+func TestMerkleTreeBuildingOutputCpu(t *testing.T) {
+	leaf := []uint64{8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027}
+
+	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
+
+	leaf_size := len(leaf)
+	n_leaves := 4
+	n_caps := n_leaves
+	hash_size := 4
+	n_digests := 2 * (n_leaves - n_caps)
+	cap_h := int(math.Log2(float64(n_caps)))
+
+	leaves := make([]uint64, n_leaves*leaf_size)
+	for i := 0; i < n_leaves; i++ {
+		copy(leaves[i*leaf_size:], leaf)
+	}
+	caps := make([]uint64, n_caps*hash_size)
+
+	FillDigestsBufLinearCPU(unsafe.Pointer(&caps[0]), unsafe.Pointer(&caps[0]), unsafe.Pointer(&leaves[0]), n_digests, n_caps, n_leaves, leaf_size, cap_h, HashPoseidon)
+
+	for j := 0; j < n_caps; j++ {
+		for i := 0; i < len(expHash); i++ {
+			if caps[4*j+i] != expHash[i] {
+				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
+			}
+		}
 	}
 }
