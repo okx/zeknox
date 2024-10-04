@@ -50,24 +50,24 @@ func TestInitCUDADegree(t *testing.T) {
 
 func TestLDEBatch(t *testing.T) {
 	logn := 4
-	rate_bits := 2
-	log_domain_size := logn + rate_bits
+	rateBits := 2
+	logDomainSize := logn + rateBits
 	batches := 2
 
-	InitTwiddleFactors(0, log_domain_size)
-	InitCoset(0, log_domain_size, 7)
+	InitTwiddleFactors(0, logDomainSize)
+	InitCoset(0, logDomainSize, 7)
 
 	a := make([]uint64, batches*(1<<logn))
 	for i := 0; i < batches*(1<<logn); i++ {
 		a[i] = uint64(i)
 	}
-	b := make([]uint64, batches*(1<<log_domain_size))
+	b := make([]uint64, batches*(1<<logDomainSize))
 	pa := unsafe.Pointer(&a[0])
 	pb := unsafe.Pointer(&b[0])
 
 	cfg := DefaultNTTConfig()
-	cfg.ExtensionRateBits = uint32(rate_bits)
-	err := LDEBatch(0, pb, pa, log_domain_size, cfg)
+	cfg.ExtensionRateBits = uint32(rateBits)
+	err := LDEBatch(0, pb, pa, logDomainSize, cfg)
 	if err != nil {
 		t.Errorf("LDEBatch() error = %v", err)
 	}
@@ -83,26 +83,26 @@ func TestLDEBatchMultiGPU(t *testing.T) {
 	}
 
 	logn := 4
-	rate_bits := 2
-	log_domain_size := logn + rate_bits
+	rateBits := 2
+	logDomainSize := logn + rateBits
 	batches := 2
 
 	for i := 0; i < num; i++ {
-		InitTwiddleFactors(i, log_domain_size)
-		InitCoset(i, log_domain_size, 7)
+		InitTwiddleFactors(i, logDomainSize)
+		InitCoset(i, logDomainSize, 7)
 	}
 
 	a := make([]uint64, batches*(1<<logn))
 	for i := 0; i < batches*(1<<logn); i++ {
 		a[i] = uint64(i)
 	}
-	b := make([]uint64, batches*(1<<log_domain_size))
+	b := make([]uint64, batches*(1<<logDomainSize))
 	pa := unsafe.Pointer(&a[0])
 	pb := unsafe.Pointer(&b[0])
 
 	cfg := DefaultNTTConfig()
-	cfg.ExtensionRateBits = uint32(rate_bits)
-	err = LDEBatchMultiGPU(pb, pa, num, cfg, log_domain_size, batches*(1<<logn), batches*(1<<log_domain_size))
+	cfg.ExtensionRateBits = uint32(rateBits)
+	err = LDEBatchMultiGPU(pb, pa, num, cfg, logDomainSize, batches*(1<<logn), batches*(1<<logDomainSize))
 	if err != nil {
 		t.Errorf("LDEBatchMultiGPU() error = %v", err)
 	}
@@ -156,29 +156,29 @@ func TestMerkleTreeBuildingOutputGpu(t *testing.T) {
 
 	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
 
-	leaf_size := len(leaf)
-	n_leaves := 4
-	n_caps := n_leaves
-	hash_size := 4
-	n_digests := 2 * (n_leaves - n_caps)
-	cap_h := int(math.Log2(float64(n_caps)))
+	leafSize := len(leaf)
+	nLeaves := 4
+	nCaps := nLeaves
+	hashSize := 4
+	nDigests := 2 * (nLeaves - nCaps)
+	capHeight := int(math.Log2(float64(nCaps)))
 
-	leaves := make([]uint64, n_leaves*leaf_size)
-	for i := 0; i < n_leaves; i++ {
-		copy(leaves[i*leaf_size:], leaf)
+	leaves := make([]uint64, nLeaves*leafSize)
+	for i := 0; i < nLeaves; i++ {
+		copy(leaves[i*leafSize:], leaf)
 	}
-	caps := make([]uint64, n_caps*hash_size)
+	caps := make([]uint64, nCaps*hashSize)
 
-	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, n_leaves*leaf_size)
-	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
-	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
+	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, nLeaves*leafSize)
+	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
 
 	gpuLeavesBuff.CopyFromHost(leaves)
 
-	FillDigestsBufLinearGPUWithGPUPtr(0, gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), n_digests, n_caps, n_leaves, leaf_size, cap_h, HashPoseidon)
+	FillDigestsBufLinearGPUWithGPUPtr(0, gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
 
 	gpuCapsBuff.CopyToHost(caps)
-	for j := 0; j < n_caps; j++ {
+	for j := 0; j < nCaps; j++ {
 		for i := 0; i < len(expHash); i++ {
 			if caps[4*j+i] != expHash[i] {
 				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
@@ -200,29 +200,29 @@ func TestMerkleTreeBuildingOutputMultiGpu(t *testing.T) {
 
 	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
 
-	leaf_size := len(leaf)
-	n_leaves := 4
-	n_caps := n_leaves
-	hash_size := 4
-	n_digests := 2 * (n_leaves - n_caps)
-	cap_h := int(math.Log2(float64(n_caps)))
+	leafSize := len(leaf)
+	nLeaves := 4
+	nCaps := nLeaves
+	hashSize := 4
+	nDigests := 2 * (nLeaves - nCaps)
+	capHeight := int(math.Log2(float64(nCaps)))
 
-	leaves := make([]uint64, n_leaves*leaf_size)
-	for i := 0; i < n_leaves; i++ {
-		copy(leaves[i*leaf_size:], leaf)
+	leaves := make([]uint64, nLeaves*leafSize)
+	for i := 0; i < nLeaves; i++ {
+		copy(leaves[i*leafSize:], leaf)
 	}
-	caps := make([]uint64, n_caps*hash_size)
+	caps := make([]uint64, nCaps*hashSize)
 
-	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, n_leaves*leaf_size)
-	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
-	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, n_caps*hash_size)
+	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, nLeaves*leafSize)
+	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
 
 	gpuLeavesBuff.CopyFromHost(leaves)
 
-	FillDigestsBufLinearMultiGPUWithGPUPtr(gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), n_digests, n_caps, n_leaves, leaf_size, cap_h, HashPoseidon)
+	FillDigestsBufLinearMultiGPUWithGPUPtr(gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
 
 	gpuCapsBuff.CopyToHost(caps)
-	for j := 0; j < n_caps; j++ {
+	for j := 0; j < nCaps; j++ {
 		for i := 0; i < len(expHash); i++ {
 			if caps[4*j+i] != expHash[i] {
 				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
@@ -236,22 +236,22 @@ func TestMerkleTreeBuildingOutputCpu(t *testing.T) {
 
 	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
 
-	leaf_size := len(leaf)
-	n_leaves := 4
-	n_caps := n_leaves
-	hash_size := 4
-	n_digests := 2 * (n_leaves - n_caps)
-	cap_h := int(math.Log2(float64(n_caps)))
+	leafSize := len(leaf)
+	nLeaves := 4
+	nCaps := nLeaves
+	hashSize := 4
+	nDigests := 2 * (nLeaves - nCaps)
+	capHeight := int(math.Log2(float64(nCaps)))
 
-	leaves := make([]uint64, n_leaves*leaf_size)
-	for i := 0; i < n_leaves; i++ {
-		copy(leaves[i*leaf_size:], leaf)
+	leaves := make([]uint64, nLeaves*leafSize)
+	for i := 0; i < nLeaves; i++ {
+		copy(leaves[i*leafSize:], leaf)
 	}
-	caps := make([]uint64, n_caps*hash_size)
+	caps := make([]uint64, nCaps*hashSize)
 
-	FillDigestsBufLinearCPU(unsafe.Pointer(&caps[0]), unsafe.Pointer(&caps[0]), unsafe.Pointer(&leaves[0]), n_digests, n_caps, n_leaves, leaf_size, cap_h, HashPoseidon)
+	FillDigestsBufLinearCPU(unsafe.Pointer(&caps[0]), unsafe.Pointer(&caps[0]), unsafe.Pointer(&leaves[0]), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
 
-	for j := 0; j < n_caps; j++ {
+	for j := 0; j < nCaps; j++ {
 		for i := 0; i < len(expHash); i++ {
 			if caps[4*j+i] != expHash[i] {
 				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
