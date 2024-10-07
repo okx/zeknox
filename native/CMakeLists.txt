@@ -26,6 +26,7 @@ set(CUDA_ARCH "86;89" CACHE STRING "CUDA architecture")
 option(USE_AVX "Enable AVX acceleration" OFF)
 option(USE_AVX512 "Enable AVX512 (and AVX) acceleration" OFF)
 option(BUILD_TESTS "Build tests" OFF)
+option(INCLUDE_MSM "Include msm" OFF)
 
 set(LIB_CXX_NAME "cryptocudacpp")
 set(LIB_CUDA_NAME "cryptocudacuda")
@@ -48,7 +49,7 @@ check_language(CUDA)
 enable_language(CUDA)
 project(cryptocuda VERSION 1.0.0 LANGUAGES CUDA CXX)
 
-# specify the C++ standard
+# specify cuda runtime lib
 set(CMAKE_CUDA_RUNTIME_LIBRARY, "Static")
 
 set(LIB_INC ${PROJECT_SOURCE_DIR})
@@ -96,7 +97,17 @@ set(LIB_CUDA_SRC
     poseidon2/poseidon2.cu
     monolith/monolith.cu
     merkle/merkle.cu)
+
+if (INCLUDE_MSM)
+    list(APPEND LIB_CUDA_SRC msm/msm.cu)
+endif()
+
 add_library(${LIB_CUDA_NAME} OBJECT ${LIB_CUDA_SRC})
+
+if (INCLUDE_MSM)
+    target_link_libraries(${LIB_CUDA_NAME} ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
+endif()
+
 target_compile_definitions(${LIB_CUDA_NAME} PRIVATE FEATURE_GOLDILOCKS USE_CUDA ${EXTRA_DEFAULT_FLAGS})
 target_include_directories(${LIB_CUDA_NAME} PRIVATE ${LIB_INC})
 set_target_properties(${LIB_CUDA_NAME} PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH}")
