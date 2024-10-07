@@ -1,7 +1,8 @@
 package device
 
 /*
-#cgo LDFLAGS: -lcuda -lcudart
+#cgo LDFLAGS: -L/usr/local/cuda/lib64 -lcuda -lcudart
+#cgo CFLAGS: -I/usr/local/cuda/include
 #include <cuda_runtime.h>
 #include <stdlib.h>
 */

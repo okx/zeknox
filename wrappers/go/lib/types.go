@@ -62,3 +62,11 @@ func DefaultTransposeConfig() TransposeConfig {
 		AreOutputsOnDevice: false,
 	}
 }
+
+const (
+	HashPoseidon int = 0
+	HashKeccak
+	HashPoseidonBN128
+	HashPoseidon2
+	HashMonolith
+)

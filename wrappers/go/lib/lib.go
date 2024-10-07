@@ -1,8 +1,8 @@
 package lib
 
 /*
-#cgo LDFLAGS: -L../../../native/build -lcryptocuda -lcuda -lcudart -lm -lstdc++
-#cgo CFLAGS: -I../../../native -DFEATURE_GOLDILOCKS
+#cgo LDFLAGS: -L../../../native/build -L/usr/local/cuda/lib64 -lcryptocuda -lcuda -lcudart -lm -lstdc++ -lgomp
+#cgo CFLAGS: -I../../../native -DFEATURE_GOLDILOCKS -fopenmp
 #include <stdlib.h>
 #include "lib.h"
 */
@@ -161,17 +161,48 @@ func TransposeRevBatch(deviceID int, output, input unsafe.Pointer, logNSize int,
 	return nil
 }
 
-func NaiveTransposeRevBatch(deviceID int, output, input unsafe.Pointer, logNSize int, cfg TransposeConfig) error {
-	ccfg := toCNTTTransposeConfig(cfg)
-	err := C.compute_naive_transpose_rev(
-		C.ulong(deviceID),
-		output,
-		input,
-		C.uint(logNSize),
-		ccfg,
-	)
-	if err.code != 0 {
-		return fmt.Errorf("error: %s", C.GoString(err.message))
-	}
+func FillDigestsBufLinearGPUWithGPUPtr(deviceID int, gpu_digests, gpu_caps, gpu_leaves unsafe.Pointer, nDigests, nCaps, nLeaves, leafSize, capH, hashType int) error {
+	C.fill_digests_buf_linear_gpu_with_gpu_ptr(
+		gpu_digests,
+		gpu_caps,
+		gpu_leaves,
+		C.uint64_t(nDigests),
+		C.uint64_t(nCaps),
+		C.uint64_t(nLeaves),
+		C.uint64_t(leafSize),
+		C.uint64_t(capH),
+		C.uint64_t(hashType),
+		C.uint64_t(deviceID))
+
+	return nil
+}
+
+func FillDigestsBufLinearMultiGPUWithGPUPtr(gpu_digests, gpu_caps, gpu_leaves unsafe.Pointer, nDigests, nCaps, nLeaves, leafSize, capH, hashType int) error {
+	C.fill_digests_buf_linear_multigpu_with_gpu_ptr(
+		gpu_digests,
+		gpu_caps,
+		gpu_leaves,
+		C.uint64_t(nDigests),
+		C.uint64_t(nCaps),
+		C.uint64_t(nLeaves),
+		C.uint64_t(leafSize),
+		C.uint64_t(capH),
+		C.uint64_t(hashType))
+
+	return nil
+}
+
+func FillDigestsBufLinearCPU(cpu_digests, cpu_caps, cpu_leaves unsafe.Pointer, nDigests, nCaps, nLeaves, leafSize, capH, hashType int) error {
+	C.fill_digests_buf_linear_cpu(
+		cpu_digests,
+		cpu_caps,
+		cpu_leaves,
+		C.uint64_t(nDigests),
+		C.uint64_t(nCaps),
+		C.uint64_t(nLeaves),
+		C.uint64_t(leafSize),
+		C.uint64_t(capH),
+		C.uint64_t(hashType))
+
 	return nil
 }
