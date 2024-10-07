@@ -15,7 +15,7 @@
 #endif
 */
 
-// #pragma message "The value of CUDA_DEBUG: " XSTR(CUDA_DEBUG)
+// #pragma message "The value of BUILD_MSM: " XSTR(BUILD_MSM)
 // #pragma message "The value of __CUDA_ARCH__: " XSTR(__CUDA_ARCH__)
 
 #include <cuda.h>
@@ -53,6 +53,10 @@ extern "C"
 
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
+#ifdef BUILD_MSM
+#include <msm/msm.h>
+#include <msm/msm.cu>
+#endif
 #include <vector>
 
 #ifndef __CUDA_ARCH__ // below is cpu code; __CUDA_ARCH__ should not be defined

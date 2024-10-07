@@ -13,6 +13,9 @@
 
 #include <utils/rusterror.h>
 #include <ntt/ntt.h>
+#ifdef BUILD_MSM
+#include <msm/msm.h>
+#endif
 #include <merkle/merkle.h>
 
 EXTERN RustError get_number_of_gpus(size_t *ngpus);
