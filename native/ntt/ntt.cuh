@@ -25,10 +25,6 @@ namespace ntt {
     static std::array<fr_t *, MAX_NUM_OF_GPUS> coset_ptr_arr;
 
 #ifndef __CUDA_ARCH__
-    using Ntt_Types::Direction;
-    using Ntt_Types::NTTConfig;
-    using Ntt_Types::TransposeConfig;
-
     const uint32_t MAX_NUM_THREADS = 512;
     // TODO(cliff0412): allows 100% occupancy for scalar NTT for sm_86..sm_89
     const uint32_t MAX_THREADS_BATCH = 512;
@@ -195,7 +191,7 @@ namespace ntt {
      * @param n length of `arr`.
      * @param batch_size the size of the batch.
      */
-    RustError compute_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, TransposeConfig cfg) {
+    RustError compute_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg) {
         try {
             size_t size = static_cast<size_t>(1 << lg_n);
             size_t total_elements = size * cfg.batches;
@@ -248,7 +244,7 @@ namespace ntt {
      * @param n length of `arr`.
      * @param batch_size the size of the batch.
      */
-    RustError compute_naive_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, TransposeConfig cfg) {
+    RustError compute_naive_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg) {
         try {
             size_t size = static_cast<size_t>(1 << lg_n);
             size_t total_elements = size * cfg.batches;
@@ -319,7 +315,7 @@ namespace ntt {
      * \param are_outputs_on_device
      */
     // static
-    RustError batch_ntt(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, Direction direction, NTTConfig cfg) {
+    RustError batch_ntt(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, NTT_Direction direction, NTT_Config cfg) {
         // printf("inside batch ntt with coset: %d\n", cfg.with_coset);
         if (lg_domain_size == 0)
             return RustError{cudaErrorInvalidValue};
@@ -331,7 +327,7 @@ namespace ntt {
             uint32_t n_twiddles = size;
 
             fr_t *d_twiddle;
-            if (direction == Direction::inverse) {
+            if (direction == NTT_Direction::inverse) {
                 d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_domain_size);
             } else {
                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_domain_size);
@@ -352,11 +348,11 @@ namespace ntt {
                 gpu.HtoD(&d_input[0], inout, total_elements);
             }
 
-            if (direction == Direction::inverse) {
+            if (direction == NTT_Direction::inverse) {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
-            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[gpu.id()], gpu);
-            if (direction == Direction::forward) {
+            ntt_inplace_batch_template(d_input, d_twiddle, n_twiddles, cfg.batches, direction == NTT_Direction::inverse, cfg.with_coset, coset_ptr_arr[gpu.id()], gpu);
+            if (direction == NTT_Direction::forward) {
                 reverse_order_batch(d_input, size, lg_domain_size, cfg.batches, gpu);
             }
 
@@ -381,7 +377,7 @@ namespace ntt {
      * assume with coset and that buffer has already been allocated in GPU with id 0
      * \param lg_n , logn before extension
      */
-    RustError batch_lde_multi_gpu(fr_t *output, fr_t *inputs, size_t num_gpu, Direction direction, NTTConfig cfg, size_t lg_n, size_t total_num_input_elements, size_t total_num_output_elements) {
+    RustError batch_lde_multi_gpu(fr_t *output, fr_t *inputs, size_t num_gpu, NTT_Direction direction, NTT_Config cfg, size_t lg_n, size_t total_num_input_elements, size_t total_num_output_elements) {
         if (total_num_input_elements == 0 || lg_n == 0 || cfg.extension_rate_bits < 1) {
             // printf("invalid input : %d\n", cfg.with_coset);
             return RustError{cudaErrorInvalidValue};
@@ -411,7 +407,7 @@ namespace ntt {
                 uint32_t n_twiddles = size;
 
                 fr_t *d_twiddle;
-                if (direction == Direction::inverse) {
+                if (direction == NTT_Direction::inverse) {
                     d_twiddle = all_gpus_twiddle_inverse_arr[i].at(lg_output_domain_size);
                 } else {
                     d_twiddle = all_gpus_twiddle_forward_arr[i].at(lg_output_domain_size);
@@ -447,13 +443,13 @@ namespace ntt {
                 extend_inputs_batch(&output_data[0], &input_data[0], static_cast<size_t>(1 << lg_n), lg_n, cfg.extension_rate_bits, batches, gpu);
                 // gpu.sync();
 
-                if (direction == Direction::inverse) {
+                if (direction == NTT_Direction::inverse) {
                     reverse_order_batch(&output_data[0], size, lg_output_domain_size, batches, gpu);
                 }
 
-                ntt_inplace_batch_template(&output_data[0], d_twiddle, n_twiddles, batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[i], gpu);
+                ntt_inplace_batch_template(&output_data[0], d_twiddle, n_twiddles, batches, direction == NTT_Direction::inverse, cfg.with_coset, coset_ptr_arr[i], gpu);
 
-                if (direction == Direction::forward) {
+                if (direction == NTT_Direction::forward) {
                     reverse_order_batch(&output_data[0], size, lg_output_domain_size, batches, gpu);
                 }
             }
@@ -528,10 +524,10 @@ namespace ntt {
      * assume with coset
      * \param lg_n , logn before extension
      */
-    RustError batch_lde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, Direction direction, NTTConfig cfg) {
+    RustError batch_lde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_Direction direction, NTT_Config cfg) {
         if (lg_n == 0 || cfg.extension_rate_bits < 1) {
             // printf("invalid input : %d\n", cfg.with_coset);
-            return RustError{cudaErrorInvalidValue};
+            return RustError{cudaErrorInvalidValue, "invalid args"};
         }
 
         try {
@@ -545,7 +541,7 @@ namespace ntt {
             uint32_t n_twiddles = size;
 
             fr_t *d_twiddle;
-            if (direction == Direction::inverse) {
+            if (direction == NTT_Direction::inverse) {
                 d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_output_domain_size);
             } else {
                 d_twiddle = all_gpus_twiddle_forward_arr[gpu.id()].at(lg_output_domain_size);
@@ -582,13 +578,13 @@ namespace ntt {
 
             extend_inputs_batch(&d_output[0], &d_input[0], static_cast<size_t>(1 << lg_n), lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
 
-            if (direction == Direction::inverse) {
+            if (direction == NTT_Direction::inverse) {
                 reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
             }
             // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
-            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == Direction::inverse, cfg.with_coset, coset_ptr_arr[gpu.id()], gpu);
+            ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == NTT_Direction::inverse, cfg.with_coset, coset_ptr_arr[gpu.id()], gpu);
             // printf("end inplace batch template, with coset: %d \n", cfg.with_coset);
-            if (direction == Direction::forward) {
+            if (direction == NTT_Direction::forward) {
                 reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
             }
 

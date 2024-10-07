@@ -122,6 +122,22 @@ Poseidon BN128 | 8192  | 404.7 ms  | 73.5 ms  | 5.5 X
 Poseidon BN128 | 16384 | 809.4 ms  | 124.0 ms | 6.5 X
 Poseidon BN128 | 32768 | 1618.4 ms | 239.9 ms | 6.7 X
 
+Next, we show benchmarking results for LDE + MT building with Poseidon, comparing the CPU-only with the CPU+GPU execution. To run these benchmarks, simply:
+```
+git clone https://github.com/okx/plonky2.git
+cd plonky2
+git checkout dev
+cd plonky2
+cargo bench --bench=lde
+cargo bench --bench=lde --features=cuda
+```
+
+LDE size (log) | CPU-only | CPU+GPU | Speedup
+--- | --- | --- | ---
+  13 |  6.5 ms | 3.1 ms | 2.1 X
+  14 | 11.6 ms | 4.2 ms | 2.8 X
+  15 | 22.0 ms | 6.0 ms | 3.7 X
+
 
 ## zk_evm (Type 1 ZK EVM from 0xPolygonZero)
 
@@ -142,6 +158,20 @@ Input | CPU-only |	CPU+GPU | Speedup
 witness_b3_b6.json     | 193.7 ms |  111.1 ms | 1.74 X
 witness_b19807080.json | 294.6 ms |	 174.5 ms | 1.69 X
 
+## Proof-of-Reserves-v2 (OKX)
+
+```
+git clone https://github.com/okx/proof-of-reserves-v2.git
+cd proof-of-reserves-v2.git
+git checkout dev-dumi-v0.1.0
+```
+then follow the steps presented in the [README](https://github.com/okx/proof-of-reserves-v2/blob/dev-dumi-v0.1.0/README.md).
+
+The following results are from an GCP g2-standard-32 instance with 32 vCPU of Intel Xeon type and one NVIDIA L4 GPU, for proving 1,310,720 accounts.
+
+CPU-only |	CPU+GPU | Speedup
+--- | --- | ---
+ 2834 s | 1377 s | 2.06 X
 
 # License
 

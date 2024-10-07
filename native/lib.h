@@ -4,19 +4,48 @@
 
 #ifndef ZEKNOX_CUDA_LIB_H_
 #define ZEKNOX_CUDA_LIB_H_
+
+#ifdef __cplusplus
+#define EXTERN extern "C"
+#else
+#define EXTERN
+#endif
+
 #include <utils/rusterror.h>
 #include <ntt/ntt.h>
-#include <vector>
-#if defined(FEATURE_GOLDILOCKS)
-#include <ff/goldilocks.hpp>
-#elif defined(FEATURE_BN254)
-#include <ff/alt_bn254.hpp>
-#else
-#error "no FEATURE"
-#endif
-#include <utils/device_context.cuh>
-
 #include <merkle/merkle.h>
+
+EXTERN RustError get_number_of_gpus(size_t *ngpus);
+
+EXTERN RustError list_devices_info();
+
+EXTERN void init_cuda();
+
+EXTERN void init_cuda_degree(const uint32_t max_degree);
+
+EXTERN RustError init_twiddle_factors(size_t device_id, size_t lg_n);
+
+EXTERN RustError init_coset(size_t device_id, size_t lg_domain_size, const uint64_t coset_gen);
+
+EXTERN RustError compute_batched_ntt(size_t device_id, void *inout, uint32_t lg_domain_size,
+                                     NTT_Direction ntt_direction,
+                                     NTT_Config cfg);
+
+EXTERN RustError compute_batched_lde(size_t device_id, void *output, void *input, uint32_t lg_domain_size,
+                                     NTT_Direction ntt_direction,
+                                     NTT_Config cfg);
+
+EXTERN RustError compute_batched_lde_multi_gpu(void *output, void *input, uint32_t num_gpu, NTT_Direction ntt_direction,
+                                               NTT_Config cfg,
+                                               uint32_t lg_domain_size,
+                                               size_t total_num_input_elements,
+                                               size_t total_num_output_elements);
+
+EXTERN RustError compute_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
+                                       NTT_TransposeConfig cfg);
+
+EXTERN RustError compute_naive_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
+                                             NTT_TransposeConfig cfg);
 
 #ifdef FEATURE_BN254
 #include <ff/alt_bn254.hpp>
@@ -48,31 +77,6 @@ typedef Affine<g2_point_field_t> g2_affine_t;
 
 extern "C" RustError::by_value mult_pippenger_g2(g2_projective_t *out, g2_affine_t *points, size_t msm_size, scalar_field_t *scalars, size_t large_bucket_factor, bool on_device,
                                                  bool big_triangle);
-#endif  // FEATURE_BN254
+#endif // FEATURE_BN254
 
-extern "C" RustError compute_batched_ntt(size_t device_id, fr_t *inout, uint32_t lg_domain_size,
-                                         Ntt_Types::Direction ntt_direction,
-                                         Ntt_Types::NTTConfig cfg);
-
-extern "C" RustError compute_batched_lde(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_domain_size,
-                                         Ntt_Types::Direction ntt_direction,
-                                         Ntt_Types::NTTConfig cfg);
-
-extern "C" RustError compute_batched_lde_multi_gpu(fr_t *output,fr_t *input, uint32_t num_gpu, Ntt_Types::Direction ntt_direction,
-                                         Ntt_Types::NTTConfig cfg,
-                                         uint32_t lg_domain_size,
-                                         size_t total_num_input_elements,
-                                         size_t total_num_output_elements);
-
-extern "C" RustError compute_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
-                                         Ntt_Types::TransposeConfig cfg);
-
-extern "C" RustError compute_naive_transpose_rev(size_t device_id, fr_t *output, fr_t *input, uint32_t lg_n,
-                                         Ntt_Types::TransposeConfig cfg);
-
-extern "C" RustError init_twiddle_factors(size_t device_id, size_t lg_n);
-
-extern "C" RustError init_coset(size_t device_id, size_t lg_domain_size, fr_t coset_gen);
-
-extern "C" RustError get_number_of_gpus(size_t *ngpus);
 #endif // ZEKNOX_CUDA_LIB_H_
