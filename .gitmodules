@@ -1,8 +1,9 @@
+[submodule "native/depends/blst"]
+	path = native/depends/blst
+	url = git@github.com:supranational/blst.git
+[submodule "native/depends/goldilocks"]
+	path = native/depends/goldilocks
 [submodule "wrappers/cpp/depends/ffiasm"]
 	path = wrappers/cpp/depends/ffiasm
 	url = git@github.com:okx/ffiasm.git
-[submodule "wrappers/cpp/depends/blst"]
-	path = wrappers/cpp/depends/blst
-	url = git@github.com:supranational/blst.git
-[submodule "cuda/depends/goldilocks"]
-	path = native/depends/goldilocks
+
