@@ -15,7 +15,7 @@
 #endif
 */
 
-// #pragma message "The value of CUDA_DEBUG: " XSTR(CUDA_DEBUG)
+// #pragma message "The value of BUILD_MSM: " XSTR(BUILD_MSM)
 // #pragma message "The value of __CUDA_ARCH__: " XSTR(__CUDA_ARCH__)
 
 #include <cuda.h>
@@ -53,6 +53,10 @@ extern "C"
 
 #include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
+#ifdef BUILD_MSM
+#include <msm/msm.h>
+#include <msm/msm.cu>
+#endif
 #include <vector>
 
 #ifndef __CUDA_ARCH__ // below is cpu code; __CUDA_ARCH__ should not be defined
@@ -141,32 +145,6 @@ extern "C"
     return ntt::init_coset(gpu, lg_n, fr_t(coset_gen));
 }
 
-#endif
-
-#ifndef FEATURE_GOLDILOCKS
-#include <ec/jacobian_t.hpp>
-#include <ec/xyzz_t.hpp>
-
-#include <msm/pippenger.cuh>
-#include <cstdio>
-#include <blst_t.hpp>
-
-RustError::by_value mult_pippenger(point_t *result, const affine_t points[],
-                                   size_t npoints, const scalar_t scalars[],
-                                   size_t ffi_affine_sz)
-{
-    RustError r = mult_pippenger<bucket_t>(result, points, npoints, scalars, false, ffi_affine_sz);
-    return r;
-}
-
-#if defined(G2_ENABLED)
-extern "C" RustError::by_value mult_pippenger_g2(g2_projective_t *result, g2_affine_t *points, size_t msm_size, scalar_field_t *scalars, size_t large_bucket_factor, bool on_device, bool big_triangle)
-{
-    mult_pippenger_g2_internal<scalar_field_t, g2_projective_t, g2_affine_t>(
-        result, points, scalars, msm_size, on_device, big_triangle, large_bucket_factor);
-    CHECK_LAST_CUDA_ERROR();
-}
-#endif
 #endif
 
 #if defined(EXPOSE_C_INTERFACE)

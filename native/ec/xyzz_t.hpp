@@ -78,8 +78,8 @@ public:
             Y = 1/a.ZZZ;
             X = Y * a.ZZ;   // 1/Z
             X = X^2;        // 1/Z^2
-            X *= a.X;       // X/Z^2
-            Y *= a.Y;       // Y/Z^3
+            X *= a.X;       // a.X/Z^2
+            Y *= a.Y;       // a.Y/Z^3
             return *this;
         }
         inline __host__ affine_t(const xyzz_t& a)  { *this = a; }

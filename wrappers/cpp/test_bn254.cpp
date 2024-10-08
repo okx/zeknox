@@ -7,6 +7,7 @@
 #include <blst_t.hpp>
 #include <vect.h>
 #include <ntt/ntt.h>
+#include <msm/msm.h>
 #include <gmp.h>
 #include <lib.h>
 #include "alt_bn128.hpp"
@@ -323,23 +324,26 @@ TEST(altBn128, msm_bn254_g1_curve_gpu_consistency_with_cpu)
     G1.multiMulByScalar(p1, bases, (uint8_t *)scalars, 32, NMExp);
 
     mpz_t e;
-    mpz_init_set_ui(e, acc);
+    mpz_init_set_ui(e, acc); // init to an unsigned integer
 
     Scalar sAcc;
+    std::fill(std::begin(sAcc), std::end(sAcc), 0);
 
-    for (int i = 0; i < 32; i++)
-        sAcc[i] = 0;
+    // export a multi-precision integer `e` into a more traditional byte array format `sAcc`;
+    // each block is 8 bytes
+    // blocks are little endian order; and witin each block, it is also little endian order;
     mpz_export((void *)sAcc, NULL, -1, 8, -1, 0, e);
     mpz_clear(e);
 
     G1Point p2;
     G1.mulByScalar(p2, G1.one(), sAcc, 32);
 
-    // ASSERT_TRUE(G1.eq(p1, p2));
+    ASSERT_TRUE(G1.eq(p1, p2));
 
     point_t *gpu_result = new point_t{};
     size_t sz = sizeof(affine_t);
 
+    std::cout << "size of affine_t: " << sizeof(affine_t) << " size of fr_t: " << sizeof(fr_t) << std::endl;
     mult_pippenger(gpu_result, (affine_t *)bases, NMExp, (fr_t *)scalars, sz);
 
     // remain in Montgmery Space
@@ -358,7 +362,7 @@ TEST(altBn128, msm_bn254_g1_curve_gpu_consistency_with_cpu)
     F1.square(gpu_point_result.zz, *gpu_z);
     F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
     print_g1_point(gpu_point_result);
-    // ASSERT_TRUE(G1.eq(p1, gpu_point_result));
+    ASSERT_TRUE(G1.eq(p1, gpu_point_result));
 
     delete[] bases;
     delete[] scalars;
