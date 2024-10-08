@@ -1,7 +1,7 @@
 package lib
 
 /*
-#cgo LDFLAGS: -L../../../native/build -L/usr/local/cuda/lib64 -lcryptocuda -lcuda -lcudart -lm -lstdc++ -lgomp
+#cgo LDFLAGS: -L../../../native/build -L../../../native/depends/blst -L/usr/local/cuda/lib64 -lcryptocuda -lblst -lcuda -lcudart -lm -lstdc++ -lgomp
 #cgo CFLAGS: -I../../../native -DFEATURE_GOLDILOCKS -fopenmp
 #include <stdlib.h>
 #include "lib.h"
