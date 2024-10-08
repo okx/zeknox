@@ -71,7 +71,7 @@ namespace ntt {
         int number_of_threads = MAX_NUM_THREADS;
         dim3 threads_dim = dim3(8, 32);
         dim3 blocks_dim = dim3(blocks_per_row, blocks_per_col);
-        transpose_rev_kernel<<<blocks_dim, threads_dim, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
+        transpose_rev_kernel<<<blocks_dim, threads_dim, BLOCK_DIM*(BLOCK_DIM + 1)*sizeof(fr_t), stream>>>(in_arr, out_arr, n, lg_n, batch_size);
     }
 
     /**
