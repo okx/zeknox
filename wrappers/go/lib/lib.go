@@ -2,9 +2,9 @@ package lib
 
 /*
 #cgo LDFLAGS: -L../../../native/build -L../../../native/depends/blst -L/usr/local/cuda/lib64 -lcryptocuda -lblst -lcuda -lcudart -lm -lstdc++ -lgomp
-#cgo CFLAGS: -I../../../native -DFEATURE_GOLDILOCKS -fopenmp
-#include <stdlib.h>
+#cgo CFLAGS: -I../../../native -I/usr/local/cuda/include -DFEATURE_BN254 -D__ADX__ -fopenmp
 #include "lib.h"
+#include "msm/msm.h"
 */
 import "C"
 import (
@@ -17,6 +17,16 @@ func BoolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+func toCMSMConfig(cfg MSMConfig) C.MSM_Config {
+	return C.MSM_Config{
+		npoints:               C.uint(cfg.Npoints),
+		ffi_affine_sz:         C.uint(cfg.FfiAffineSz),
+		are_inputs_on_device:  C.int(BoolToInt(cfg.AreInputsOnDevice)),
+		are_outputs_on_device: C.int(BoolToInt(cfg.AreOutputsOnDevice)),
+		are_points_in_mont:    C.int(BoolToInt(cfg.ArePointsInMont)),
+	}
 }
 
 func toCNTTConfig(cfg NTTConfig) C.NTT_Config {
@@ -153,6 +163,21 @@ func TransposeRevBatch(deviceID int, output, input unsafe.Pointer, logNSize int,
 		output,
 		input,
 		C.uint(logNSize),
+		ccfg,
+	)
+	if err.code != 0 {
+		return fmt.Errorf("error: %s", C.GoString(err.message))
+	}
+	return nil
+}
+
+func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg MSMConfig) error {
+	ccfg := toCMSMConfig(cfg)
+	err := C.mult_pippenger(
+		C.uint(numGPU),
+		output,
+		input_points,
+		input_scalars,
 		ccfg,
 	)
 	if err.code != 0 {

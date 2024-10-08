@@ -5,7 +5,7 @@
 #ifndef __CRYPTO_UTIL_HOST_MATH_CUH__
 #define __CRYPTO_UTIL_HOST_MATH_CUH__
 
-#include <cstdint>
+#include <stdint.h>
 #include <cuda_runtime.h>
 
 namespace host_math {

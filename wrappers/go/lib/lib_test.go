@@ -1,10 +1,16 @@
 package lib
 
 import (
+	"fmt"
 	"math"
 	"testing"
 	"unsafe"
 	"zeknox/device"
+
+	"github.com/consensys/gnark-crypto/ecc"
+	curve "github.com/consensys/gnark-crypto/ecc/bn254"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 )
 
 func TestListDevicesInfo(t *testing.T) {
@@ -258,4 +264,36 @@ func TestMerkleTreeBuildingOutputCpu(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMsmG1(t *testing.T) {
+
+	device_alloc_size := 1024
+	scalars := make([]fr.Element, device_alloc_size)
+	for i := 0; i < len(scalars); i++ {
+		scalars[i] = fr.NewElement(uint64(i))
+	}
+
+	// curve.G1Affine
+
+	base := fp.NewElement(1)
+	g := curve.MapToG1(base)
+	points := make([]curve.G1Affine, device_alloc_size)
+	for i := 0; i < len(points); i++ {
+		points[i] = g
+	}
+
+	result, err := g.MultiExp(points, scalars, ecc.MultiExpConfig{NbTasks: 16})
+	// expected := g.X.Mul()
+	if err != nil {
+		fmt.Printf("cpu msm error: %s", err.Error())
+	}
+	fmt.Printf("cpu result %s", result.String())
+
+	d_scalar, err := device.CudaMalloc[fr.Element](0, device_alloc_size)
+	err = d_scalar.CopyFromHost(scalars)
+
+	d_points, err := device.CudaMalloc[curve.G1Affine](0, device_alloc_size)
+	err = d_points.CopyFromHost(points)
+
 }

@@ -99,11 +99,15 @@ struct fr_t : public fr_mont
  * define fp_t, fr_t in host code
  */
 #ifndef __CUDA_ARCH__ // host-side field types
+#ifdef __cplusplus
 #include <blst_t.hpp>
+#endif
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsubobject-linkage"
 #endif
+
+#ifdef __cplusplus
 // TO_LIMB_T is defined in blst_t.hpp, # define TO_LIMB_T(limb64)     (limb_t)limb64,(limb_t)(limb64>>32)
 // vec256, blst_256_t is a type defined in blst_t.hpp also
 // the int value of P is 21888242871839275222246405745257275088696311157297823662689037894645226208583
@@ -175,6 +179,8 @@ struct fr_t : public fr_mont
     }
     //**********************************************************
 };
+
+#endif
 
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
