@@ -16,10 +16,10 @@
  * @brief montgomery reduction template
  * @param[in] N, pnumber of bits
  * @param[in] MOD, modulus, field modulus
- * @param[in] M0, 
- * @param[in] RR, 
+ * @param[in] M0,
+ * @param[in] RR,
  * @param[in] ONE,
- * @param[in] MODx,  
+ * @param[in] MODx,
 */
 template<const size_t N, const uint32_t MOD[(N+31)/32], const uint32_t& M0,
          const uint32_t RR[(N+31)/32], const uint32_t ONE[(N+31)/32],
@@ -36,7 +36,7 @@ private:
     uint32_t even[n];
 
      /**
-     * @brief mul `a` with bi, the result is stored in `acc` 
+     * @brief mul `a` with bi, the result is stored in `acc`
      * @param[in] acc, pointer to a u32, size is 2*n
      * @param[in] a,   pointer to a const u32, size is n
      * @param[in] bi, the scalar to be multiplied
@@ -52,7 +52,7 @@ private:
     }
 
     /**
-     * @brief mul `a` with bi, and add it to acc; the result is stored in `acc` 
+     * @brief mul `a` with bi, and add it to acc; the result is stored in `acc`
      * @param[in] acc, pointer to a u32, size is 2*n
      * @param[in] a,   pointer to a const u32, size is n
      * @param[in] bi, the scalar to be multiplied
@@ -73,7 +73,7 @@ private:
 
 
     /**
-     * @brief add `a` into `acc`, with 
+     * @brief add `a` into `acc`, with
      * @param[in] acc, pointer to a u32
      * @param[in] a,   pointer to a const u32
      * @param[in] n, number of u32 to add (carry is carried to next if there is carry); default to the number of u32 as stored in monot_t instance
@@ -209,7 +209,7 @@ private:
      * cast the object to a uint32_t* (a pointer)
      * `const uint32_t*() const` means a pointer whose content cannot be changed; and also the value pointed is a constant
     */
-    inline operator const uint32_t*() const             { return even;    }  
+    inline operator const uint32_t*() const             { return even;    }
     inline operator uint32_t*()                         { return even;    }
 
 public:
@@ -258,7 +258,7 @@ public:
     {   return a <<= l;   }
 
     /**
-     * @brief rightshift, 
+     * @brief rightshift,
      * @param[in] r, right shifted bits
     */
    inline mont_t& operator>>=(unsigned r)
@@ -277,7 +277,7 @@ public:
              {
                 printf("N is divided by 32 \n");
                  asm("addc.u32 %0, 0, 0;" : "=r"(tmp[n]));
-             }  
+             }
 
             for (i = 0; i < n-1; i++)
                 asm("shf.r.wrap.b32 %0, %1, %2, 1;"
@@ -290,7 +290,7 @@ public:
                 printf("tmp[i]: %x \n", tmp[i]);
                 even[i] = tmp[i] >> 1;
             }
-                
+
         }
 
         return *this;
@@ -300,7 +300,7 @@ public:
     {   return a >>= r;   }
 
      /**
-     * @brief subtraction, 
+     * @brief subtraction,
      * @param[in] b, value to be subtracted
     */
     inline mont_t& operator-=(const mont_t& b)
@@ -320,7 +320,7 @@ public:
 
         // if there is borrow, i.e borrow=0xffffffff, the effect is add MOD first (which makes sub in bits no borrow), and then subtract in bits.
         // the result would be in 256bits and there is no borrow.
-        asm("{ .reg.pred %top; setp.ne.u32 %top, %0, 0;" :: "r"(borrow));  
+        asm("{ .reg.pred %top; setp.ne.u32 %top, %0, 0;" :: "r"(borrow));
         for (i = 0; i < n; i++)
             asm("@%top mov.b32 %0, %1;" : "+r"(even[i]) : "r"(tmp[i]));
         asm("}");
@@ -671,7 +671,7 @@ private:
     inline void final_subc()
     {
         uint32_t carry, tmp[n];
-        uint32_t tmp_carry;
+        // uint32_t tmp_carry;
         // printf("carry0: %d, tmp[n]: %d \n", carry, tmp[n]);
         // printf("even[0]: %x, tmp[0]: %x \n", even[0], tmp[0]);
         // printf("carry1: %d \n", carry);
@@ -682,7 +682,7 @@ private:
             // printf("even[i]: %x, MOD[i]: %x \n", even[i], MOD[i]);
             asm("subc.cc.u32 %0, %1, %2;" : "=r"(tmp[i]) : "r"(even[i]), "r"(MOD[i]));
         }
-            
+
         // asm("addc.u32 %0, 0, 0;" : "=r"(tmp_carry));  // capture the carry flag of the previous operation
         //  printf("tmp_carry: %d \n", tmp_carry);
         asm("subc.u32 %0, %0, 0;" : "+r"(carry));
@@ -694,7 +694,7 @@ private:
          * if carry is ffffffff, means there is borrow in subtraction, which means value is less than MOD, therefore, keep the original value
          * if carry is 00000000, means value is larger than MOD, therefore, use the value - MOD (which is tmp) as the final value
         */
-        asm("setp.eq.u32 %top, %0, 0;" :: "r"(carry));  
+        asm("setp.eq.u32 %top, %0, 0;" :: "r"(carry));
         // printf("carry4: %d \n", carry);
         // printf("even[7]: %x, tmp[7]: %x \n", even[7], tmp[7]);
         for (size_t i = 0; i < n; i++)

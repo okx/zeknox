@@ -1,4 +1,14 @@
 cmake_minimum_required(VERSION 3.22.1)
+
+if(NOT CMAKE_CUDA_TOOLKIT_ROOT_DIR)
+  set(CMAKE_CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
+  set(CMAKE_CUDA_COMPILER "${CMAKE_CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
+endif()
+if(NOT CMAKE_CUDA_ARCHITECTURES)
+  set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
+endif()
+enable_language(CUDA)
+
 project(cryptography_cuda_cpp LANGUAGES CXX CUDA ASM)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -64,8 +74,6 @@ if(USE_OPENMP)
         endif()
     endif()
 endif()
-find_package(CUDA REQUIRED)
-enable_language("CUDA")
 
 get_filename_component(CPP_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
 get_filename_component(PROJECT_DIR ${CPP_DIR} DIRECTORY)
@@ -102,16 +110,17 @@ else()
 endif ()
 
 add_subdirectory(${PROJECT_CUDA_SOURCE_DIR} zeknox)
-target_compile_definitions(cryptocuda PRIVATE -DCURVE_FEATURE=FEATURE_BN254)
+target_compile_definitions(cryptocuda PRIVATE -DBUILD_MSM=ON -DCURVE=BN254)
 
 ##============================Build Test & Bench==============================================##
 enable_testing()
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-)
-FetchContent_MakeAvailable(googletest)
+#include(FetchContent)
+#FetchContent_Declare(
+#  googletest
+#  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+#)
+#FetchContent_MakeAvailable(googletest)
+find_package(GTest REQUIRED)
 
 link_libraries(${GMP_LIB})
 add_definitions(${GMP_DEFINIONS})
@@ -203,8 +212,7 @@ add_executable(test_bn254 ${BN254_TEST_SOURCES})
 target_include_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
 target_include_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR}/depends/blst/src)
 target_link_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR}/depends/blst)
-target_link_libraries(test_bn254 cryptocuda)
-target_link_libraries(test_bn254 blst)
+target_link_libraries(test_bn254 cryptocuda blst)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         target_link_libraries(test_bn254 OpenMP::OpenMP_CXX)
