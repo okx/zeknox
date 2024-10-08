@@ -7,6 +7,7 @@
 #include <blst_t.hpp>
 #include <vect.h>
 #include <ntt/ntt.h>
+#include <msm/msm.h>
 #include <gmp.h>
 #include <lib.h>
 #include "alt_bn128.hpp"

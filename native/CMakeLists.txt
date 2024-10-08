@@ -12,13 +12,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(EXTRA_DEFAULT_FLAGS "-DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE")
-
-set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g ${EXTRA_DEFAULT_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3 ${EXTRA_DEFAULT_FLAGS}")
-set(CMAKE_DEBUG_POSTFIX d)
-
-find_package(OpenMP)
 
 # Options
 option(USE_CUDA "Enable CUDA code (ON by default)" ON)
@@ -28,11 +21,31 @@ option(USE_AVX512 "Enable AVX512 (and AVX) acceleration" OFF)
 option(BUILD_TESTS "Build tests" OFF)
 option(BUILD_MSM "Include msm" OFF)
 
+set(EXTRA_DEFAULT_FLAGS "-DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE")
+if(BUILD_MSM)
+    set(EXTRA_DEFAULT_FLAGS "-DBUILD_MSM ${EXTRA_DEFAULT_FLAGS}")
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g ${EXTRA_DEFAULT_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3 ${EXTRA_DEFAULT_FLAGS}")
+set(CMAKE_DEBUG_POSTFIX d)
+
+find_package(OpenMP)
+
 set(LIB_CXX_NAME "cryptocudacpp")
 set(LIB_CUDA_NAME "cryptocudacuda")
 set(LIB_NAME "cryptocuda")
 set(EXE_TESTS_CUDA_NAME "tests.exe")
 set(EXE_TESTS_CXX_NAME "tests_cpp.exe")
+
+if (CURVE STREQUAL "BN254")
+    set(CURVE_FEATURE "FEATURE_BN254")
+endif ()
+
+if(NOT CURVE)
+    set(CURVE_FEATURE "FEATURE_GOLDILOCKS")
+endif()
+message("zeknox CURVE_FEATURE=${CURVE_FEATURE}, BUILD_MSM=${BUILD_MSM}")
 
 # CUDA support
 if(USE_CUDA)
@@ -104,11 +117,7 @@ endif()
 
 add_library(${LIB_CUDA_NAME} OBJECT ${LIB_CUDA_SRC})
 
-if (INCLUDE_MSM)
-    target_link_libraries(${LIB_CUDA_NAME} ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
-endif()
-
-target_compile_definitions(${LIB_CUDA_NAME} PRIVATE FEATURE_GOLDILOCKS USE_CUDA ${EXTRA_DEFAULT_FLAGS})
+target_compile_definitions(${LIB_CUDA_NAME} PRIVATE ${CURVE_FEATURE} USE_CUDA ${EXTRA_DEFAULT_FLAGS})
 target_include_directories(${LIB_CUDA_NAME} PRIVATE ${LIB_INC})
 set_target_properties(${LIB_CUDA_NAME} PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH}")
 set_target_properties(${LIB_CUDA_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -120,13 +129,10 @@ target_link_libraries(${LIB_CUDA_NAME} PRIVATE cudart)
 
 # 3. Build the final library
 add_library(${LIB_NAME} STATIC lib.cu $<TARGET_OBJECTS:${LIB_CUDA_NAME}> $<TARGET_OBJECTS:${LIB_CXX_NAME}>)
-if(BUILD_MSM)
-    target_compile_definitions(${LIB_NAME} PRIVATE FEATURE_BN254 BUILD_MSM USE_CUDA ${EXTRA_DEFAULT_FLAGS})
-    target_include_directories(${LIB_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/blst/src)
-    target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/blst/libblst.a)
-else()
-    target_compile_definitions(${LIB_NAME} PRIVATE FEATURE_GOLDILOCKS USE_CUDA ${EXTRA_DEFAULT_FLAGS})
-endif()
+target_compile_definitions(${LIB_NAME} PRIVATE ${CURVE_FEATURE} USE_CUDA ${EXTRA_DEFAULT_FLAGS})
+message(STATUS "FINAL_LIB_INCLUDE ${PROJECT_SOURCE_DIR}/depends/blst/src")
+target_include_directories(${LIB_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/depends/blst/src)
+target_compile_definitions(${LIB_NAME} PUBLIC -D${CURVE_FEATURE} -D__ADX__) ## __ADX__ is required for blst
 
 target_include_directories(${LIB_NAME} PRIVATE ${LIB_INC})
 set_target_properties(${LIB_NAME} PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH}")
