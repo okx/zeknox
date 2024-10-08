@@ -41,6 +41,7 @@ public:
             Y   = p.Y;
             ZZZ = p.ZZZ;
             ZZ  = p.ZZ;
+            return *this;
         }
         inline __device__ void inf() { ZZZ.zero(); ZZ.zero(); }
     };
