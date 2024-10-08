@@ -7,4 +7,3 @@
 [submodule "wrappers/cpp/depends/ffiasm"]
 	path = wrappers/cpp/depends/ffiasm
 	url = git@github.com:okx/ffiasm.git
-
