@@ -17,6 +17,9 @@
 
 typedef struct
 {
+    size_t ffi_affine_sz;       // affine point size; for bn254 is 64; 32 bytes for X and 32 bytes for Y.
+    size_t npoints;             // number of points
+    BOOL are_points_in_mont;   // whether input points are in montgomery form. Default value: false
     BOOL are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
 } MSM_Config;
@@ -29,9 +32,7 @@ typedef jacobian_t<fp_t> point_t;
 typedef xyzz_t<fp_t> bucket_t;
 typedef bucket_t::affine_t affine_t;
 typedef fr_t scalar_t;
-EXTERN RustError::by_value mult_pippenger(point_t *out, const affine_t points[],
-                                   size_t npoints, const scalar_t scalars[],
-                                   size_t ffi_affine_sz);
+EXTERN RustError::by_value mult_pippenger(size_t device_id, point_t* out, affine_t* points, scalar_t* scalars, MSM_Config cfg);
 
 #include <primitives/field.cuh>
 #include <primitives/extension_field.cuh>
@@ -50,7 +51,7 @@ typedef Projective<g2_point_field_t, scalar_field_t, g2_b, g2_gen_x, g2_gen_y> g
 typedef Affine<g2_point_field_t> g2_affine_t;
 
 EXTERN RustError::by_value mult_pippenger_g2(g2_projective_t *out, g2_affine_t *points, size_t msm_size, scalar_field_t *scalars, size_t large_bucket_factor, bool on_device,
-                                                 bool big_triangle);
+                                             bool big_triangle);
 #endif // FEATURE_BN254
 
 #endif
