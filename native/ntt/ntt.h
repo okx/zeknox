@@ -6,9 +6,9 @@
 
 // This is because Rust uses a C++ binding, while Go uses a C binding.
 #ifdef __cplusplus
-#define BOOL bool
+#define _BOOL bool
 #else
-#define BOOL int
+#define _BOOL char
 #endif
 
 typedef enum
@@ -44,18 +44,20 @@ typedef struct
                                  *   `InputOutputOrder::NN`. */
     NTT_Type ntt_type;
     uint32_t extension_rate_bits;
-    BOOL are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    BOOL with_coset;
-    BOOL is_multi_gpu;
+    _BOOL are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
+    _BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
+    _BOOL with_coset;
+    _BOOL is_multi_gpu;
     uint32_t salt_size;
 } NTT_Config;
 
 typedef struct
 {
     uint32_t batches;          /**< The number of NTTs to compute. Default value: 1. */
-    BOOL are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
+    _BOOL are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
+    _BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
 } NTT_TransposeConfig;
+
+#undef _BOOL
 
 #endif // ZEKNOX_CUDA_NTT_NTT_H_

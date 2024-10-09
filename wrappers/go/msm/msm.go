@@ -1,0 +1,58 @@
+package msm
+
+/*
+#cgo LDFLAGS: -L../../../native/build -L../../../native/depends/blst -L/usr/local/cuda/lib64 -lcryptocuda -lblst -lcuda -lcudart -lm -lstdc++ -lgomp
+#cgo CFLAGS: -I../../../native -I/usr/local/cuda/include -DFEATURE_BN254 -D__ADX__ -fopenmp
+#include "lib.h"
+#include "msm/msm.h"
+*/
+import "C"
+import (
+	"fmt"
+	"unsafe"
+	"zeknox/lib"
+)
+
+type MSMConfig struct {
+	FfiAffineSz        uint32
+	Npoints            uint32
+	ArePointsInMont    bool
+	AreInputsOnDevice  bool
+	AreOutputsOnDevice bool
+}
+
+func DefaultMSMConfig() MSMConfig {
+	return MSMConfig{
+		FfiAffineSz:        0,
+		Npoints:            0,
+		AreInputsOnDevice:  false,
+		AreOutputsOnDevice: false,
+	}
+}
+
+func toCMSMConfig(cfg MSMConfig) C.MSM_Config {
+	return C.MSM_Config{
+		ffi_affine_sz:         C.uint(cfg.FfiAffineSz),
+		npoints:               C.uint(cfg.Npoints),
+		are_points_in_mont:    C.char(lib.BoolToInt8(cfg.ArePointsInMont)),
+		are_inputs_on_device:  C.char(lib.BoolToInt8(cfg.AreInputsOnDevice)),
+		are_outputs_on_device: C.char(lib.BoolToInt8(cfg.AreOutputsOnDevice)),
+	}
+}
+
+func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg MSMConfig) error {
+	ccfg := toCMSMConfig(cfg)
+	fmt.Printf("start invoke mul pippenger %v\n", ccfg)
+	err := C.mult_pippenger(
+		C.uint(numGPU),
+		output,
+		input_points,
+		input_scalars,
+		ccfg,
+	)
+	C.fflush(C.stdout)
+	if err.code != 0 {
+		return fmt.Errorf("error: %s", C.GoString(err.message))
+	}
+	return nil
+}

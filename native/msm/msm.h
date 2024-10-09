@@ -8,10 +8,10 @@
 #include <utils/rusterror.h>
 
 #ifdef __cplusplus
-#define BOOL bool
+#define _BOOL bool
 #define EXTERN extern "C"
 #else
-#define BOOL int
+#define _BOOL char
 #define EXTERN
 #endif
 
@@ -19,9 +19,9 @@ typedef struct
 {
     uint32_t ffi_affine_sz;       // affine point size; for bn254 is 64; 32 bytes for X and 32 bytes for Y.
     uint32_t npoints;             // number of points
-    BOOL are_points_in_mont;   // whether input points are in montgomery form. Default value: false
-    BOOL are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
+    _BOOL are_points_in_mont;   // whether input points are in montgomery form. Default value: false
+    _BOOL are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
+    _BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
 } MSM_Config;
 
 #ifdef FEATURE_BN254
@@ -57,8 +57,9 @@ typedef Affine<g2_point_field_t> g2_affine_t;
 
 // EXTERN RustError::by_value mult_pippenger_g2(g2_projective_t *out, g2_affine_t *points, size_t msm_size, scalar_field_t *scalars, size_t large_bucket_factor, bool on_device,
 //                                              bool big_triangle);
-EXTERN RustError mult_pippenger_g2(void *out, void *points, size_t msm_size, void *scalars, size_t large_bucket_factor, BOOL on_device,
-BOOL big_triangle);
+EXTERN RustError mult_pippenger_g2(void *out, void *points, size_t msm_size, void *scalars, size_t large_bucket_factor, _BOOL on_device, _BOOL big_triangle);
 #endif // FEATURE_BN254
+
+#undef _BOOL
 
 #endif
