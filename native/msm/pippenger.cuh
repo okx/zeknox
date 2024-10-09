@@ -105,13 +105,9 @@ __launch_bounds__(1024) __global__
     {
         auto s = scalars[i];
 
-#if 0
-        s.from();
-        if (!mont) s.to();
-#else
-        if (mont)
+        if (mont){
             s.from();
-#endif
+        }
 
         // clear the most significant bit
         uint32_t msb = s[top_i] >> ((scalar_t::nbits - 1) % 32);

@@ -25,6 +25,7 @@ func DefaultMSMConfig() MSMConfig {
 	return MSMConfig{
 		FfiAffineSz:        0,
 		Npoints:            0,
+		ArePointsInMont:    false,
 		AreInputsOnDevice:  false,
 		AreOutputsOnDevice: false,
 	}
