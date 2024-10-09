@@ -364,12 +364,14 @@ template __global__ void breakdown<scalar_t>(vec2d_t<uint32_t> digits, const sca
 #include <utils/rusterror.h>
 #include <utils/gpu_t.cuh>
 
-template <class bucket_t, class point_t, class affine_t, class scalar_t,
-        //   class affine_h = class affine_t::mem_t,
-         class affine_h = class affine_t,
-          class bucket_h = class bucket_t::mem_t>
+template <class bucket_t, class point_t, class affine_t, class scalar_t>
+        //  class affine_h = class affine_t::mem_t,
+        //  class affine_h = class affine_t,
+        //  class bucket_h = class bucket_t::mem_t>
 class msm_t
 {
+    typedef typename bucket_t::mem_t bucket_h;
+    typedef typename bucket_t::affine_t affine_h;
     const gpu_t &gpu;
     size_t npoints;
     uint32_t wbits, nwins;
