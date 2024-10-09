@@ -49,23 +49,6 @@ func DefaultNTTConfig() NTTConfig {
 	}
 }
 
-type MSMConfig struct {
-	FfiAffineSz        uint32
-	Npoints            uint32
-	ArePointsInMont    bool
-	AreInputsOnDevice  bool
-	AreOutputsOnDevice bool
-}
-
-func DefaultMSMConfig() MSMConfig {
-	return MSMConfig{
-		FfiAffineSz:        0,
-		Npoints:            0,
-		AreInputsOnDevice:  false,
-		AreOutputsOnDevice: false,
-	}
-}
-
 type TransposeConfig struct {
 	Batches            uint32
 	AreInputsOnDevice  bool

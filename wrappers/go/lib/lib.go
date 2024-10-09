@@ -12,21 +12,11 @@ import (
 	"unsafe"
 )
 
-func BoolToInt(b bool) int {
+func BoolToInt8(b bool) int8 {
 	if b {
 		return 1
 	}
 	return 0
-}
-
-func toCMSMConfig(cfg MSMConfig) C.MSM_Config {
-	return C.MSM_Config{
-		ffi_affine_sz:         C.uint(cfg.FfiAffineSz),
-		npoints:               C.uint(cfg.Npoints),
-		are_points_in_mont:    C.int(BoolToInt(cfg.ArePointsInMont)),
-		are_inputs_on_device:  C.int(BoolToInt(cfg.AreInputsOnDevice)),
-		are_outputs_on_device: C.int(BoolToInt(cfg.AreOutputsOnDevice)),
-	}
 }
 
 func toCNTTConfig(cfg NTTConfig) C.NTT_Config {
@@ -35,10 +25,10 @@ func toCNTTConfig(cfg NTTConfig) C.NTT_Config {
 		order:                 C.NTT_InputOutputOrder(cfg.Order),
 		ntt_type:              C.NTT_Type(cfg.NttType),
 		extension_rate_bits:   C.uint(cfg.ExtensionRateBits),
-		are_inputs_on_device:  C.int(BoolToInt(cfg.AreInputsOnDevice)),
-		are_outputs_on_device: C.int(BoolToInt(cfg.AreOutputsOnDevice)),
-		with_coset:            C.int(BoolToInt(cfg.WithCoset)),
-		is_multi_gpu:          C.int(BoolToInt(cfg.IsMultiGPU)),
+		are_inputs_on_device:  C.char(BoolToInt8(cfg.AreInputsOnDevice)),
+		are_outputs_on_device: C.char(BoolToInt8(cfg.AreOutputsOnDevice)),
+		with_coset:            C.char(BoolToInt8(cfg.WithCoset)),
+		is_multi_gpu:          C.char(BoolToInt8(cfg.IsMultiGPU)),
 		salt_size:             C.uint(cfg.SaltSize),
 	}
 }
@@ -46,8 +36,8 @@ func toCNTTConfig(cfg NTTConfig) C.NTT_Config {
 func toCNTTTransposeConfig(cfg TransposeConfig) C.NTT_TransposeConfig {
 	return C.NTT_TransposeConfig{
 		batches:               C.uint(cfg.Batches),
-		are_inputs_on_device:  C.int(BoolToInt(cfg.AreInputsOnDevice)),
-		are_outputs_on_device: C.int(BoolToInt(cfg.AreOutputsOnDevice)),
+		are_inputs_on_device:  C.char(BoolToInt8(cfg.AreInputsOnDevice)),
+		are_outputs_on_device: C.char(BoolToInt8(cfg.AreOutputsOnDevice)),
 	}
 }
 
@@ -165,23 +155,6 @@ func TransposeRevBatch(deviceID int, output, input unsafe.Pointer, logNSize int,
 		C.uint(logNSize),
 		ccfg,
 	)
-	if err.code != 0 {
-		return fmt.Errorf("error: %s", C.GoString(err.message))
-	}
-	return nil
-}
-
-func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg MSMConfig) error {
-	ccfg := toCMSMConfig(cfg)
-	fmt.Printf("start invoke mul pippenger %v\n", ccfg)
-	err := C.mult_pippenger(
-		C.uint(numGPU),
-		output,
-		input_points,
-		input_scalars,
-		ccfg,
-	)
-	C.fflush(C.stdout)
 	if err.code != 0 {
 		return fmt.Errorf("error: %s", C.GoString(err.message))
 	}
