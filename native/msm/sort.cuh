@@ -17,13 +17,6 @@
 # error "impossible DIGIT_BITS"
 #endif
 
-
-// __launch_bounds__(SORT_BLOCKDIM)
-// __global__ void sort(vec2d_t<uint32_t> inouts, size_t len, uint32_t win,
-//                      vec2d_t<uint2> temps, vec2d_t<uint32_t> histograms,
-//                      uint32_t wbits, uint32_t lsbits0, uint32_t lsbits1);
-
-
 #ifndef __MSM_SORT_DONT_IMPLEMENT__
 
 #ifndef WARP_SZ

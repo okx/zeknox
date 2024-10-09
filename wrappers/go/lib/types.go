@@ -52,9 +52,9 @@ func DefaultNTTConfig() NTTConfig {
 type MSMConfig struct {
 	FfiAffineSz        uint32
 	Npoints            uint32
+	ArePointsInMont    bool
 	AreInputsOnDevice  bool
 	AreOutputsOnDevice bool
-	ArePointsInMont    bool
 }
 
 func DefaultMSMConfig() MSMConfig {

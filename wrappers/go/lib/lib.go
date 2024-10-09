@@ -21,11 +21,11 @@ func BoolToInt(b bool) int {
 
 func toCMSMConfig(cfg MSMConfig) C.MSM_Config {
 	return C.MSM_Config{
-		npoints:               C.uint(cfg.Npoints),
 		ffi_affine_sz:         C.uint(cfg.FfiAffineSz),
+		npoints:               C.uint(cfg.Npoints),
+		are_points_in_mont:    C.int(BoolToInt(cfg.ArePointsInMont)),
 		are_inputs_on_device:  C.int(BoolToInt(cfg.AreInputsOnDevice)),
 		are_outputs_on_device: C.int(BoolToInt(cfg.AreOutputsOnDevice)),
-		are_points_in_mont:    C.int(BoolToInt(cfg.ArePointsInMont)),
 	}
 }
 
@@ -173,6 +173,7 @@ func TransposeRevBatch(deviceID int, output, input unsafe.Pointer, logNSize int,
 
 func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg MSMConfig) error {
 	ccfg := toCMSMConfig(cfg)
+	fmt.Printf("start invoke mul pippenger %v\n", ccfg)
 	err := C.mult_pippenger(
 		C.uint(numGPU),
 		output,
@@ -180,6 +181,7 @@ func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg 
 		input_scalars,
 		ccfg,
 	)
+	C.fflush(C.stdout)
 	if err.code != 0 {
 		return fmt.Errorf("error: %s", C.GoString(err.message))
 	}

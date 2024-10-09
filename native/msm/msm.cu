@@ -15,6 +15,7 @@
 // RustError mult_pippenger(uint32_t device_id, point_t *out, affine_t *input_points, scalar_t *input_scalars, MSM_Config cfg)
 RustError mult_pippenger(uint32_t device_id, void *out, void *input_points, void *input_scalars, MSM_Config cfg)
 {
+    printf("start mult_pippenger, device_id: %d, ffi_affine_sz: %d, npoints: %d, are_inputs_on_device: %d\n", device_id, cfg.ffi_affine_sz, cfg.npoints, cfg.are_inputs_on_device);
     auto &gpu = select_gpu(device_id);
     gpu.select();
 
