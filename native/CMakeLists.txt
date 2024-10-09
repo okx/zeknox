@@ -53,8 +53,8 @@ if(USE_CUDA)
 # enable CUDA debug
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 message("debug mode (enable CUDA debug)")
-set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
-set(CUDA_NVCC_FLAGS "-g -G")
+set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G -maxrregcount=168")
+set(CUDA_NVCC_FLAGS "-g -G -maxrregcount=168")
 endif()
 
 if(NOT CMAKE_CUDA_TOOLKIT_ROOT_DIR)

@@ -2,6 +2,9 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
+#ifndef __SPPARK_UTIL_ALL_GPUS_CPP__
+#define __SPPARK_UTIL_ALL_GPUS_CPP__
+
 #include "gpu_t.cuh"
 #include <iostream>
 #include <cuda_runtime.h>
@@ -171,3 +174,4 @@ void list_all_gpus_prop()
     }
 }
 
+#endif

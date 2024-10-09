@@ -20,7 +20,8 @@ to enable G2
 - run test
 ```
 export LD_LIBRARY_PATH=package/lib/ # if building a shared lib
-./test_bn254 --gtest_filter=*msm_bn254_g1_curve_gpu_consistency_with_cpu*
+./test_bn254 --gtest_filter=*msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu*
+./test_bn254 --gtest_filter=*msm_inputs_on_device_bn254_g1_curve_gpu_consistency_with_cpu*
 ./test_gl64 --gtest_filter=*xxx*
 ```
 

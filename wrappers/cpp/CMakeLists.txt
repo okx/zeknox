@@ -7,6 +7,7 @@ endif()
 if(NOT CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
 endif()
+set(CUDA_INCLUDE_DIRS ${CMAKE_CUDA_TOOLKIT_ROOT_DIR}/include)
 enable_language(CUDA)
 
 project(cryptography_cuda_cpp LANGUAGES CXX CUDA ASM)

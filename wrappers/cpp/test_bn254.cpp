@@ -15,6 +15,7 @@
 #include "fft.hpp"
 #include <random>
 #include <cmath>
+#include <cuda_runtime.h>
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
@@ -293,10 +294,10 @@ TEST(altBn128, msm_bn254_g1_cpu_self_consistency)
     delete[] scalars;
 }
 
-TEST(altBn128, msm_bn254_g1_curve_gpu_consistency_with_cpu)
+TEST(altBn128, msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
 {
 
-    int NMExp = 1 << 10;
+    int NMExp = 1 << 12;
 
     typedef uint8_t Scalar[32];
 
@@ -344,7 +345,106 @@ TEST(altBn128, msm_bn254_g1_curve_gpu_consistency_with_cpu)
     size_t sz = sizeof(affine_t);
 
     std::cout << "size of affine_t: " << sizeof(affine_t) << " size of fr_t: " << sizeof(fr_t) << std::endl;
-    mult_pippenger(gpu_result, (affine_t *)bases, NMExp, (fr_t *)scalars, sz);
+    size_t device_id = 0;
+    MSM_Config cfg{
+        ffi_affine_sz : sz,
+        npoints : NMExp,
+        are_points_in_mont : false,
+        are_inputs_on_device : false,
+        are_outputs_on_device : false,
+    };
+    mult_pippenger(device_id, gpu_result, (affine_t *)bases, (fr_t *)scalars, cfg);
+
+    // remain in Montgmery Space
+    F1Element *gpu_x = (F1Element *)(&gpu_result->X);
+    F1Element *gpu_y = (F1Element *)(&gpu_result->Y);
+    F1Element *gpu_z = (F1Element *)(&gpu_result->Z);
+
+    G1Point gpu_point_result{
+        x : F1.zero(),
+        y : F1.zero(),
+        zz : F1.zero(),
+        zzz : F1.zero(),
+    };
+    F1.copy(gpu_point_result.x, *gpu_x);
+    F1.copy(gpu_point_result.y, *gpu_y);
+    F1.square(gpu_point_result.zz, *gpu_z);
+    F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
+    print_g1_point(gpu_point_result);
+    ASSERT_TRUE(G1.eq(p1, gpu_point_result));
+    std::cout << "end success" << std::endl;
+    delete[] bases;
+    delete[] scalars;
+}
+
+TEST(altBn128, msm_inputs_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
+{
+    int NMExp = 1 << 12;
+
+    typedef uint8_t Scalar[32];
+
+    Scalar *scalars = new Scalar[NMExp];
+    G1PointAffine *bases = new G1PointAffine[NMExp];
+
+    uint64_t acc = 0;
+    for (int i = 0; i < NMExp; i++)
+    {
+        if (i == 0)
+        {
+            G1.copy(bases[0], G1.one());
+        }
+        else
+        {
+            G1.add(bases[i], bases[i - 1], G1.one());
+        }
+        for (int j = 0; j < 32; j++)
+            scalars[i][j] = 0;
+        *(int *)&scalars[i][0] = i + 1;
+        acc += (i + 1) * (i + 1);
+    }
+
+    G1Point p1;
+    G1.multiMulByScalar(p1, bases, (uint8_t *)scalars, 32, NMExp);
+
+    mpz_t e;
+    mpz_init_set_ui(e, acc); // init to an unsigned integer
+
+    Scalar sAcc;
+    std::fill(std::begin(sAcc), std::end(sAcc), 0);
+
+    // export a multi-precision integer `e` into a more traditional byte array format `sAcc`;
+    // each block is 8 bytes
+    // blocks are little endian order; and witin each block, it is also little endian order;
+    mpz_export((void *)sAcc, NULL, -1, 8, -1, 0, e);
+    mpz_clear(e);
+
+    G1Point p2;
+    G1.mulByScalar(p2, G1.one(), sAcc, 32);
+
+    ASSERT_TRUE(G1.eq(p1, p2));
+
+    point_t *gpu_result = new point_t{};
+    size_t sz = sizeof(affine_t);
+
+    std::cout << "size of affine_t: " << sizeof(affine_t) << " size of fr_t: " << sizeof(fr_t) << std::endl;
+    size_t device_id = 0;
+    MSM_Config cfg{
+        ffi_affine_sz : sz,
+        npoints : NMExp,
+        are_points_in_mont : false,
+        are_inputs_on_device : true,
+        are_outputs_on_device : false,
+    };
+
+    affine_t *d_points;
+    cudaMalloc((void **)&d_points, NMExp * sizeof(affine_t));
+    cudaMemcpy(d_points, bases, NMExp * sizeof(affine_t), cudaMemcpyHostToDevice);
+
+    fr_t *d_scalars;
+    cudaMalloc((void **)&d_scalars, NMExp * sizeof(fr_t));
+    cudaMemcpy(d_scalars, scalars, NMExp * sizeof(fr_t), cudaMemcpyHostToDevice);
+
+    mult_pippenger(device_id, gpu_result, (affine_t *)d_points, (fr_t *)d_scalars, cfg);
 
     // remain in Montgmery Space
     F1Element *gpu_x = (F1Element *)(&gpu_result->X);

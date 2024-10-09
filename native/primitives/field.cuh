@@ -21,12 +21,7 @@
 #include "utils/host_math.cuh"
 #include "utils/ptx.cuh"
 #include "utils/storage.cuh"
-#include <iomanip>
-#include <iostream>
-#include <random>
-#include <sstream>
-#include <string>
-
+#include <time.h>
 
 #ifndef CUDA_DEBUG
 #define HOST_INLINE        __host__ __forceinline__
@@ -702,12 +697,10 @@ public:
 
   static HOST_INLINE Field rand_host()
   {
-    std::random_device rd;
-    std::mt19937_64 generator(rd());
-    std::uniform_int_distribution<unsigned> distribution;
+    srand((unsigned int)time(NULL));
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
-      value.limbs_storage.limbs[i] = distribution(generator);
+      value.limbs_storage.limbs[i] = (unsigned int)rand();
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
     return value;
@@ -720,19 +713,6 @@ public:
     const ff_storage modulus = get_modulus<REDUCTION_SIZE>();
     Field rs = {};
     return sub_limbs<true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
-  }
-
-  friend std::ostream& operator<<(std::ostream& os, const Field& xs)
-  {
-    std::stringstream hex_string;
-    hex_string << std::hex << std::setfill('0');
-
-    for (int i = 0; i < TLC; i++) {
-      hex_string << std::setw(8) << xs.limbs_storage.limbs[TLC - i - 1];
-    }
-
-    os << "0x" << hex_string.str();
-    return os;
   }
 
   friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys)

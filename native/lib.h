@@ -10,7 +10,7 @@
 #else
 #define EXTERN
 #endif
-
+#include <stdio.h>
 #include <utils/rusterror.h>
 #include <ntt/ntt.h>
 #ifdef BUILD_MSM

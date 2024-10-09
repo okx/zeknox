@@ -365,7 +365,8 @@ template __global__ void breakdown<scalar_t>(vec2d_t<uint32_t> digits, const sca
 #include <utils/gpu_t.cuh>
 
 template <class bucket_t, class point_t, class affine_t, class scalar_t,
-          class affine_h = class affine_t::mem_t,
+        //   class affine_h = class affine_t::mem_t,
+         class affine_h = class affine_t,
           class bucket_h = class bucket_t::mem_t>
 class msm_t
 {
@@ -373,9 +374,10 @@ class msm_t
     size_t npoints;
     uint32_t wbits, nwins;
     bucket_h *d_buckets;
+    vec2d_t<uint32_t> d_hist;
+public:
     affine_h *d_points;
     scalar_t *d_scalars;
-    vec2d_t<uint32_t> d_hist;
 
     template <typename T>
     using vec_t = slice_t<T>;
@@ -403,6 +405,7 @@ public:
           size_t ffi_affine_sz = sizeof(affine_t), int device_id = -1)
         : gpu(select_gpu(device_id)), d_points(nullptr), d_scalars(nullptr)
     {
+        // std::cout << "Line: " << __LINE__ << "\n";
         npoints = (np + WARP_SZ - 1) & ((size_t)0 - WARP_SZ);
 
         wbits = 17;
@@ -438,9 +441,13 @@ public:
     }
     inline msm_t(vec_t<affine_t> points, size_t ffi_affine_sz = sizeof(affine_t),
                  int device_id = -1)
-        : msm_t(points, points.size(), ffi_affine_sz, device_id){};
+        : msm_t(points, points.size(), ffi_affine_sz, device_id){
+            //   std::cout << "Line: " << __LINE__ << "\n";
+        };
     inline msm_t(int device_id = -1)
-        : msm_t(nullptr, 0, 0, device_id){};
+        : msm_t(nullptr, 0, 0, device_id){
+            //   std::cout << "Line: " << __LINE__ << "\n";
+        };
     ~msm_t()
     {
         gpu.sync();
@@ -507,7 +514,9 @@ public:
         assert(this->npoints == 0 || npoints <= this->npoints);
 
         uint32_t lg_npoints = lg2(npoints + npoints / 2);
+
         size_t batch = 1 << (std::max(lg_npoints, wbits) - wbits);
+        // printf("npoints: %d, lg_npoints: %d, wbits: %d, batch: %d\n", npoints,lg_npoints, wbits, batch);
         batch >>= 6;
         batch = batch ? batch : 1;
         uint32_t stride = (npoints + batch - 1) / batch;
@@ -782,14 +791,16 @@ private:
 };
 
 template <class bucket_t, class point_t, class affine_t, class scalar_t>
-static RustError mult_pippenger(point_t *out, const affine_t points[], size_t npoints,
-                                const scalar_t scalars[], bool mont = true,
+static RustError mult_pippenger(point_t *out, affine_t *points, size_t npoints,
+                                scalar_t* scalars, bool mont = true,
                                 size_t ffi_affine_sz = sizeof(affine_t))
 {
     // printf("invoke mult_pippenger mont: %d, ffi_affine_sz:%d \n", mont, ffi_affine_sz);
     try
     {
         msm_t<bucket_t, point_t, affine_t, scalar_t> msm{nullptr, npoints};
+        msm.d_points = points; // TODO: need a proper way to set the device pointer
+        msm.d_scalars = scalars;
         return msm.invoke(*out, slice_t<affine_t>{points, npoints},
                           scalars, mont, ffi_affine_sz);
     }
