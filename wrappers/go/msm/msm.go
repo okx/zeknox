@@ -43,7 +43,7 @@ func toCMSMConfig(cfg MSMConfig) C.MSM_Config {
 
 func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg MSMConfig) error {
 	ccfg := toCMSMConfig(cfg)
-	fmt.Printf("start invoke mul pippenger %v\n", ccfg)
+	// fmt.Printf("start invoke mul pippenger %v\n", ccfg)
 	err := C.mult_pippenger(
 		C.uint(numGPU),
 		output,
