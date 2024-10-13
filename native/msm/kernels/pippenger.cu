@@ -224,6 +224,7 @@ __global__ void split_scalars_kernel(
   unsigned bucket_index2;
   unsigned current_index;
   unsigned msm_index = tid >> msm_log_size;
+  // printf("tid: %d, msm_index: %d \n", tid, msm_index);
   unsigned borrow = 0;
   if (tid < total_size) {
     S scalar = scalars[tid];

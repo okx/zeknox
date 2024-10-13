@@ -111,7 +111,7 @@ else()
 endif ()
 
 add_subdirectory(${PROJECT_CUDA_SOURCE_DIR} zeknox)
-target_compile_definitions(cryptocuda PRIVATE -DBUILD_MSM=ON -DCURVE=BN254)
+target_compile_definitions(cryptocuda PRIVATE -DBUILD_MSM=ON -DCURVE=BN254 -DG2_ENABLED=ON)
 
 ##============================Build Test & Bench==============================================##
 enable_testing()

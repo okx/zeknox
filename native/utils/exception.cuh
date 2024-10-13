@@ -13,7 +13,8 @@ using cuda_error = zeknox_error;
 #define CUDA_OK(expr) do {                                  \
     cudaError_t code = expr;                                \
     if (code != cudaSuccess) {                              \
-        auto file = std::strstr(__FILE__, "sppark");        \
+        printf("error code%d, %s \n", code, __FILE__);         \
+        auto file = std::strstr(__FILE__, "zeknox");        \
         auto str = fmt("%s@%s:%d failed: \"%s\"", #expr,    \
                        file ? file : __FILE__, __LINE__,    \
                        cudaGetErrorString(code));           \

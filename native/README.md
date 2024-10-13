@@ -17,6 +17,9 @@ set(CUDA_ARCH "86" CACHE STRING "CUDA architecture")
 option(USE_AVX "Enable AVX acceleration" OFF)
 option(USE_AVX512 "Enable AVX512 (and AVX) acceleration" OFF)
 option(BUILD_TESTS "Build tests" OFF)
+CURVE BN254    # indicate which curve to use, default is GL64; supported values are: BN254, etc
+BUILD_MSM      # whether build MSM
+G2_ENABLED     # whether enable msm on G2 curve; it takes very long to build; OFF by default
 ```
 
 ## Other flags

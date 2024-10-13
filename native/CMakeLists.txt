@@ -20,10 +20,14 @@ option(USE_AVX "Enable AVX acceleration" OFF)
 option(USE_AVX512 "Enable AVX512 (and AVX) acceleration" OFF)
 option(BUILD_TESTS "Build tests" OFF)
 option(BUILD_MSM "Include msm" OFF)
+option(G2_ENABLED "Enable G2" OFF) # whether enable msm on G2 curve; it takes very long to build; OFF by default
 
 set(EXTRA_DEFAULT_FLAGS "-DEXPOSE_C_INTERFACE -DTAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE")
 if(BUILD_MSM)
     set(EXTRA_DEFAULT_FLAGS "-DBUILD_MSM ${EXTRA_DEFAULT_FLAGS}")
+    if(G2_ENABLED)
+        set(EXTRA_DEFAULT_FLAGS "-DG2_ENABLED ${EXTRA_DEFAULT_FLAGS}")
+    endif()
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -g ${EXTRA_DEFAULT_FLAGS}")
