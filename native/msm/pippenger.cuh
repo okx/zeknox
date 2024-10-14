@@ -831,6 +831,7 @@ static RustError mult_pippenger_g2_internal(
     A *points,
     S *scalars,
     unsigned size,
+    bool mont,
     bool on_device,
     bool big_triangle,
     unsigned large_bucket_factor)
@@ -838,7 +839,7 @@ static RustError mult_pippenger_g2_internal(
     unsigned c = 16;
     unsigned bitsize = S::NBITS; // 254
 
-    bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle, large_bucket_factor);
+    bucket_method_msm(bitsize, c, scalars, points, size,   mont, result, on_device, big_triangle, large_bucket_factor);
     RustError r{0};
     return r;
 }
@@ -851,6 +852,7 @@ void bucket_method_msm(
     S *scalars,
     A *points,
     unsigned size,
+        bool mont,
     P *final_result,
     bool on_device,
     bool big_triangle,
@@ -882,7 +884,7 @@ void bucket_method_msm(
     unsigned msm_log_size = ceil(log2(size));
     unsigned bm_bitsize = ceil(log2(nof_bms));
     unsigned nof_buckets = nof_bms << c; // each bucket module contains 1<<c buckets; total is nof_bms << c
-    printf("bucket_method_msm, bitsize: %d, c: %d, nof_bms: %d, nof_buckets:%d \n", bitsize, c, nof_bms, nof_buckets);
+    // printf("bucket_method_msm, bitsize: %d, c: %d, nof_bms: %d, nof_buckets:%d \n", bitsize, c, nof_bms, nof_buckets);
     CUDA_OK(cudaMallocAsync(&buckets, sizeof(P) * nof_buckets, stream));
 
     // launch the bucket initialization kernel with maximum threads
@@ -897,7 +899,12 @@ void bucket_method_msm(
     CUDA_OK(cudaMallocAsync(&point_indices, sizeof(unsigned) * size * (nof_bms + 1), stream));
 
     // split scalars into digits
-    printf("initialize split_scalars_kernel: size: %d, msm_log_size: %d, nof_bms: %d, bm_bitsize: %d \n", size, msm_log_size, nof_bms, bm_bitsize);
+    // printf("initialize split_scalars_kernel: size: %d, msm_log_size: %d, nof_bms: %d, bm_bitsize: %d \n", size, msm_log_size, nof_bms, bm_bitsize);
+    if(mont) {
+        transfrom_scalars_and_points_from_mont<<<(size+ NUM_THREADS-1)/NUM_THREADS, NUM_THREADS,0, stream >>>(d_scalars,d_points, size);
+    }
+
+
     NUM_BLOCKS = (size * (nof_bms + 1) + NUM_THREADS - 1) / NUM_THREADS;
     split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
         bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, nof_bms, bm_bitsize, c);
@@ -965,7 +972,7 @@ void bucket_method_msm(
         // if all points are 0 just return point 0
         if (h_nof_buckets_to_compute == 0)
         {
-            printf("h_nof_buckets_to_compute is zero \n");
+            // printf("h_nof_buckets_to_compute is zero \n");
             if (!on_device)
                 final_result[0] = P::zero();
             else
@@ -1045,7 +1052,7 @@ void bucket_method_msm(
                 1 << (unsigned)ceil(log2((h_largest_bucket_size + bucket_th - 1) / bucket_th)); // global param
             unsigned max_bucket_size_run_length = (h_largest_bucket_size + threads_per_bucket - 1) / threads_per_bucket;
             unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
-            printf("total byts to allocate: %d \n", sizeof(P) * total_large_buckets_size);
+            // printf("total byts to allocate: %d \n", sizeof(P) * total_large_buckets_size);
             CUDA_OK(cudaMallocAsync(&large_buckets, sizeof(P) * total_large_buckets_size, stream2));
 
             NUM_THREADS = min(1 << 8, total_large_buckets_size);
@@ -1233,12 +1240,12 @@ void bucket_method_msm(
             }
         }
 
-        printf("double and add \n");
+        // printf("double and add \n");
 
         // launch the double and add kernel, a single thread
         final_accumulation_kernel<P, S>
             <<<1, 1, 0, stream>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
-         printf("free \n");
+        //  printf("free \n");
 
         CUDA_OK(cudaFreeAsync(final_results, stream));
         CUDA_OK(cudaStreamSynchronize(stream));
