@@ -54,21 +54,21 @@ find_max_size(unsigned *bucket_count, unsigned *unique_bucket_indices, unsigned 
 // it is done by a single thread
 template <typename P, typename S>
 __global__ void
-final_accumulation_kernel(P *final_sums, P *final_results, unsigned nof_msms, unsigned nof_bms, unsigned c)
+final_accumulation_kernel(P *final_sums, P *final_results, unsigned nof_msms, unsigned num_of_windows, unsigned c)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid > nof_msms)
     return;
   P final_result = P::zero();
-  for (unsigned i = nof_bms; i > 1; i--)
+  for (unsigned i = num_of_windows; i > 1; i--)
   {
-    final_result = final_result + final_sums[i - 1 + tid * nof_bms]; // add
+    final_result = final_result + final_sums[i - 1 + tid * num_of_windows]; // add
     for (unsigned j = 0; j < c; j++)                                 // double
     {
       final_result = final_result + final_result;
     }
   }
-  final_results[tid] = final_result + final_sums[tid * nof_bms];
+  final_results[tid] = final_result + final_sums[tid * num_of_windows];
 }
 
 template <typename P, typename A>
@@ -153,22 +153,22 @@ __global__ void single_stage_multi_reduction_kernel(
   v_r[v_r_key] = v_r_value;
 }
 
-// this kernel sums the entire bucket module
-// each thread deals with a single bucket module
+// this kernel sums across windows
+// each thread deals with a single window
 template <typename P>
-__global__ void big_triangle_sum_kernel(P *buckets, P *final_sums, unsigned nof_bms, unsigned c)
+__global__ void big_triangle_sum_kernel(P *buckets, P *final_sums, unsigned num_of_windows, unsigned c)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid >= nof_bms)
+  if (tid >= num_of_windows)
     return;
 
-  unsigned buckets_in_bm = (1 << c);
+  unsigned num_of_buckets_per_window = (1 << c);
 
-  P line_sum = buckets[(tid + 1) * buckets_in_bm - 1];
+  P line_sum = buckets[(tid + 1) * num_of_buckets_per_window - 1];
   final_sums[tid] = line_sum;
-  for (unsigned i = buckets_in_bm - 2; i > 0; i--)
+  for (unsigned i = num_of_buckets_per_window - 2; i > 0; i--)
   {
-    line_sum = line_sum + buckets[tid * buckets_in_bm + i]; // using the running sum method
+    line_sum = line_sum + buckets[tid * num_of_buckets_per_window + i];
     final_sums[tid] = final_sums[tid] + line_sum;
   }
 }
@@ -238,7 +238,7 @@ __global__ void transfrom_scalars_and_points_from_mont(scalar_field_t *scalars, 
 }
 
 /**
- * this kernel splits the scalars into digits of size c; each thread splits a single scalar into nof_bms digits
+ * this kernel splits the scalars into digits of size c; each thread splits a single scalar into num_of_windows digits
  * @param buckets_indices, indicate the bucket index of each scalar of a window. the size of `buckets_indices` is `msm_size`*`num_windows`;the value is the bit concanation of
  * `window_index | window_idx | bucket_index`
  * @param num_windows number of windows; for BN254, the size of bits is 254; if window bit size is `c` = 16; num_windows = ceil(254/16) = 16

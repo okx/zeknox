@@ -1121,7 +1121,6 @@ void bucket_method_msm(
     else
     {
         unsigned source_bits_count = c;
-        bool odd_source_c = source_bits_count % 2;
         unsigned source_windows_count = num_of_window;
         unsigned source_buckets_count = total_num_of_buckets;
         P *source_buckets = buckets;
@@ -1219,7 +1218,6 @@ void bucket_method_msm(
             temp_buckets1 = nullptr;
             temp_buckets2 = nullptr;
             source_bits_count = target_bits_count;
-            odd_source_c = source_bits_count % 2;
             source_windows_count = target_windows_count;
             source_buckets_count = target_buckets_count;
         }
