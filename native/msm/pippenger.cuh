@@ -423,7 +423,7 @@ public:
 
         size_t d_buckets_sz = (nwins * row_sz) + (gpu.sm_count() * BATCH_ADD_BLOCK_SIZE / WARP_SZ);
         size_t d_blob_sz = (d_buckets_sz * sizeof(d_buckets[0])) + (nwins * row_sz * sizeof(uint32_t)) + (points ? npoints * sizeof(d_points[0]) : 0);
-        printf("nwins: %d, wbits: %d, d_buckets_sz: %d, d_blob_sz: %d, sm_count: %d, size_of_bucket: %d, row_sz:%d\n", nwins, wbits, d_buckets_sz, d_blob_sz, gpu.sm_count(), sizeof(d_buckets[0]), row_sz);
+        // printf("nwins: %d, wbits: %d, d_buckets_sz: %d, d_blob_sz: %d, sm_count: %d, size_of_bucket: %d, row_sz:%d\n", nwins, wbits, d_buckets_sz, d_blob_sz, gpu.sm_count(), sizeof(d_buckets[0]), row_sz);
         d_buckets = reinterpret_cast<decltype(d_buckets)>(gpu.Dmalloc(d_blob_sz));
         d_hist = vec2d_t<uint32_t>(&d_buckets[d_buckets_sz], row_sz);
         if (points)

@@ -25,7 +25,7 @@ typedef struct
 
     // below fields are MSM_G2 related
     uint32_t large_bucket_factor; // to control the threshhold of large bucket
-    _BOOL big_triangle;
+    _BOOL big_triangle; // select the type of reduction kernel, default is not using big_triangle (with very poor performance)
 } MSM_Config;
 
 #ifdef FEATURE_BN254
