@@ -270,7 +270,6 @@ __global__ void split_scalars_kernel(
     {
       bucket_index = scalar.get_scalar_digit(window_idx, c);
       current_index = window_idx * msm_size + tid;
-      printf("tid: %d, window_idx: %d, window_index: %d \n", tid, window_idx, window_index);
       buckets_indices[current_index] =
           (window_index << (c + bm_bitsize)) | (window_idx << c) | bucket_index; // the bucket module number and the msm number are appended at the msbs
       if (scalar == S::zero() || bucket_index == 0) {
