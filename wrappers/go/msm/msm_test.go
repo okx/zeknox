@@ -138,70 +138,22 @@ func TestMsmG1(t *testing.T) {
 	assert.True(t, cpuResultAffine.Equal(&gpuResultAffine), "gpu result is incorrect")
 }
 
-func fillRandomScalars(sampleScalars []fr.Element) {
-	// ensure every words of the scalars are filled
-	for i := 0; i < len(sampleScalars); i++ {
-		sampleScalars[i].SetRandom()
-	}
-}
-
-func fillRandomBasesG1(samplePoints []curve.G1Affine) {
-	for i := 0; i < len(samplePoints); i++ {
-		randomInt := big.NewInt(rand.Int63())
-		samplePoints[i].ScalarMultiplicationBase(randomInt)
-	}
-}
-
-// WARNING: this return points that are NOT on the curve and is meant to be use for benchmarking
-// purposes only. We don't check that the result is valid but just measure "computational complexity".
-//
-// Rationale for generating points that are not on the curve is that for large benchmarks, generating
-// a vector of different points can take minutes. Using the same point or subset will bias the benchmark result
-// since bucket additions in extended jacobian coordinates will hit doubling algorithm instead of add.
-//
-// Source: https://github.com/Consensys/gnark-crypto/blob/ef459367f3b5662d69381e74d2874b5fae1729ea/ecc/bn254/multiexp_test.go#L434
-func fillBenchBasesG1(samplePoints []curve.G1Affine) {
-	var r big.Int
-	r.SetString("340444420969191673093399857471996460938405", 10)
-	samplePoints[0].ScalarMultiplication(&samplePoints[0], &r)
-
-	one := samplePoints[0].X
-	one.SetOne()
-
-	for i := 1; i < len(samplePoints); i++ {
-		samplePoints[i].X.Add(&samplePoints[i-1].X, &one)
-		samplePoints[i].Y.Sub(&samplePoints[i-1].Y, &one)
-	}
-}
-
 func TestMsmG2InputsNotOnDevice(t *testing.T) {
-	var npoints uint32 = 1024
-	point_scale_factor := 1
-	scalars := make([]fr.Element, npoints)
-	for i := 0; i < len(scalars); i++ {
-		scalars[i] = fr.NewElement(uint64(i + 3))
-	}
+	const npoints uint32 = 1 << 10
+	var (
+		points  [npoints]curve.G2Affine
+		scalars [npoints]fr.Element
+	)
 
-	_, _, _, g2GenAff := curve.Generators()
-	basePointAffine := curve.G2Affine{}
-	basePointAffine.ScalarMultiplication(&g2GenAff, big.NewInt(int64(point_scale_factor)))
+	fillRandomScalars(scalars[:])
+	fillRandomBasesG2(points[:])
 
-	points := make([]curve.G2Affine, npoints)
-	for i := 0; i < len(points); i++ {
-		points[i] = basePointAffine
-	}
-
+	// CPU
 	cpuResultAffine := curve.G2Affine{}
-	_, err := cpuResultAffine.MultiExp(points, scalars, ecc.MultiExpConfig{NbTasks: 16})
+	_, err := cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
 	if err != nil {
 		t.Errorf("cpu msm error: %s", err.Error())
 	}
-
-	// fmt.Printf("cpuResultAffine string %v \n", cpuResultAffine.String())
-	// fmt.Printf("cpuResultAffine x.a0 bytes %x \n", cpuResultAffine.X.A0.Bytes())
-	// fmt.Printf("cpuResultAffine x.a1 bytes %x \n", cpuResultAffine.X.A1.Bytes())
-	// fmt.Printf("cpuResultAffine y.a0 bytes %x \n", cpuResultAffine.Y.A0.Bytes())
-	// fmt.Printf("cpuResultAffine y.a0 bytes %x \n", cpuResultAffine.Y.A1.Bytes())
 
 	data := Alloc_c(128)
 	cfg := DefaultMSMConfig()
@@ -236,24 +188,18 @@ func TestMsmG2InputsNotOnDevice(t *testing.T) {
 
 func TestMsmG2InputsOnDevice(t *testing.T) {
 
-	var npoints uint32 = 4096
-	point_scale_factor := 10
-	scalars := make([]fr.Element, npoints)
-	for i := 0; i < len(scalars); i++ {
-		scalars[i] = fr.NewElement(uint64(i + 1))
-	}
+	const npoints uint32 = 1 << 10
+	var (
+		points  [npoints]curve.G2Affine
+		scalars [npoints]fr.Element
+	)
 
-	_, _, _, g2GenAff := curve.Generators()
-	basePointAffine := curve.G2Affine{}
-	basePointAffine.ScalarMultiplication(&g2GenAff, big.NewInt(int64(point_scale_factor)))
+	fillRandomScalars(scalars[:])
+	fillRandomBasesG2(points[:])
 
-	points := make([]curve.G2Affine, npoints)
-	for i := 0; i < len(points); i++ {
-		points[i] = basePointAffine
-	}
-
+	// CPU
 	cpuResultAffine := curve.G2Affine{}
-	_, err := cpuResultAffine.MultiExp(points, scalars, ecc.MultiExpConfig{NbTasks: 16})
+	_, err := cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
 	if err != nil {
 		t.Errorf("cpu msm error: %s", err.Error())
 	}
@@ -262,7 +208,7 @@ func TestMsmG2InputsOnDevice(t *testing.T) {
 	if err != nil {
 		t.Errorf("allocate points to device error: %s", err.Error())
 	}
-	err = d_points.CopyFromHost(points)
+	err = d_points.CopyFromHost(points[:])
 	if err != nil {
 		t.Errorf("copy points to device error: %s", err.Error())
 	}
@@ -271,7 +217,7 @@ func TestMsmG2InputsOnDevice(t *testing.T) {
 	if err != nil {
 		t.Errorf("allocate points to device error: %s", err.Error())
 	}
-	err = d_scalars.CopyFromHost(scalars)
+	err = d_scalars.CopyFromHost(scalars[:])
 	if err != nil {
 		t.Errorf("copy scalars to device error: %s", err.Error())
 	}
@@ -305,6 +251,49 @@ func TestMsmG2InputsOnDevice(t *testing.T) {
 
 	assert.True(t, cpuResultAffine.Equal(&gpuG2Aff), "gpu result is incorrect")
 
+}
+
+func fillRandomScalars(sampleScalars []fr.Element) {
+	// ensure every words of the scalars are filled
+	for i := 0; i < len(sampleScalars); i++ {
+		sampleScalars[i].SetRandom()
+	}
+}
+
+func fillRandomBasesG1(samplePoints []curve.G1Affine) {
+	for i := 0; i < len(samplePoints); i++ {
+		randomInt := big.NewInt(rand.Int63())
+		samplePoints[i].ScalarMultiplicationBase(randomInt)
+	}
+}
+
+func fillRandomBasesG2(samplePoints []curve.G2Affine) {
+	for i := 0; i < len(samplePoints); i++ {
+		randomInt := big.NewInt(rand.Int63())
+		samplePoints[i].ScalarMultiplicationBase(randomInt)
+	}
+}
+
+// WARNING: this return points that are NOT on the curve and is meant to be use for benchmarking
+// purposes only. We don't check that the result is valid but just measure "computational complexity".
+//
+// Rationale for generating points that are not on the curve is that for large benchmarks, generating
+// a vector of different points can take minutes. Using the same point or subset will bias the benchmark result
+// since bucket additions in extended jacobian coordinates will hit doubling algorithm instead of add.
+//
+// Source: https://github.com/Consensys/gnark-crypto/blob/ef459367f3b5662d69381e74d2874b5fae1729ea/ecc/bn254/multiexp_test.go#L434
+func fillBenchBasesG1(samplePoints []curve.G1Affine) {
+	var r big.Int
+	r.SetString("340444420969191673093399857471996460938405", 10)
+	samplePoints[0].ScalarMultiplication(&samplePoints[0], &r)
+
+	one := samplePoints[0].X
+	one.SetOne()
+
+	for i := 1; i < len(samplePoints); i++ {
+		samplePoints[i].X.Add(&samplePoints[i-1].X, &one)
+		samplePoints[i].Y.Sub(&samplePoints[i-1].Y, &one)
+	}
 }
 
 func ReverseBytes(arr []byte) {
