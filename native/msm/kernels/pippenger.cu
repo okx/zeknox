@@ -1,6 +1,11 @@
 #ifndef __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
 #define __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
-
+#include <stdio.h>
+/**
+ * @param v, v is assumed to be sorted in descending order
+ * @param size, number of elements in v
+ * @param run_length, each thread will find for a range of length out of the total size
+ */
 __global__ void
 find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_length, unsigned *result)
 {
@@ -13,7 +18,7 @@ find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_len
   const unsigned start_index = tid * run_length;
   for (int i = start_index; i < min(start_index + run_length, size - 1); i++)
   {
-    if (v[i] > cutoff && v[i + 1] <= cutoff)
+    if (v[i] > cutoff && v[i + 1] <= cutoff) // since v is sorted descending wise; the cutoff point is defined as here
     {
       result[0] = i + 1;
       return;
@@ -25,15 +30,21 @@ find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_len
   }
 }
 
+/**
+ * return the largest bucket info; [bucket_count, index]
+ * @param bucket_count, assumed to be sorted in descending order
+ */
 __global__ void
-find_max_size(unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned c, unsigned *largest_bucket_size)
+find_max_size(unsigned *bucket_count, unsigned *unique_bucket_indices, unsigned c, unsigned *largest_bucket_size)
 {
   for (int i = 0;; i++)
   {
-    if (single_bucket_indices[i] & ((1 << c) - 1))
+
+    if (unique_bucket_indices[i] & ((1 << c) - 1)) // the `c` bits on the MSB contains the bucket idnex
     {
-      largest_bucket_size[0] = bucket_sizes[i];
+      largest_bucket_size[0] = bucket_count[i];
       largest_bucket_size[1] = i;
+      printf("find_max_size, i:%d, bucket count: %d, index: %d\n", i,largest_bucket_size[0], largest_bucket_size[1] );
       break;
     }
   }
@@ -43,21 +54,21 @@ find_max_size(unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned 
 // it is done by a single thread
 template <typename P, typename S>
 __global__ void
-final_accumulation_kernel(P *final_sums, P *final_results, unsigned nof_msms, unsigned nof_bms, unsigned c)
+final_accumulation_kernel(P *final_sums, P *final_results, unsigned nof_msms, unsigned num_of_windows, unsigned c)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid > nof_msms)
     return;
   P final_result = P::zero();
-  for (unsigned i = nof_bms; i > 1; i--)
+  for (unsigned i = num_of_windows; i > 1; i--)
   {
-    final_result = final_result + final_sums[i - 1 + tid * nof_bms]; // add
+    final_result = final_result + final_sums[i - 1 + tid * num_of_windows]; // add
     for (unsigned j = 0; j < c; j++)                                 // double
     {
       final_result = final_result + final_result;
     }
   }
-  final_results[tid] = final_result + final_sums[tid * nof_bms];
+  final_results[tid] = final_result + final_sums[tid * num_of_windows];
 }
 
 template <typename P, typename A>
@@ -142,24 +153,22 @@ __global__ void single_stage_multi_reduction_kernel(
   v_r[v_r_key] = v_r_value;
 }
 
-// this kernel sums the entire bucket module
-// each thread deals with a single bucket module
+// this kernel sums across windows
+// each thread deals with a single window
 template <typename P>
-__global__ void big_triangle_sum_kernel(P *buckets, P *final_sums, unsigned nof_bms, unsigned c)
+__global__ void big_triangle_sum_kernel(P *buckets, P *final_sums, unsigned num_of_windows, unsigned c)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid >= nof_bms)
+  if (tid >= num_of_windows)
     return;
-#ifdef SIGNED_DIG
-  unsigned buckets_in_bm = (1 << c) + 1;
-#else
-  unsigned buckets_in_bm = (1 << c);
-#endif
-  P line_sum = buckets[(tid + 1) * buckets_in_bm - 1];
+
+  unsigned num_of_buckets_per_window = (1 << c);
+
+  P line_sum = buckets[(tid + 1) * num_of_buckets_per_window - 1];
   final_sums[tid] = line_sum;
-  for (unsigned i = buckets_in_bm - 2; i > 0; i--)
+  for (unsigned i = num_of_buckets_per_window - 2; i > 0; i--)
   {
-    line_sum = line_sum + buckets[tid * buckets_in_bm + i]; // using the running sum method
+    line_sum = line_sum + buckets[tid * num_of_buckets_per_window + i];
     final_sums[tid] = final_sums[tid] + line_sum;
   }
 }
@@ -181,7 +190,6 @@ __global__ void accumulate_buckets_kernel(
     const unsigned msm_idx_shift,
     const unsigned c)
 {
-  constexpr unsigned sign_mask = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid >= nof_buckets_to_compute)
     return;
@@ -189,15 +197,10 @@ __global__ void accumulate_buckets_kernel(
   {
     return; // skip zero buckets
   }
-#ifdef SIGNED_DIG // todo - fix
-  const unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
-  const unsigned bm_index = (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1)) >> c;
-  const unsigned bucket_index =
-      msm_index * nof_buckets + bm_index * ((1 << (c - 1)) + 1) + (single_bucket_indices[tid] & ((1 << c) - 1));
-#else
+
   unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
   unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
-#endif
+
   const unsigned bucket_offset = bucket_offsets[tid];
   const unsigned bucket_size = bucket_sizes[tid];
 
@@ -206,15 +209,8 @@ __global__ void accumulate_buckets_kernel(
        i++)
   { // add the relevant points starting from the relevant offset up to the bucket size
     unsigned point_ind = point_indices[bucket_offset + i];
-#ifdef SIGNED_DIG
-    unsigned sign = point_ind & sign_mask;
-    point_ind &= ~sign_mask;
+
     A point = points[point_ind];
-    if (sign)
-      point = A::neg(point);
-#else
-    A point = points[point_ind];
-#endif
     bucket = i ? bucket + point : P::from_affine(point);
   }
   buckets[bucket_index] = bucket;
@@ -230,68 +226,51 @@ __global__ void initialize_buckets_kernel(P *buckets, unsigned N)
     buckets[tid] = P::zero(); // zero point
 }
 
-// TODO: try to combine with other kernels
+// TODO: try to combine with other kernels. One thread can work on many points
 __global__ void transfrom_scalars_and_points_from_mont(scalar_field_t *scalars, g2_affine_t *points, size_t size)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  unsigned borrow = 0;
   if (tid < size)
   {
     *(scalars + tid) = scalar_field_t::from_montgomery(*(scalars + tid));
-     *(points + tid) = g2_affine_t::from_montgomery(*(points + tid));
+    *(points + tid) = g2_affine_t::from_montgomery(*(points + tid));
   }
 }
 
-// this kernel splits the scalars into digits of size c
-// each thread splits a single scalar into nof_bms digits
+/**
+ * this kernel splits the scalars into digits of size c; each thread splits a single scalar into num_of_windows digits
+ * @param buckets_indices, indicate the bucket index of each scalar of a window. the size of `buckets_indices` is `msm_size`*`num_windows`;the value is the bit concanation of
+ * `window_index | window_idx | bucket_index`
+ * @param num_windows number of windows; for BN254, the size of bits is 254; if window bit size is `c` = 16; num_windows = ceil(254/16) = 16
+ */
 template <typename S>
 __global__ void split_scalars_kernel(
     unsigned *buckets_indices,
     unsigned *point_indices,
     S *scalars,
-    unsigned total_size,
+    unsigned msm_size,
     unsigned msm_log_size,
-    unsigned nof_bms,
+    unsigned num_windows,
     unsigned bm_bitsize,
     unsigned c)
 {
-  constexpr unsigned sign_mask = 0x80000000;
-  // constexpr unsigned trash_bucket = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   unsigned bucket_index;
-  unsigned bucket_index2;
   unsigned current_index;
-  unsigned msm_index = tid >> msm_log_size;
-  // printf("tid: %d, msm_index: %d \n", tid, msm_index);
-  unsigned borrow = 0;
-  if (tid < total_size)
+  unsigned window_index = tid >> msm_log_size; // TODO: since tid < msm_size; window_index would always be 0; can remove this.
+  if (tid < msm_size)
   {
     S scalar = scalars[tid];
-    for (unsigned bm = 0; bm < nof_bms; bm++)
+    for (unsigned window_idx = 0; window_idx < num_windows; window_idx++)
     {
-      bucket_index = scalar.get_scalar_digit(bm, c);
-#ifdef SIGNED_DIG
-      bucket_index += borrow;
-      borrow = 0;
-      unsigned sign = 0;
-      if (bucket_index > (1 << (c - 1)))
-      {
-        bucket_index = (1 << c) - bucket_index;
-        borrow = 1;
-        sign = sign_mask;
-      }
-#endif
-      current_index = bm * total_size + tid;
-#ifdef SIGNED_DIG
-      point_indices[current_index] = sign | tid; // the point index is saved for later
-#else
+      bucket_index = scalar.get_scalar_digit(window_idx, c);
+      current_index = window_idx * msm_size + tid;
       buckets_indices[current_index] =
-          (msm_index << (c + bm_bitsize)) | (bm << c) |
-          bucket_index; // the bucket module number and the msm number are appended at the msbs
-      if (scalar == S::zero() || bucket_index == 0)
+          (window_index << (c + bm_bitsize)) | (window_idx << c) | bucket_index; // the bucket module number and the msm number are appended at the msbs
+      if (scalar == S::zero() || bucket_index == 0) {
         buckets_indices[current_index] = 0; // will be skipped
+      }
       point_indices[current_index] = tid;   // the point index is saved for later
-#endif
     }
   }
 }
