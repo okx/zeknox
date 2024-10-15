@@ -24,7 +24,7 @@ typedef struct
     _BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
 
     // below fields are MSM_G2 related
-    uint32_t large_bucket_factor;
+    uint32_t large_bucket_factor; // to control the threshhold of large bucket
     _BOOL big_triangle;
 } MSM_Config;
 

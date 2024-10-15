@@ -1183,7 +1183,6 @@ void bucket_method_msm(
                      * 1*P_1 + 2*P_2 + ... + 15*P_15 = ((P_1 + P_2 + P_9 + P_13) + ... + 3*(P_3 + P_7 + P_11 + P_15)) + 4*((P_4 + P_5 + P_6 + P_7) + ... + 3*(P_12 + P_13 + P_14 + P_15))
                      * The first sum is the first single_stage_multi_reduction_kernel and the second sum (that's multiplied by 4) is the second call
                      */
-                    unsigned last_j = target_bits_count - 1;
                     unsigned nof_threads = (source_buckets_count >> (1 + j));
                     NUM_THREADS = min(MAX_TH, nof_threads);
                     NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;

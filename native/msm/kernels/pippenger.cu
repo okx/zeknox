@@ -1,6 +1,11 @@
 #ifndef __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
 #define __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
-
+#include <stdio.h>
+/**
+ * @param v, v is assumed to be sorted in descending order
+ * @param size, number of elements in v
+ * @param run_length, each thread will find for a range of length out of the total size
+ */
 __global__ void
 find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_length, unsigned *result)
 {
@@ -13,7 +18,7 @@ find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_len
   const unsigned start_index = tid * run_length;
   for (int i = start_index; i < min(start_index + run_length, size - 1); i++)
   {
-    if (v[i] > cutoff && v[i + 1] <= cutoff)
+    if (v[i] > cutoff && v[i + 1] <= cutoff) // since v is sorted descending wise; the cutoff point is defined as here
     {
       result[0] = i + 1;
       return;
@@ -25,15 +30,21 @@ find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_len
   }
 }
 
+/**
+ * return the largest bucket info; [bucket_count, index]
+ * @param bucket_count, assumed to be sorted in descending order
+ */
 __global__ void
-find_max_size(unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned c, unsigned *largest_bucket_size)
+find_max_size(unsigned *bucket_count, unsigned *unique_bucket_indices, unsigned c, unsigned *largest_bucket_size)
 {
   for (int i = 0;; i++)
   {
-    if (single_bucket_indices[i] & ((1 << c) - 1))
+
+    if (unique_bucket_indices[i] & ((1 << c) - 1)) // the `c` bits on the MSB contains the bucket idnex
     {
-      largest_bucket_size[0] = bucket_sizes[i];
+      largest_bucket_size[0] = bucket_count[i];
       largest_bucket_size[1] = i;
+      printf("find_max_size, i:%d, bucket count: %d, index: %d\n", i,largest_bucket_size[0], largest_bucket_size[1] );
       break;
     }
   }
@@ -150,11 +161,9 @@ __global__ void big_triangle_sum_kernel(P *buckets, P *final_sums, unsigned nof_
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid >= nof_bms)
     return;
-#ifdef SIGNED_DIG
-  unsigned buckets_in_bm = (1 << c) + 1;
-#else
+
   unsigned buckets_in_bm = (1 << c);
-#endif
+
   P line_sum = buckets[(tid + 1) * buckets_in_bm - 1];
   final_sums[tid] = line_sum;
   for (unsigned i = buckets_in_bm - 2; i > 0; i--)
@@ -181,7 +190,6 @@ __global__ void accumulate_buckets_kernel(
     const unsigned msm_idx_shift,
     const unsigned c)
 {
-  constexpr unsigned sign_mask = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid >= nof_buckets_to_compute)
     return;
@@ -189,15 +197,10 @@ __global__ void accumulate_buckets_kernel(
   {
     return; // skip zero buckets
   }
-#ifdef SIGNED_DIG // todo - fix
-  const unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
-  const unsigned bm_index = (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1)) >> c;
-  const unsigned bucket_index =
-      msm_index * nof_buckets + bm_index * ((1 << (c - 1)) + 1) + (single_bucket_indices[tid] & ((1 << c) - 1));
-#else
+
   unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
   unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
-#endif
+
   const unsigned bucket_offset = bucket_offsets[tid];
   const unsigned bucket_size = bucket_sizes[tid];
 
@@ -206,15 +209,8 @@ __global__ void accumulate_buckets_kernel(
        i++)
   { // add the relevant points starting from the relevant offset up to the bucket size
     unsigned point_ind = point_indices[bucket_offset + i];
-#ifdef SIGNED_DIG
-    unsigned sign = point_ind & sign_mask;
-    point_ind &= ~sign_mask;
+
     A point = points[point_ind];
-    if (sign)
-      point = A::neg(point);
-#else
-    A point = points[point_ind];
-#endif
     bucket = i ? bucket + point : P::from_affine(point);
   }
   buckets[bucket_index] = bucket;
@@ -230,11 +226,10 @@ __global__ void initialize_buckets_kernel(P *buckets, unsigned N)
     buckets[tid] = P::zero(); // zero point
 }
 
-// TODO: try to combine with other kernels
+// TODO: try to combine with other kernels. One thread can work on many points
 __global__ void transfrom_scalars_and_points_from_mont(scalar_field_t *scalars, g2_affine_t *points, size_t size)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  unsigned borrow = 0;
   if (tid < size)
   {
     *(scalars + tid) = scalar_field_t::from_montgomery(*(scalars + tid));
