@@ -238,60 +238,45 @@ __global__ void transfrom_scalars_and_points_from_mont(scalar_field_t *scalars, 
   if (tid < size)
   {
     *(scalars + tid) = scalar_field_t::from_montgomery(*(scalars + tid));
-     *(points + tid) = g2_affine_t::from_montgomery(*(points + tid));
+    *(points + tid) = g2_affine_t::from_montgomery(*(points + tid));
   }
 }
 
-// this kernel splits the scalars into digits of size c
-// each thread splits a single scalar into nof_bms digits
+/**
+ * this kernel splits the scalars into digits of size c; each thread splits a single scalar into nof_bms digits
+ * @param buckets_indices, indicate the bucket index of each scalar of a window. the size of `buckets_indices` is `msm_size`*`num_windows`;the value is the bit concanation of
+ * `window_index | window_idx | bucket_index`
+ * @param num_windows number of windows; for BN254, the size of bits is 254; if window bit size is `c` = 16; num_windows = ceil(254/16) = 16
+ */
 template <typename S>
 __global__ void split_scalars_kernel(
     unsigned *buckets_indices,
     unsigned *point_indices,
     S *scalars,
-    unsigned total_size,
+    unsigned msm_size,
     unsigned msm_log_size,
-    unsigned nof_bms,
+    unsigned num_windows,
     unsigned bm_bitsize,
     unsigned c)
 {
-  constexpr unsigned sign_mask = 0x80000000;
-  // constexpr unsigned trash_bucket = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   unsigned bucket_index;
-  unsigned bucket_index2;
   unsigned current_index;
-  unsigned msm_index = tid >> msm_log_size;
-  // printf("tid: %d, msm_index: %d \n", tid, msm_index);
-  unsigned borrow = 0;
-  if (tid < total_size)
+  unsigned window_index = tid >> msm_log_size; // TODO: since tid < msm_size; window_index would always be 0; can remove this.
+  if (tid < msm_size)
   {
     S scalar = scalars[tid];
-    for (unsigned bm = 0; bm < nof_bms; bm++)
+    for (unsigned window_idx = 0; window_idx < num_windows; window_idx++)
     {
-      bucket_index = scalar.get_scalar_digit(bm, c);
-#ifdef SIGNED_DIG
-      bucket_index += borrow;
-      borrow = 0;
-      unsigned sign = 0;
-      if (bucket_index > (1 << (c - 1)))
-      {
-        bucket_index = (1 << c) - bucket_index;
-        borrow = 1;
-        sign = sign_mask;
-      }
-#endif
-      current_index = bm * total_size + tid;
-#ifdef SIGNED_DIG
-      point_indices[current_index] = sign | tid; // the point index is saved for later
-#else
+      bucket_index = scalar.get_scalar_digit(window_idx, c);
+      current_index = window_idx * msm_size + tid;
+      printf("tid: %d, window_idx: %d, window_index: %d \n", tid, window_idx, window_index);
       buckets_indices[current_index] =
-          (msm_index << (c + bm_bitsize)) | (bm << c) |
-          bucket_index; // the bucket module number and the msm number are appended at the msbs
-      if (scalar == S::zero() || bucket_index == 0)
+          (window_index << (c + bm_bitsize)) | (window_idx << c) | bucket_index; // the bucket module number and the msm number are appended at the msbs
+      if (scalar == S::zero() || bucket_index == 0) {
         buckets_indices[current_index] = 0; // will be skipped
+      }
       point_indices[current_index] = tid;   // the point index is saved for later
-#endif
     }
   }
 }
