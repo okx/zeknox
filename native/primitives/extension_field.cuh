@@ -65,10 +65,13 @@ public:
     };
     }
 
-  // static constexpr HOST_DEVICE_INLINE ExtensionField from_montgomery(const ExtensionField& xs)
-  // {
-  //   return xs * Field{CONFIG::montgomery_r_inv};
-  // }
+  static constexpr HOST_DEVICE_INLINE ExtensionField to_montgomery(const ExtensionField& xs)
+  {
+    return ExtensionField{
+      FF::to_montgomery(xs.real),
+      FF::to_montgomery(xs.imaginary),
+    };
+  }
 
   static HOST_INLINE ExtensionField rand_host() { return ExtensionField{FF::rand_host(), FF::rand_host()}; }
 
