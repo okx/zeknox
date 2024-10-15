@@ -138,6 +138,121 @@ func TestMsmG1(t *testing.T) {
 	assert.True(t, cpuResultAffine.Equal(&gpuResultAffine), "gpu result is incorrect")
 }
 
+func TestMsmG2InputsNotOnDevice(t *testing.T) {
+	const npoints uint32 = 1 << 10
+	var (
+		points  [npoints]curve.G2Affine
+		scalars [npoints]fr.Element
+	)
+
+	fillRandomScalars(scalars[:])
+	fillRandomBasesG2(points[:])
+
+	// CPU
+	cpuResultAffine := curve.G2Affine{}
+	_, err := cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
+	if err != nil {
+		t.Errorf("cpu msm error: %s", err.Error())
+	}
+
+	data := Alloc_c(128)
+	cfg := DefaultMSMConfig()
+	cfg.AreInputsOnDevice = false
+	cfg.Npoints = npoints
+	cfg.ArePointsInMont = true
+	cfg.LargeBucketFactor = 2
+	err = MSM_G2(data, unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
+	if err != nil {
+		t.Errorf("invoke msm gpu error: %s", err.Error())
+	}
+
+	byteArray := (*[128]byte)(data)
+	fmt.Printf("%x\n", byteArray)
+
+	gpuG2Aff := curve.G2Affine{}
+	ReverseBytes(byteArray[0:32])
+	gpuG2Aff.X.A0.SetBytes(byteArray[0:32])
+
+	ReverseBytes(byteArray[32:64])
+	gpuG2Aff.X.A1.SetBytes(byteArray[32:64])
+
+	ReverseBytes(byteArray[64:96])
+	gpuG2Aff.Y.A0.SetBytes(byteArray[64:96])
+
+	ReverseBytes(byteArray[96:128])
+	gpuG2Aff.Y.A1.SetBytes(byteArray[96:128])
+
+	assert.True(t, cpuResultAffine.Equal(&gpuG2Aff), "gpu result is incorrect")
+
+}
+
+func TestMsmG2InputsOnDevice(t *testing.T) {
+
+	const npoints uint32 = 1 << 10
+	var (
+		points  [npoints]curve.G2Affine
+		scalars [npoints]fr.Element
+	)
+
+	fillRandomScalars(scalars[:])
+	fillRandomBasesG2(points[:])
+
+	// CPU
+	cpuResultAffine := curve.G2Affine{}
+	_, err := cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
+	if err != nil {
+		t.Errorf("cpu msm error: %s", err.Error())
+	}
+
+	d_points, err := device.CudaMalloc[curve.G2Affine](0, int(npoints))
+	if err != nil {
+		t.Errorf("allocate points to device error: %s", err.Error())
+	}
+	err = d_points.CopyFromHost(points[:])
+	if err != nil {
+		t.Errorf("copy points to device error: %s", err.Error())
+	}
+
+	d_scalars, err := device.CudaMalloc[fr.Element](0, int(npoints))
+	if err != nil {
+		t.Errorf("allocate points to device error: %s", err.Error())
+	}
+	err = d_scalars.CopyFromHost(scalars[:])
+	if err != nil {
+		t.Errorf("copy scalars to device error: %s", err.Error())
+	}
+
+	data := Alloc_c(128)
+	cfg := DefaultMSMConfig()
+	cfg.AreInputsOnDevice = true
+	cfg.Npoints = npoints
+	cfg.ArePointsInMont = true
+	cfg.LargeBucketFactor = 2
+	err = MSM_G2(data, d_points.AsPtr(), d_scalars.AsPtr(), 0, cfg)
+	if err != nil {
+		t.Errorf("invoke msm gpu error: %s", err.Error())
+	}
+
+	byteArray := (*[128]byte)(data)
+	fmt.Printf("%x\n", byteArray)
+
+	gpuG2Aff := curve.G2Affine{}
+	ReverseBytes(byteArray[0:32])
+	gpuG2Aff.X.A0.SetBytes(byteArray[0:32])
+
+	ReverseBytes(byteArray[32:64])
+	gpuG2Aff.X.A1.SetBytes(byteArray[32:64])
+
+	ReverseBytes(byteArray[64:96])
+	gpuG2Aff.Y.A0.SetBytes(byteArray[64:96])
+
+	ReverseBytes(byteArray[96:128])
+	gpuG2Aff.Y.A1.SetBytes(byteArray[96:128])
+
+	assert.True(t, cpuResultAffine.Equal(&gpuG2Aff), "gpu result is incorrect")
+
+}
+
 func fillRandomScalars(sampleScalars []fr.Element) {
 	// ensure every words of the scalars are filled
 	for i := 0; i < len(sampleScalars); i++ {
@@ -146,6 +261,13 @@ func fillRandomScalars(sampleScalars []fr.Element) {
 }
 
 func fillRandomBasesG1(samplePoints []curve.G1Affine) {
+	for i := 0; i < len(samplePoints); i++ {
+		randomInt := big.NewInt(rand.Int63())
+		samplePoints[i].ScalarMultiplicationBase(randomInt)
+	}
+}
+
+func fillRandomBasesG2(samplePoints []curve.G2Affine) {
 	for i := 0; i < len(samplePoints); i++ {
 		randomInt := big.NewInt(rand.Int63())
 		samplePoints[i].ScalarMultiplicationBase(randomInt)
@@ -171,5 +293,11 @@ func fillBenchBasesG1(samplePoints []curve.G1Affine) {
 	for i := 1; i < len(samplePoints); i++ {
 		samplePoints[i].X.Add(&samplePoints[i-1].X, &one)
 		samplePoints[i].Y.Sub(&samplePoints[i-1].Y, &one)
+	}
+}
+
+func ReverseBytes(arr []byte) {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
 	}
 }

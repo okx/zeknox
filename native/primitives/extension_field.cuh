@@ -58,6 +58,21 @@ public:
     return ExtensionField{FF{CONFIG::g2_gen_y_re}, FF{CONFIG::g2_gen_y_im}};
   }
 
+  static constexpr HOST_DEVICE_INLINE ExtensionField from_montgomery(const ExtensionField& xs) {
+    return ExtensionField{
+      FF::from_montgomery(xs.real),
+      FF::from_montgomery(xs.imaginary),
+    };
+    }
+
+  static constexpr HOST_DEVICE_INLINE ExtensionField to_montgomery(const ExtensionField& xs)
+  {
+    return ExtensionField{
+      FF::to_montgomery(xs.real),
+      FF::to_montgomery(xs.imaginary),
+    };
+  }
+
   static HOST_INLINE ExtensionField rand_host() { return ExtensionField{FF::rand_host(), FF::rand_host()}; }
 
   template <unsigned REDUCTION_SIZE = 1>
