@@ -63,10 +63,18 @@ RustError mult_pippenger_g2(uint32_t device_id,
     g2_projective_t *result_jac = new g2_projective_t();
 
     RustError r = mult_pippenger_g2_internal<scalar_field_t, g2_projective_t, g2_affine_t>(
-        result_jac, points, scalar, cfg.npoints, cfg.are_points_in_mont,  cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
+        result_jac, points, scalar, cfg.npoints, cfg.are_points_in_mont, cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
 
-    g2_affine_t gpu_result_affine_mont = g2_projective_t::to_affine(*result_jac);
-     *reinterpret_cast<g2_affine_t *>(result) = gpu_result_affine_mont;
+    g2_affine_t gpu_result_affine = g2_projective_t::to_affine(*result_jac);
+    if (cfg.are_points_in_mont)
+    {
+        g2_affine_t gpu_result_affine_mont = g2_affine_t::to_montgomery(gpu_result_affine);
+        *reinterpret_cast<g2_affine_t *>(result) = gpu_result_affine_mont;
+    }
+    else
+    {
+        *reinterpret_cast<g2_affine_t *>(result) = gpu_result_affine;
+    }
 
     return r;
 }

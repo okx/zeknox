@@ -155,34 +155,18 @@ func TestMsmG2InputsNotOnDevice(t *testing.T) {
 		t.Errorf("cpu msm error: %s", err.Error())
 	}
 
-	data := Alloc_c(128)
+	gpuResult := curve.G2Affine{}
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = false
 	cfg.Npoints = npoints
 	cfg.ArePointsInMont = true
 	cfg.LargeBucketFactor = 2
-	err = MSM_G2(data, unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
+	err = MSM_G2(unsafe.Pointer(&gpuResult), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
 	if err != nil {
 		t.Errorf("invoke msm gpu error: %s", err.Error())
 	}
 
-	byteArray := (*[128]byte)(data)
-	fmt.Printf("%x\n", byteArray)
-
-	gpuG2Aff := curve.G2Affine{}
-	ReverseBytes(byteArray[0:32])
-	gpuG2Aff.X.A0.SetBytes(byteArray[0:32])
-
-	ReverseBytes(byteArray[32:64])
-	gpuG2Aff.X.A1.SetBytes(byteArray[32:64])
-
-	ReverseBytes(byteArray[64:96])
-	gpuG2Aff.Y.A0.SetBytes(byteArray[64:96])
-
-	ReverseBytes(byteArray[96:128])
-	gpuG2Aff.Y.A1.SetBytes(byteArray[96:128])
-
-	assert.True(t, cpuResultAffine.Equal(&gpuG2Aff), "gpu result is incorrect")
+	assert.True(t, cpuResultAffine.Equal(&gpuResult), "gpu result is incorrect")
 
 }
 
@@ -222,34 +206,18 @@ func TestMsmG2InputsOnDevice(t *testing.T) {
 		t.Errorf("copy scalars to device error: %s", err.Error())
 	}
 
-	data := Alloc_c(128)
+	gpuResult := curve.G2Affine{}
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = true
 	cfg.Npoints = npoints
 	cfg.ArePointsInMont = true
 	cfg.LargeBucketFactor = 2
-	err = MSM_G2(data, d_points.AsPtr(), d_scalars.AsPtr(), 0, cfg)
+	err = MSM_G2(unsafe.Pointer(&gpuResult), d_points.AsPtr(), d_scalars.AsPtr(), 0, cfg)
 	if err != nil {
 		t.Errorf("invoke msm gpu error: %s", err.Error())
 	}
 
-	byteArray := (*[128]byte)(data)
-	fmt.Printf("%x\n", byteArray)
-
-	gpuG2Aff := curve.G2Affine{}
-	ReverseBytes(byteArray[0:32])
-	gpuG2Aff.X.A0.SetBytes(byteArray[0:32])
-
-	ReverseBytes(byteArray[32:64])
-	gpuG2Aff.X.A1.SetBytes(byteArray[32:64])
-
-	ReverseBytes(byteArray[64:96])
-	gpuG2Aff.Y.A0.SetBytes(byteArray[64:96])
-
-	ReverseBytes(byteArray[96:128])
-	gpuG2Aff.Y.A1.SetBytes(byteArray[96:128])
-
-	assert.True(t, cpuResultAffine.Equal(&gpuG2Aff), "gpu result is incorrect")
+	assert.True(t, cpuResultAffine.Equal(&gpuResult), "gpu result is incorrect")
 
 }
 
