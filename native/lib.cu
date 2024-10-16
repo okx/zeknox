@@ -21,7 +21,8 @@
 #include <cuda.h>
 #include <utils/gpu_t.cuh>
 #include <utils/cuda_available.hpp>
-#include <utils/all_gpus.cpp>
+#include <utils/all_gpus.hpp>
+#include <ntt/ntt.cuh>
 #include "lib.h"
 
 #if defined(FEATURE_GOLDILOCKS)
@@ -51,11 +52,9 @@ extern "C"
 #error "no FEATURE"
 #endif
 
-#include <ntt/ntt.cuh>
 #include <ntt/ntt.h>
 #ifdef BUILD_MSM
 #include <msm/msm.h>
-#include <msm/msm.cu>
 #endif
 #include <vector>
 
