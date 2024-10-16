@@ -10,7 +10,8 @@ import "C"
 import (
 	"fmt"
 	"unsafe"
-	"zeknox/lib"
+
+	"github.com/okx/cryptography_cuda/wrappers/go/lib"
 )
 
 type MSMConfig struct {

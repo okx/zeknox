@@ -7,7 +7,8 @@ import (
 	"runtime"
 	"testing"
 	"unsafe"
-	"zeknox/device"
+
+	"github.com/okx/cryptography_cuda/wrappers/go/device"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	curve "github.com/consensys/gnark-crypto/ecc/bn254"

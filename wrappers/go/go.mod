@@ -1,4 +1,4 @@
-module zeknox
+module github.com/okx/cryptography_cuda/wrappers/go
 
 go 1.22.2
 
