@@ -30,26 +30,6 @@ find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_len
   }
 }
 
-/**
- * return the largest bucket info; [bucket_count, index]
- * @param bucket_count, assumed to be sorted in descending order
- */
-__global__ void
-find_max_size(unsigned *bucket_count, unsigned *unique_bucket_indices, unsigned c, unsigned *largest_bucket_size)
-{
-  for (int i = 0;; i++)
-  {
-
-    if (unique_bucket_indices[i] & ((1 << c) - 1)) // the `c` bits on the MSB contains the bucket idnex
-    {
-      largest_bucket_size[0] = bucket_count[i];
-      largest_bucket_size[1] = i;
-      printf("find_max_size, i:%d, bucket count: %d, index: %d\n", i,largest_bucket_size[0], largest_bucket_size[1] );
-      break;
-    }
-  }
-}
-
 // this kernel computes the final result using the double and add algorithm
 // it is done by a single thread
 template <typename P, typename S>
@@ -63,7 +43,7 @@ final_accumulation_kernel(P *final_sums, P *final_results, unsigned nof_msms, un
   for (unsigned i = num_of_windows; i > 1; i--)
   {
     final_result = final_result + final_sums[i - 1 + tid * num_of_windows]; // add
-    for (unsigned j = 0; j < c; j++)                                 // double
+    for (unsigned j = 0; j < c; j++)                                        // double
     {
       final_result = final_result + final_result;
     }
@@ -71,12 +51,16 @@ final_accumulation_kernel(P *final_sums, P *final_results, unsigned nof_msms, un
   final_results[tid] = final_result + final_sums[tid * num_of_windows];
 }
 
+
+/**
+ * @param bucket_offsets, stores the index where new unique bucket begins; bucket might contains multiple scalars; it's sorted by counts in descending order
+ */
 template <typename P, typename A>
 __global__ void accumulate_large_buckets_kernel(
     P *__restrict__ buckets,
     unsigned *__restrict__ bucket_offsets,
-    unsigned *__restrict__ bucket_sizes,
-    unsigned *__restrict__ single_bucket_indices,
+    unsigned *__restrict__ bucket_count,
+    unsigned *__restrict__ unique_bucket_indices,
     const unsigned *__restrict__ point_indices,
     A *__restrict__ points,
     const unsigned nof_buckets,
@@ -93,19 +77,18 @@ __global__ void accumulate_large_buckets_kernel(
   {
     return;
   }
-  if ((single_bucket_indices[large_bucket_index] & ((1 << c) - 1)) == 0)
-  {         // dont need
-    return; // skip zero buckets
+  if ((unique_bucket_indices[large_bucket_index] & ((1 << c) - 1)) == 0) // skip zero buckets
+  {
+    return;
   }
   unsigned write_bucket_index = bucket_segment_index * nof_buckets_to_compute + large_bucket_index;
   const unsigned bucket_offset = bucket_offsets[large_bucket_index] + bucket_segment_index * max_run_length;
-  const unsigned bucket_size = bucket_sizes[large_bucket_index] > bucket_segment_index * max_run_length
-                                   ? bucket_sizes[large_bucket_index] - bucket_segment_index * max_run_length
+  const unsigned bucket_size = bucket_count[large_bucket_index] > bucket_segment_index * max_run_length
+                                   ? bucket_count[large_bucket_index] - bucket_segment_index * max_run_length
                                    : 0;
   P bucket;
   unsigned run_length = min(bucket_size, max_run_length);
-  for (unsigned i = 0; i < run_length;
-       i++)
+  for (unsigned i = 0; i < run_length; i++)
   { // add the relevant points starting from the relevant offset up to the bucket size
     unsigned point_ind = point_indices[bucket_offset + i];
     A point = points[point_ind];
@@ -175,14 +158,14 @@ __global__ void big_triangle_sum_kernel(P *buckets, P *final_sums, unsigned num_
 
 // this kernel adds up the points in each bucket
 //  __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__restrict__ bucket_offsets,
-//   unsigned *__restrict__ bucket_sizes, unsigned *__restrict__ single_bucket_indices, unsigned *__restrict__
+//   unsigned *__restrict__ bucket_count, unsigned *__restrict__ unique_bucket_indices, unsigned *__restrict__
 //   point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
 template <typename P, typename A>
 __global__ void accumulate_buckets_kernel(
     P *__restrict__ buckets,
     unsigned *__restrict__ bucket_offsets,
-    unsigned *__restrict__ bucket_sizes,
-    unsigned *__restrict__ single_bucket_indices,
+    unsigned *__restrict__ bucket_count,
+    unsigned *__restrict__ unique_bucket_indices,
     const unsigned *__restrict__ point_indices,
     A *__restrict__ points,
     const unsigned nof_buckets,
@@ -193,16 +176,16 @@ __global__ void accumulate_buckets_kernel(
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid >= nof_buckets_to_compute)
     return;
-  if ((single_bucket_indices[tid] & ((1 << c) - 1)) == 0)
+  if ((unique_bucket_indices[tid] & ((1 << c) - 1)) == 0)
   {
     return; // skip zero buckets
   }
 
-  unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
-  unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
+  unsigned msm_index = unique_bucket_indices[tid] >> msm_idx_shift;
+  unsigned bucket_index = msm_index * nof_buckets + (unique_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
 
   const unsigned bucket_offset = bucket_offsets[tid];
-  const unsigned bucket_size = bucket_sizes[tid];
+  const unsigned bucket_size = bucket_count[tid];
 
   P bucket; // get rid of init buckets? no.. because what about buckets with no points
   for (unsigned i = 0; i < bucket_size;
@@ -240,7 +223,7 @@ __global__ void transfrom_scalars_and_points_from_mont(scalar_field_t *scalars, 
 /**
  * this kernel splits the scalars into digits of size c; each thread splits a single scalar into num_of_windows digits
  * @param buckets_indices, indicate the bucket index of each scalar of a window. the size of `buckets_indices` is `msm_size`*`num_windows`;the value is the bit concanation of
- * `window_index | window_idx | bucket_index`
+ * `window_index | window_idx | bucket_index`; concat window_index with bucket_index is required to index all bucket across all windows
  * @param num_windows number of windows; for BN254, the size of bits is 254; if window bit size is `c` = 16; num_windows = ceil(254/16) = 16
  */
 template <typename S>
@@ -264,27 +247,29 @@ __global__ void split_scalars_kernel(
     for (unsigned window_idx = 0; window_idx < num_windows; window_idx++)
     {
       bucket_index = scalar.get_scalar_digit(window_idx, c);
+      // printf("tid: %d, window_idx: %d, bucket_index: %d\n", tid, window_idx, bucket_index);
       current_index = window_idx * msm_size + tid;
       buckets_indices[current_index] =
           (window_index << (c + bm_bitsize)) | (window_idx << c) | bucket_index; // the bucket module number and the msm number are appended at the msbs
-      if (scalar == S::zero() || bucket_index == 0) {
+      if (scalar == S::zero() || bucket_index == 0)
+      {
         buckets_indices[current_index] = 0; // will be skipped
       }
-      point_indices[current_index] = tid;   // the point index is saved for later
+      point_indices[current_index] = tid; // the point index is saved for later
     }
   }
 }
 
 template <typename P>
 __global__ void
-distribute_large_buckets_kernel(P *large_buckets, P *buckets, unsigned *single_bucket_indices, unsigned size)
+distribute_large_buckets_kernel(P *large_buckets, P *buckets, unsigned *unique_bucket_indices, unsigned size)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid >= size)
   {
     return;
   }
-  buckets[single_bucket_indices[tid]] = large_buckets[tid];
+  buckets[unique_bucket_indices[tid]] = large_buckets[tid];
 }
 
 #endif

@@ -139,7 +139,7 @@ func TestMsmG1(t *testing.T) {
 }
 
 func TestMsmG2InputsNotOnDevice(t *testing.T) {
-	const npoints uint32 = 1 << 6
+	const npoints uint32 = 1 << 10
 	var (
 		points  [npoints]curve.G2Affine
 		scalars [npoints]fr.Element
