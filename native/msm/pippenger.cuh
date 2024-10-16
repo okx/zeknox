@@ -1061,7 +1061,7 @@ void bucket_method_msm(
     if (large_buckets_to_compute > 0 && bucket_th > 0)
     {
         unsigned threads_per_bucket =
-            1 << (unsigned)ceil(log2((h_largest_bucket_count + bucket_th - 1) / bucket_th)); // global param
+            1 << (unsigned)ceil(log2((h_largest_bucket_count + bucket_th - 1) / bucket_th));
         unsigned max_bucket_size_run_length = (h_largest_bucket_count + threads_per_bucket - 1) / threads_per_bucket;
         unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
         // printf("sizeof(P): %d, total_large_buckets_size: %d\n", sizeof(P), total_large_buckets_size);
@@ -1095,7 +1095,7 @@ void bucket_method_msm(
     }
     else
     {
-        h_nof_large_buckets = 0;
+        h_nof_large_buckets = 0;  // if bucket_th = 0; there is no large buckets
     }
 
     // launch the accumulation kernel with maximum threads

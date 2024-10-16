@@ -156,10 +156,9 @@ __global__ void big_triangle_sum_kernel(P *buckets, P *final_sums, unsigned num_
   }
 }
 
-// this kernel adds up the points in each bucket
-//  __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__restrict__ bucket_offsets,
-//   unsigned *__restrict__ bucket_count, unsigned *__restrict__ unique_bucket_indices, unsigned *__restrict__
-//   point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
+/**
+ * this kernel adds up the points in each bucket
+ */
 template <typename P, typename A>
 __global__ void accumulate_buckets_kernel(
     P *__restrict__ buckets,
@@ -181,18 +180,16 @@ __global__ void accumulate_buckets_kernel(
     return; // skip zero buckets
   }
 
-  unsigned msm_index = unique_bucket_indices[tid] >> msm_idx_shift;
-  unsigned bucket_index = msm_index * nof_buckets + (unique_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
+  // unsigned msm_index = unique_bucket_indices[tid] >> msm_idx_shift;
+  unsigned bucket_index = unique_bucket_indices[tid] & ((1 << msm_idx_shift) - 1);//  msm_index * nof_buckets + ();
 
   const unsigned bucket_offset = bucket_offsets[tid];
   const unsigned bucket_size = bucket_count[tid];
 
-  P bucket; // get rid of init buckets? no.. because what about buckets with no points
-  for (unsigned i = 0; i < bucket_size;
-       i++)
-  { // add the relevant points starting from the relevant offset up to the bucket size
+  P bucket;
+  for (unsigned i = 0; i < bucket_size; i++)
+  {
     unsigned point_ind = point_indices[bucket_offset + i];
-
     A point = points[point_ind];
     bucket = i ? bucket + point : P::from_affine(point);
   }
