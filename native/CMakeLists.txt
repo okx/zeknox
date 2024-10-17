@@ -87,8 +87,7 @@ set(LIB_CXX_SRC
     poseidon2/poseidon2.cu
     monolith/monolith.cu
     merkle/merkle.cpp
-    merkle/merkle_avx.cpp
-    utils/all_gpus.cpp)
+    merkle/merkle_avx.cpp)
 
 add_library(${LIB_CXX_NAME} OBJECT ${LIB_CXX_SRC})
 target_compile_definitions(${LIB_CXX_NAME} PRIVATE FEATURE_GOLDILOCKS)
@@ -121,7 +120,8 @@ set(LIB_CUDA_SRC
     poseidon2/poseidon2.cu
     monolith/monolith.cu
     merkle/merkle.cu
-    ntt/ntt.cu)
+    ntt/ntt.cu
+    utils/all_gpus.cu)
 
 if (BUILD_MSM)
     list(APPEND LIB_CUDA_SRC msm/msm.cu)
