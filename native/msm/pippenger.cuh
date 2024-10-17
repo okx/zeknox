@@ -1060,8 +1060,8 @@ void bucket_method_msm(
     // printf("large_buckets_to_compute: %d, bucket_th: %d \n", large_buckets_to_compute, bucket_th);
     if (large_buckets_to_compute > 0 && bucket_th > 0)
     {
-        unsigned threads_per_bucket =
-            1 << (unsigned)ceil(log2((h_largest_bucket_count + bucket_th - 1) / bucket_th));
+        unsigned threads_per_bucket = min(MAX_TH,
+            1 << (unsigned)ceil(log2((h_largest_bucket_count + bucket_th - 1) / bucket_th)));
         unsigned max_bucket_size_run_length = (h_largest_bucket_count + threads_per_bucket - 1) / threads_per_bucket;
         unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
         // printf("sizeof(P): %d, total_large_buckets_size: %d\n", sizeof(P), total_large_buckets_size);
