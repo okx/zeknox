@@ -398,9 +398,9 @@ public:
     }
 
 public:
-    msm_t(const affine_t points[], size_t np,
+    msm_t(affine_t* points,  scalar_t* scalars, size_t np,
           size_t ffi_affine_sz = sizeof(affine_t), int device_id = -1)
-        : gpu(select_gpu(device_id)), d_points(nullptr), d_scalars(nullptr)
+        : gpu(select_gpu(device_id)), d_points(points), d_scalars(scalars)
     {
         // std::cout << "Line: " << __LINE__ << "\n";
         // printf("bucket_t::degree: %d\n", bucket_t::degree);
@@ -420,10 +420,12 @@ public:
         }
         nwins = (scalar_t::bit_length() - 1) / wbits + 1;
 
+        // npoints: 2322982, lg_npoints: 21,
+        // wbits =18; nwins = 15; gpu.sm_count() = 128
         uint32_t row_sz = 1U << (wbits - 1);
 
         size_t d_buckets_sz = (nwins * row_sz) + (gpu.sm_count() * BATCH_ADD_BLOCK_SIZE / WARP_SZ);
-        size_t d_blob_sz = (d_buckets_sz * sizeof(d_buckets[0])) + (nwins * row_sz * sizeof(uint32_t)) + (points ? npoints * sizeof(d_points[0]) : 0);
+        size_t d_blob_sz = (d_buckets_sz * sizeof(d_buckets[0])) + (nwins * row_sz * sizeof(uint32_t));
         printf("nwins: %d, wbits: %d, d_buckets_sz: %d, d_blob_sz: %d, sm_count: %d, size_of_bucket: %d, row_sz:%d\n", nwins, wbits, d_buckets_sz, d_blob_sz, gpu.sm_count(), sizeof(d_buckets[0]), row_sz);
         d_buckets = reinterpret_cast<decltype(d_buckets)>(gpu.Dmalloc(d_blob_sz));
         d_hist = vec2d_t<uint32_t>(&d_buckets[d_buckets_sz], row_sz);
@@ -770,12 +772,9 @@ static RustError mult_pippenger(point_t *out, affine_t *points, size_t npoints,
                                 scalar_t *scalars, bool mont = true,
                                 size_t ffi_affine_sz = sizeof(affine_t))
 {
-    // printf("invoke mult_pippenger mont: %d, ffi_affine_sz:%d \n", mont, ffi_affine_sz);
     try
     {
-        msm_t<bucket_t, point_t, affine_t, scalar_t> msm{nullptr, npoints};
-        msm.d_points = points; // TODO: need a proper way to set the device pointer
-        msm.d_scalars = scalars;
+        msm_t<bucket_t, point_t, affine_t, scalar_t> msm{points, scalars, npoints};
         return msm.invoke(*out, slice_t<affine_t>{points, npoints},
                           scalars, mont, ffi_affine_sz);
     }
