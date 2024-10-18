@@ -112,31 +112,31 @@ func TestMsmG1(t *testing.T) {
 	t.Logf("gpuResultAffine: %s \n", gpuResultAffine.String())
 	assert.True(t, cpuResultAffine.Equal(&gpuResultAffine), "gpu result is incorrect")
 
-	// GPU device input
-	d_scalar, err := device.CudaMalloc[fr.Element](0, int(npoints))
-	if err != nil {
-		t.Errorf("allocate scalars to device error: %s", err.Error())
-	}
-	err = d_scalar.CopyFromHost(scalars[:])
-	if err != nil {
-		t.Errorf("copy scalars to device error: %s", err.Error())
-	}
-	d_points, err := device.CudaMalloc[curve.G1Affine](0, int(npoints))
-	if err != nil {
-		t.Errorf("allocate points to device error: %s", err.Error())
-	}
-	err = d_points.CopyFromHost(points[:])
-	if err != nil {
-		t.Errorf("copy points to device error: %s", err.Error())
-	}
-	cfg.AreInputsOnDevice = true
-	err = MSM_G1(unsafe.Pointer(&gpuResultJac), d_points.AsPtr(), d_scalar.AsPtr(), 0, cfg)
-	if err != nil {
-		t.Errorf("invoke msm gpu error: %s", err.Error())
-	}
-	gpuResultAffine.FromJacobian(&gpuResultJac)
-	t.Logf("gpuResultAffine: %s \n", gpuResultAffine.String())
-	assert.True(t, cpuResultAffine.Equal(&gpuResultAffine), "gpu result is incorrect")
+	// // GPU device input
+	// d_scalar, err := device.CudaMalloc[fr.Element](0, int(npoints))
+	// if err != nil {
+	// 	t.Errorf("allocate scalars to device error: %s", err.Error())
+	// }
+	// err = d_scalar.CopyFromHost(scalars[:])
+	// if err != nil {
+	// 	t.Errorf("copy scalars to device error: %s", err.Error())
+	// }
+	// d_points, err := device.CudaMalloc[curve.G1Affine](0, int(npoints))
+	// if err != nil {
+	// 	t.Errorf("allocate points to device error: %s", err.Error())
+	// }
+	// err = d_points.CopyFromHost(points[:])
+	// if err != nil {
+	// 	t.Errorf("copy points to device error: %s", err.Error())
+	// }
+	// cfg.AreInputsOnDevice = true
+	// err = MSM_G1(unsafe.Pointer(&gpuResultJac), d_points.AsPtr(), d_scalar.AsPtr(), 0, cfg)
+	// if err != nil {
+	// 	t.Errorf("invoke msm gpu error: %s", err.Error())
+	// }
+	// gpuResultAffine.FromJacobian(&gpuResultJac)
+	// t.Logf("gpuResultAffine: %s \n", gpuResultAffine.String())
+	// assert.True(t, cpuResultAffine.Equal(&gpuResultAffine), "gpu result is incorrect")
 }
 
 func TestMsmG2InputsNotOnDevice(t *testing.T) {

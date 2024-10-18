@@ -13,7 +13,7 @@
 // RustError mult_pippenger(uint32_t device_id, point_t *out, affine_t *input_points, scalar_t *input_scalars, MSM_Config cfg)
 RustError mult_pippenger(uint32_t device_id, void *out, void *input_points, void *input_scalars, MSM_Config cfg)
 {
-    // printf("start mult_pippenger, using device_id: %d, ffi_affine_sz: %d, npoints: %d, are_inputs_on_device: %d, are_points_in_mont: %d\n", device_id, cfg.ffi_affine_sz, cfg.npoints, cfg.are_inputs_on_device, cfg.are_points_in_mont);
+    printf("start mult_pippenger, using device_id: %d, ffi_affine_sz: %d, npoints: %d, are_inputs_on_device: %d, are_points_in_mont: %d\n", device_id, cfg.ffi_affine_sz, cfg.npoints, cfg.are_inputs_on_device, cfg.are_points_in_mont);
     auto &gpu = select_gpu(device_id);
     gpu.select();
 
@@ -31,13 +31,13 @@ RustError mult_pippenger(uint32_t device_id, void *out, void *input_points, void
 
     if (cfg.are_inputs_on_device)
     {
-        // printf("set input device pointer \n");
+        printf("set input device pointer \n");
         d_input_points.set_device_ptr(reinterpret_cast<affine_t *>(input_points));
         d_input_scalars.set_device_ptr(reinterpret_cast<scalar_t *>(input_scalars));
     }
     else
     {
-        // printf("copy data from host to device \n");
+        printf("copy data from host to device \n");
         gpu.HtoD(&d_input_points[0], input_points, cfg.npoints);
         gpu.HtoD(&d_input_scalars[0], input_scalars, cfg.npoints);
     }

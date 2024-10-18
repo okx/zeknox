@@ -410,7 +410,7 @@ public:
         wbits = 17;
         if (npoints > 192)
         {
-            wbits = std::min(lg2(npoints + npoints / 2) - 8, 18);
+            wbits = std::min(lg2(npoints), 18);
             if (wbits < 10)
                 wbits = 10;
         }
@@ -424,20 +424,14 @@ public:
 
         size_t d_buckets_sz = (nwins * row_sz) + (gpu.sm_count() * BATCH_ADD_BLOCK_SIZE / WARP_SZ);
         size_t d_blob_sz = (d_buckets_sz * sizeof(d_buckets[0])) + (nwins * row_sz * sizeof(uint32_t)) + (points ? npoints * sizeof(d_points[0]) : 0);
-        // printf("nwins: %d, wbits: %d, d_buckets_sz: %d, d_blob_sz: %d, sm_count: %d, size_of_bucket: %d, row_sz:%d\n", nwins, wbits, d_buckets_sz, d_blob_sz, gpu.sm_count(), sizeof(d_buckets[0]), row_sz);
+        printf("nwins: %d, wbits: %d, d_buckets_sz: %d, d_blob_sz: %d, sm_count: %d, size_of_bucket: %d, row_sz:%d\n", nwins, wbits, d_buckets_sz, d_blob_sz, gpu.sm_count(), sizeof(d_buckets[0]), row_sz);
         d_buckets = reinterpret_cast<decltype(d_buckets)>(gpu.Dmalloc(d_blob_sz));
         d_hist = vec2d_t<uint32_t>(&d_buckets[d_buckets_sz], row_sz);
-        if (points)
-        {
-            printf("copy host to device within pippenger\n");
-            d_points = reinterpret_cast<decltype(d_points)>(d_hist[nwins]);
-            gpu.HtoD(d_points, points, np, ffi_affine_sz);
-            npoints = np;
-        }
-        else
-        {
+
+        // else
+        // {
             npoints = 0;
-        }
+        // }
     }
     inline msm_t(vec_t<affine_t> points, size_t ffi_affine_sz = sizeof(affine_t),
                  int device_id = -1)
@@ -507,8 +501,8 @@ private:
     }
 
 public:
-    RustError invoke(point_t &out, const affine_t *points_, size_t npoints,
-                     const scalar_t *scalars, bool mont = true,
+    RustError invoke(point_t &out, const affine_t *d_points_, size_t npoints,
+                     const scalar_t *d_scalars, bool mont = true,
                      size_t ffi_affine_sz = sizeof(affine_t))
     {
         assert(this->npoints == 0 || npoints <= this->npoints);
@@ -516,11 +510,13 @@ public:
         uint32_t lg_npoints = lg2(npoints + npoints / 2);
 
         size_t batch = 1 << (std::max(lg_npoints, wbits) - wbits);
-        // printf("npoints: %d, lg_npoints: %d, wbits: %d, batch: %d\n", npoints,lg_npoints, wbits, batch);
+        printf("npoints: %d, this->npoints: %d, lg_npoints: %d, wbits: %d, batch: %d\n", npoints, this->npoints, lg_npoints, wbits, batch);
         batch >>= 6;
         batch = batch ? batch : 1;
+
         uint32_t stride = (npoints + batch - 1) / batch;
         stride = (stride + WARP_SZ - 1) & ((size_t)0 - WARP_SZ);
+        printf("batch: %d, stride:%d \n", batch, stride);
 
         std::vector<result_t> res(nwins);
         std::vector<bucket_t> ones(gpu.sm_count() * BATCH_ADD_BLOCK_SIZE / WARP_SZ);
@@ -530,43 +526,25 @@ public:
 
         try
         {
-            // |scalars| being nullptr means the scalars are pre-loaded to
-            // |d_scalars|, otherwise allocate stride.
-            size_t temp_sz = scalars ? sizeof(scalar_t) : 0;
-            temp_sz = stride * std::max(2 * sizeof(uint2), temp_sz);
-
-            // |points| being nullptr means the points are pre-loaded to
-            // |d_points|, otherwise allocate double-stride.
-            const char *points = reinterpret_cast<const char *>(points_);
-            size_t d_point_sz = points ? (batch > 1 ? 2 * stride : stride) : 0;
-            d_point_sz *= sizeof(affine_h);
-
+            size_t temp_sz = stride * 2 * sizeof(uint2);
             size_t digits_sz = nwins * stride * sizeof(uint32_t);
 
-            dev_ptr_t<uint8_t> d_temp{temp_sz + digits_sz + d_point_sz, gpu[2], true, false};
+            printf("temp size: %d, digits_sz: %d \n", temp_sz, digits_sz);
+            dev_ptr_t<uint8_t> d_temp{temp_sz + digits_sz, gpu[2], true, false};
 
             vec2d_t<uint2> d_temps{&d_temp[0], stride};
             vec2d_t<uint32_t> d_digits{&d_temp[temp_sz], stride};
 
-            scalar_t *d_scalars = scalars ? (scalar_t *)&d_temp[0]
-                                          : this->d_scalars;
-            affine_h *d_points = points ? (affine_h *)&d_temp[temp_sz + digits_sz]
-                                        : this->d_points;
-
             size_t d_off = 0; // device offset
             size_t h_off = 0; // host offset
             size_t num = stride > npoints ? npoints : stride;
+            printf("stride: %d, npoints: %d, num: %d \n", stride, npoints, num);
             event_t ev;
 
-            if (scalars)
-                gpu[2].HtoD(&d_scalars[d_off], &scalars[h_off], num);
             digits(&d_scalars[0], num, d_digits, d_temps, mont);
             gpu[2].record(ev);
 
-            if (points)
-                gpu[0].HtoD(&d_points[d_off], &points[h_off],
-                            num, ffi_affine_sz);
-
+            affine_h* d_points = this->d_points;
             for (uint32_t i = 0; i < batch; i++)
             {
                 gpu[i & 1].wait(ev);
@@ -593,24 +571,14 @@ public:
                     h_off += stride;
                     num = h_off + stride <= npoints ? stride : npoints - h_off;
 
-                    if (scalars)
-                        gpu[2].HtoD(&d_scalars[0], &scalars[h_off], num);
+
                     gpu[2].wait(ev);
-                    digits(&d_scalars[scalars ? 0 : h_off], num,
+                    digits(&d_scalars[h_off], num,
                            d_digits, d_temps, mont);
                     gpu[2].record(ev);
 
-                    if (points)
-                    {
-                        size_t j = (i + 1) & 1;
-                        d_off = j ? stride : 0;
-                        gpu[j].HtoD(&d_points[d_off], &points[h_off * ffi_affine_sz],
-                                    num, ffi_affine_sz);
-                    }
-                    else
-                    {
-                        d_off = h_off;
-                    }
+
+                    d_off = h_off;
                 }
 
                 if (i > 0)
