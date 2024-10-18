@@ -30,10 +30,10 @@ func BenchmarkMsmG1(b *testing.B) {
 	cpuNum := runtime.NumCPU()
 	b.Run(fmt.Sprintf("CPU %d", npoints), func(b *testing.B) {
 		b.ResetTimer()
-		cpuResultAffine := curve.G1Affine{}
+		cpuResult := curve.G1Jac{}
 		for i := 0; i < b.N; i++ {
 			// NbTasks same as Gnark prover
-			cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: cpuNum / 2})
+			cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: cpuNum / 2})
 		}
 	})
 
@@ -46,10 +46,10 @@ func BenchmarkMsmG1(b *testing.B) {
 	// GPU, include time to copy data to device
 	b.Run(fmt.Sprintf("GPU host input %d", npoints), func(b *testing.B) {
 		cfg.AreInputsOnDevice = false
-		gpuResultJac := curve.G1Jac{}
+		gpuResult := curve.G1Jac{}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			MSM_G1(unsafe.Pointer(&gpuResultJac), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
+			MSM_G1(unsafe.Pointer(&gpuResult), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
 		}
 	})
 
@@ -74,10 +74,10 @@ func BenchmarkMsmG1(b *testing.B) {
 		if err != nil {
 			b.Errorf("copy points to device error: %s", err.Error())
 		}
-		gpuResultJac := curve.G1Jac{}
+		gpuResult := curve.G1Jac{}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			MSM_G1(unsafe.Pointer(&gpuResultJac), d_points.AsPtr(), d_scalar.AsPtr(), 0, cfg)
+			MSM_G1(unsafe.Pointer(&gpuResult), d_points.AsPtr(), d_scalar.AsPtr(), 0, cfg)
 		}
 	})
 }
@@ -92,12 +92,12 @@ func TestMsmG1(t *testing.T) {
 	fillRandomBasesG1(points[:])
 
 	// CPU
-	cpuResultAffine := curve.G1Affine{}
-	_, err := cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
+	cpuResult := curve.G1Jac{}
+	_, err := cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
 	if err != nil {
 		t.Errorf("cpu msm error: %s", err.Error())
 	}
-	t.Logf("cpuResultAffine %s \n", cpuResultAffine.String())
+	t.Logf("cpuResult %s \n", cpuResult.String())
 
 	// GPU host input
 	cfg := DefaultMSMConfig()
@@ -105,38 +105,42 @@ func TestMsmG1(t *testing.T) {
 	cfg.ArePointsInMont = true
 	cfg.Npoints = npoints
 	cfg.FfiAffineSz = 64
-	gpuResultJac := curve.G1Jac{}
-	MSM_G1(unsafe.Pointer(&gpuResultJac), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
-	gpuResultAffine := curve.G1Affine{}
-	gpuResultAffine.FromJacobian(&gpuResultJac)
-	t.Logf("gpuResultAffine: %s \n", gpuResultAffine.String())
-	assert.True(t, cpuResultAffine.Equal(&gpuResultAffine), "gpu result is incorrect")
+	gpuResult := curve.G1Jac{}
+	if err := MSM_G1(unsafe.Pointer(&gpuResult), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg); err != nil {
+		t.Errorf("invoke msm gpu error: %s", err.Error())
+	}
+	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
+		t.Logf("cpuResult: %s", cpuResult.String())
+		t.Logf("gpuResult: %s", gpuResult.String())
+	}
 
-	// // GPU device input
-	// d_scalar, err := device.CudaMalloc[fr.Element](0, int(npoints))
-	// if err != nil {
-	// 	t.Errorf("allocate scalars to device error: %s", err.Error())
-	// }
-	// err = d_scalar.CopyFromHost(scalars[:])
-	// if err != nil {
-	// 	t.Errorf("copy scalars to device error: %s", err.Error())
-	// }
-	// d_points, err := device.CudaMalloc[curve.G1Affine](0, int(npoints))
-	// if err != nil {
-	// 	t.Errorf("allocate points to device error: %s", err.Error())
-	// }
-	// err = d_points.CopyFromHost(points[:])
-	// if err != nil {
-	// 	t.Errorf("copy points to device error: %s", err.Error())
-	// }
-	// cfg.AreInputsOnDevice = true
-	// err = MSM_G1(unsafe.Pointer(&gpuResultJac), d_points.AsPtr(), d_scalar.AsPtr(), 0, cfg)
-	// if err != nil {
-	// 	t.Errorf("invoke msm gpu error: %s", err.Error())
-	// }
-	// gpuResultAffine.FromJacobian(&gpuResultJac)
-	// t.Logf("gpuResultAffine: %s \n", gpuResultAffine.String())
-	// assert.True(t, cpuResultAffine.Equal(&gpuResultAffine), "gpu result is incorrect")
+	// GPU device input
+	d_scalar, err := device.CudaMalloc[fr.Element](0, int(npoints))
+	if err != nil {
+		t.Errorf("allocate scalars to device error: %s", err.Error())
+	}
+	err = d_scalar.CopyFromHost(scalars[:])
+	if err != nil {
+		t.Errorf("copy scalars to device error: %s", err.Error())
+	}
+	d_points, err := device.CudaMalloc[curve.G1Affine](0, int(npoints))
+	if err != nil {
+		t.Errorf("allocate points to device error: %s", err.Error())
+	}
+	err = d_points.CopyFromHost(points[:])
+	if err != nil {
+		t.Errorf("copy points to device error: %s", err.Error())
+	}
+	cfg.AreInputsOnDevice = true
+	err = MSM_G1(unsafe.Pointer(&gpuResult), d_points.AsPtr(), d_scalar.AsPtr(), 0, cfg)
+	if err != nil {
+		t.Errorf("invoke msm gpu error: %s", err.Error())
+	}
+
+	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
+		t.Logf("cpuResult: %s", cpuResult.String())
+		t.Logf("gpuResult: %s", gpuResult.String())
+	}
 }
 
 func TestMsmG2InputsNotOnDevice(t *testing.T) {
@@ -150,29 +154,32 @@ func TestMsmG2InputsNotOnDevice(t *testing.T) {
 	fillRandomBasesG2(points[:])
 
 	// CPU
-	cpuResultAffine := curve.G2Affine{}
-	_, err := cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
+	cpuResult := curve.G2Jac{}
+	_, err := cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
 	if err != nil {
 		t.Errorf("cpu msm error: %s", err.Error())
 	}
 
-	gpuResult := curve.G2Affine{}
+	gpuResultAffine := curve.G2Affine{}
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = false
 	cfg.Npoints = npoints
 	cfg.ArePointsInMont = true
 	cfg.LargeBucketFactor = 2
-	err = MSM_G2(unsafe.Pointer(&gpuResult), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
+	err = MSM_G2(unsafe.Pointer(&gpuResultAffine), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
 	if err != nil {
 		t.Errorf("invoke msm gpu error: %s", err.Error())
 	}
+	gpuResult := curve.G2Jac{}
+	gpuResult.FromAffine(&gpuResultAffine)
 
-	assert.True(t, cpuResultAffine.Equal(&gpuResult), "gpu result is incorrect")
-
+	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
+		t.Logf("cpuResult: %s", cpuResult.String())
+		t.Logf("gpuResult: %s", gpuResult.String())
+	}
 }
 
 func TestMsmG2InputsOnDevice(t *testing.T) {
-
 	const npoints uint32 = 1 << 10
 	var (
 		points  [npoints]curve.G2Affine
@@ -183,8 +190,8 @@ func TestMsmG2InputsOnDevice(t *testing.T) {
 	fillRandomBasesG2(points[:])
 
 	// CPU
-	cpuResultAffine := curve.G2Affine{}
-	_, err := cpuResultAffine.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
+	cpuResult := curve.G2Jac{}
+	_, err := cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
 	if err != nil {
 		t.Errorf("cpu msm error: %s", err.Error())
 	}
@@ -207,19 +214,23 @@ func TestMsmG2InputsOnDevice(t *testing.T) {
 		t.Errorf("copy scalars to device error: %s", err.Error())
 	}
 
-	gpuResult := curve.G2Affine{}
+	gpuResultAffine := curve.G2Affine{}
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = true
 	cfg.Npoints = npoints
 	cfg.ArePointsInMont = true
 	cfg.LargeBucketFactor = 2
-	err = MSM_G2(unsafe.Pointer(&gpuResult), d_points.AsPtr(), d_scalars.AsPtr(), 0, cfg)
+	err = MSM_G2(unsafe.Pointer(&gpuResultAffine), d_points.AsPtr(), d_scalars.AsPtr(), 0, cfg)
 	if err != nil {
 		t.Errorf("invoke msm gpu error: %s", err.Error())
 	}
+	gpuResult := curve.G2Jac{}
+	gpuResult.FromAffine(&gpuResultAffine)
 
-	assert.True(t, cpuResultAffine.Equal(&gpuResult), "gpu result is incorrect")
-
+	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
+		t.Logf("cpuResult: %s", cpuResult.String())
+		t.Logf("gpuResult: %s", gpuResult.String())
+	}
 }
 
 func fillRandomScalars(sampleScalars []fr.Element) {

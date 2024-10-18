@@ -402,8 +402,8 @@ public:
           size_t ffi_affine_sz = sizeof(affine_t), int device_id = -1)
         : gpu(select_gpu(device_id)), d_points(nullptr), d_scalars(nullptr)
     {
-        std::cout << "Line: " << __LINE__ << "\n";
-        printf("bucket_t::degree: %d\n", bucket_t::degree);
+        // std::cout << "Line: " << __LINE__ << "\n";
+        // printf("bucket_t::degree: %d\n", bucket_t::degree);
         npoints = (np + WARP_SZ - 1) & ((size_t)0 - WARP_SZ); // make npoints a multiple of WARP_SZ
 
         // confine the number of bits in each window in the ragne [10,18]
@@ -428,10 +428,8 @@ public:
         d_buckets = reinterpret_cast<decltype(d_buckets)>(gpu.Dmalloc(d_blob_sz));
         d_hist = vec2d_t<uint32_t>(&d_buckets[d_buckets_sz], row_sz);
 
-        // else
-        // {
-            npoints = 0;
-        // }
+        npoints = 0;
+
     }
     inline msm_t(vec_t<affine_t> points, size_t ffi_affine_sz = sizeof(affine_t),
                  int device_id = -1)
@@ -837,7 +835,7 @@ void bucket_method_msm(
     cudaStream_t stream;
     CUDA_OK(cudaStreamCreate(&stream));
 
-    printf("bucket_method_msm, bitsize: %d, c: %d, size: %d, large_bucket_factor:%d \n", bitsize, c, size, large_bucket_factor);
+    // printf("bucket_method_msm, bitsize: %d, c: %d, size: %d, large_bucket_factor:%d \n", bitsize, c, size, large_bucket_factor);
     S *d_scalars;
     A *d_points;
     if (!on_device)
@@ -877,7 +875,7 @@ void bucket_method_msm(
     CUDA_OK(cudaMallocAsync(&points_window_bucket_indices, sizeof(unsigned) * size * (num_of_window + 1), stream));
 
     // split scalars into digits
-    printf("initialize split_scalars_kernel: size: %d, msm_log_size: %d, num_of_window: %d, num_of_windows_bitsize: %d \n", size, msm_log_size, num_of_window, num_of_windows_bitsize);
+    // printf("initialize split_scalars_kernel: size: %d, msm_log_size: %d, num_of_window: %d, bm_bitsize: %d \n", size, msm_log_size, num_of_window, bm_bitsize);
     if (mont)
     {
         transfrom_scalars_and_points_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, stream>>>(d_scalars, d_points, size);
@@ -1005,8 +1003,8 @@ void bucket_method_msm(
 
     NUM_THREADS = min(1 << 5, cutoff_nof_runs);
     NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
-    printf("h_nof_buckets_to_compute: %d, cutoff_run_length: %d, cutoff_nof_runs: %d, NUM_BLOCKS: %d, NUM_THREADS: %d bucket_th: %d\n", h_nof_buckets_to_compute, cutoff_run_length, cutoff_nof_runs,
-           NUM_BLOCKS, NUM_THREADS, bucket_th);
+    // printf("h_nof_buckets_to_compute: %d, cutoff_run_length: %d, cutoff_nof_runs: %d, NUM_BLOCKS: %d, NUM_THREADS: %d bucket_th: %d\n", h_nof_buckets_to_compute, cutoff_run_length, cutoff_nof_runs,
+    //        NUM_BLOCKS, NUM_THREADS, bucket_th);
     find_cutoff_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
         d_sorted_bucket_count, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
 
