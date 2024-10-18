@@ -5,6 +5,7 @@
 #ifndef ZEKNOX_NATIVE_MSM_MSM_H_
 #define ZEKNOX_NATIVE_MSM_MSM_H_
 
+#include <stdint.h>
 #include <utils/rusterror.h>
 
 #ifdef __cplusplus
@@ -30,6 +31,10 @@ typedef struct
 
 #ifdef FEATURE_BN254
 #ifdef __cplusplus
+#include <stdexcept>
+#include <cstdint>
+#include <iostream>
+#include <blst_t.hpp>
 #include <ff/alt_bn254.hpp>
 #include <ec/jacobian_t.hpp>
 #include <ec/xyzz_t.hpp>

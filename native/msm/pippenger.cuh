@@ -13,8 +13,8 @@
 
 #include "sort.cuh"
 #include "batch_addition.cuh"
-#include <msm/kernels/pippenger.cu>
 #include <utils/exception.cuh>
+#include <msm/kernels/pippenger_kernels.cuh>
 
 #ifndef WARP_SZ
 #define WARP_SZ 32

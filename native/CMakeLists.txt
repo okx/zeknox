@@ -119,16 +119,21 @@ set(LIB_CUDA_SRC
     poseidon/poseidon_bn128.cu
     poseidon2/poseidon2.cu
     monolith/monolith.cu
-    merkle/merkle.cu)
+    merkle/merkle.cu
+    ntt/ntt.cu
+    utils/all_gpus.cu)
 
-if (INCLUDE_MSM)
+if (BUILD_MSM)
     list(APPEND LIB_CUDA_SRC msm/msm.cu)
+    list(APPEND LIB_CUDA_SRC msm/sort.cu)
 endif()
 
 add_library(${LIB_CUDA_NAME} OBJECT ${LIB_CUDA_SRC})
 
 target_compile_definitions(${LIB_CUDA_NAME} PRIVATE ${CURVE_FEATURE} USE_CUDA ${EXTRA_DEFAULT_FLAGS})
 target_include_directories(${LIB_CUDA_NAME} PRIVATE ${LIB_INC})
+target_include_directories(${LIB_CUDA_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/blst/src)
+target_compile_definitions(${LIB_CUDA_NAME} PRIVATE -D${CURVE_FEATURE} -D__ADX__) ## __ADX__ is required for blst
 set_target_properties(${LIB_CUDA_NAME} PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH}")
 set_target_properties(${LIB_CUDA_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 set_target_properties(${LIB_CUDA_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
@@ -141,9 +146,8 @@ target_link_libraries(${LIB_CUDA_NAME} PRIVATE cudart)
 add_library(${LIB_NAME} STATIC lib.cu $<TARGET_OBJECTS:${LIB_CUDA_NAME}> $<TARGET_OBJECTS:${LIB_CXX_NAME}>)
 target_compile_definitions(${LIB_NAME} PRIVATE ${CURVE_FEATURE} USE_CUDA ${EXTRA_DEFAULT_FLAGS})
 message(STATUS "FINAL_LIB_INCLUDE ${PROJECT_SOURCE_DIR}/depends/blst/src")
-target_include_directories(${LIB_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/depends/blst/src)
-target_compile_definitions(${LIB_NAME} PUBLIC -D${CURVE_FEATURE} -D__ADX__) ## __ADX__ is required for blst
-
+target_include_directories(${LIB_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/blst/src)
+target_compile_definitions(${LIB_NAME} PRIVATE -D${CURVE_FEATURE} -D__ADX__) ## __ADX__ is required for blst
 target_include_directories(${LIB_NAME} PRIVATE ${LIB_INC})
 set_target_properties(${LIB_NAME} PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH}")
 set_target_properties(${LIB_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

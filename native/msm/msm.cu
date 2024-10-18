@@ -6,10 +6,9 @@
 #include <ec/jacobian_t.hpp>
 #include <ec/xyzz_t.hpp>
 #include <utils/gpu_t.cuh>
-#include <utils/all_gpus.cpp>
+#include <utils/all_gpus.hpp>
 #include <msm/pippenger.cuh>
 #include <cstdio>
-#include <blst_t.hpp>
 
 // RustError mult_pippenger(uint32_t device_id, point_t *out, affine_t *input_points, scalar_t *input_scalars, MSM_Config cfg)
 RustError mult_pippenger(uint32_t device_id, void *out, void *input_points, void *input_scalars, MSM_Config cfg)

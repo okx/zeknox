@@ -1,9 +1,9 @@
 // Copyright 2024 OKX
 #ifndef ZEKNOX_CUDA_NTTT_KERNELS_CU_
 #define ZEKNOX_CUDA_NTTT_KERNELS_CU_
+
 #include <cooperative_groups.h>
 #include <utils/sharedmem.cuh>
-
 #include <curand_kernel.h>
 
 #define BLOCK_DIM 32

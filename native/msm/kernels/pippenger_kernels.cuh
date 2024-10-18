@@ -1,6 +1,10 @@
 #ifndef __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
 #define __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
+
 #include <stdio.h>
+#include <msm/msm.h>
+#include <msm/pippenger.cuh>
+
 /**
  * @param v, v is assumed to be sorted in descending order
  * @param size, number of elements in v
