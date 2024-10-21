@@ -125,7 +125,9 @@ __launch_bounds__(1024) __global__
             uint32_t wval = get_wval(scalar, bit0, top_i);
             wval = booth_encode(wval, wmask, wbits);
             if (wval)
+            {
                 wval ^= msb;
+            }
             digits[win][i] = wval;
         }
 
@@ -155,7 +157,7 @@ __launch_bounds__(1024) __global__
 #error "bad MSM_NTHREADS value"
 #endif
 #ifndef MSM_NSTREAMS
-#define MSM_NSTREAMS 8
+#define MSM_NSTREAMS 32
 #elif MSM_NSTREAMS < 2
 #error "invalid MSM_NSTREAMS"
 #endif
@@ -179,19 +181,12 @@ __launch_bounds__(ACCUMULATE_NTHREADS) __global__
     const uint32_t degree = bucket_t::degree;
     const uint32_t warp_sz = WARP_SZ / degree;
     const uint32_t lane_id = laneid / degree;
+    // printf("degree: %d\n", degree);
 
     uint32_t x, y;
-#if 1
-    __shared__ uint32_t xchg;
 
-    if (threadIdx.x == 0)
-        xchg = atomicAdd(&current, blockDim.x / degree);
-    __syncthreads();
-    x = xchg + threadIdx.x / degree;
-#else
     x = laneid == 0 ? atomicAdd(&current, warp_sz) : 0;
     x = __shfl_sync(0xffffffff, x, 0) + lane_id;
-#endif
 
     while (x < (nwins << wbits))
     {
@@ -222,10 +217,7 @@ __launch_bounds__(ACCUMULATE_NTHREADS) __global__
             {
                 digit = *digs_ptr++;
                 p = points[digit & 0x7fffffff];
-                if (sizeof(bucket) <= 128 || LARGE_L1_CODE_CACHE)
-                    bucket.add(p, digit >> 31);
-                else
-                    bucket.uadd(p, digit >> 31);
+                bucket.add(p, digit >> 31);
             }
 
             buckets[y][x] = bucket;
@@ -360,6 +352,7 @@ template __global__ void breakdown<scalar_t>(vec2d_t<uint32_t> digits, const sca
 #include <utils/exception.cuh>
 #include <utils/rusterror.h>
 #include <utils/gpu_t.cuh>
+#include <chrono>
 
 template <class bucket_t, class point_t, class affine_t, class scalar_t>
 class msm_t
@@ -398,7 +391,7 @@ public:
     }
 
 public:
-    msm_t(affine_t* points,  scalar_t* scalars, size_t np,
+    msm_t(affine_t *points, scalar_t *scalars, size_t np,
           size_t ffi_affine_sz = sizeof(affine_t), int device_id = -1)
         : gpu(select_gpu(device_id)), d_points(points), d_scalars(scalars)
     {
@@ -431,7 +424,6 @@ public:
         d_hist = vec2d_t<uint32_t>(&d_buckets[d_buckets_sz], row_sz);
 
         npoints = 0;
-
     }
     inline msm_t(vec_t<affine_t> points, size_t ffi_affine_sz = sizeof(affine_t),
                  int device_id = -1)
@@ -466,23 +458,11 @@ private:
 
         breakdown<<<2 * grid_size, 1024, sizeof(scalar_t) * 1024, gpu[2]>>>(
             d_digits, d_scalars, len, nwins, wbits, mont);
+
         CUDA_OK(cudaGetLastError());
 
         const size_t shared_sz = sizeof(uint32_t) << DIGIT_BITS;
-#if 0
-        uint32_t win;
-        for (win = 0; win < nwins-1; win++) {
-            gpu[2].launch_coop(sort, {grid_size, SORT_BLOCKDIM, shared_sz},
-                            d_digits, len, win, d_temps, d_hist,
-                            wbits-1, wbits-1, 0u);
-        }
-        uint32_t top = scalar_t::bit_length() - wbits * win;
-        gpu[2].launch_coop(sort, {grid_size, SORT_BLOCKDIM, shared_sz},
-                            d_digits, len, win, d_temps, d_hist,
-                            wbits-1, top-1, 0u);
-#else
-        // On the other hand a pair of kernels launched in parallel run
-        // ~50% slower but sort twice as much data...
+
         uint32_t top = scalar_t::bit_length() - wbits * (nwins - 1);
         uint32_t win;
         for (win = 0; win < nwins - 1; win += 2)
@@ -497,7 +477,6 @@ private:
                                d_digits, len, win, d_temps, d_hist,
                                wbits - 1, top - 1, 0u);
         }
-#endif
     }
 
 public:
@@ -519,7 +498,7 @@ public:
         printf("batch: %d, stride:%d \n", batch, stride);
 
         std::vector<result_t> res(nwins);
-        std::vector<bucket_t> ones(gpu.sm_count() * BATCH_ADD_BLOCK_SIZE / WARP_SZ);
+        std::vector<bucket_t> ones(gpu.sm_count() * BATCH_ADD_BLOCK_SIZE / WARP_SZ); // 128* 256 / 32
 
         out.inf();
         point_t p;
@@ -529,7 +508,7 @@ public:
             size_t temp_sz = stride * 2 * sizeof(uint2);
             size_t digits_sz = nwins * stride * sizeof(uint32_t);
 
-            printf("temp size: %d, digits_sz: %d \n", temp_sz, digits_sz);
+            // printf("temp size: %d, digits_sz: %d, sizeof(uint2): %d \n", temp_sz, digits_sz, sizeof(uint2));
             dev_ptr_t<uint8_t> d_temp{temp_sz + digits_sz, gpu[2], true, false};
 
             vec2d_t<uint2> d_temps{&d_temp[0], stride};
@@ -544,39 +523,47 @@ public:
             digits(&d_scalars[0], num, d_digits, d_temps, mont);
             gpu[2].record(ev);
 
-            affine_h* d_points = this->d_points;
+            affine_h *d_points = this->d_points;
             for (uint32_t i = 0; i < batch; i++)
             {
-                gpu[i & 1].wait(ev);
+
+                gpu[(i + 2) % 3].wait(ev); /// cost 1ms
+
 
                 batch_addition<bucket_t><<<gpu.sm_count(), BATCH_ADD_BLOCK_SIZE,
-                                           0, gpu[i & 1]>>>(
+                                           0, gpu[(i + 2) % 3]>>>(
                     &d_buckets[nwins << (wbits - 1)], &d_points[d_off], num,
-                    &d_digits[0][0], d_hist[0][0]);
+                    &d_digits[0][0], d_hist[0][0]); // cost 50us
+
+
                 CUDA_OK(cudaGetLastError());
 
-                gpu[i & 1].launch_coop(accumulate<bucket_t, affine_h>,
-                                       {gpu.sm_count(), 0},
-                                       d_buckets, nwins, wbits, &d_points[d_off], d_digits, d_hist, i & 1);
-                gpu[i & 1].record(ev);
+
+                gpu[(i + 2) % 3].launch_coop(accumulate<bucket_t, affine_h>,
+                                             {gpu.sm_count(), 0},
+                                             d_buckets, nwins, wbits, &d_points[d_off], d_digits, d_hist, i & 1);
+                gpu[(i + 2) % 3].record(ev);
+
+
+
 
                 integrate<bucket_t><<<nwins, MSM_NTHREADS,
                                       sizeof(bucket_t) * MSM_NTHREADS / bucket_t::degree,
-                                      gpu[i & 1]>>>(
+                                      gpu[(i + 2) % 3]>>>(
                     d_buckets, nwins, wbits, scalar_t::bit_length());
+
                 CUDA_OK(cudaGetLastError());
+
 
                 if (i < batch - 1)
                 {
                     h_off += stride;
                     num = h_off + stride <= npoints ? stride : npoints - h_off;
 
-
-                    gpu[2].wait(ev);
+                    gpu[(i + 2) % 3].wait(ev);
                     digits(&d_scalars[h_off], num,
                            d_digits, d_temps, mont);
-                    gpu[2].record(ev);
-
+                    gpu[(i + 2) % 3].record(ev);
 
                     d_off = h_off;
                 }
@@ -586,10 +573,11 @@ public:
                     collect(p, res, ones);
                     out.add(p);
                 }
+                gpu[(i + 2) % 3].sync();
+                auto start_copy = std::chrono::high_resolution_clock::now();
+                gpu[(i + 2) % 3].DtoH(ones, d_buckets + (nwins << (wbits - 1)));
 
-                gpu[i & 1].DtoH(ones, d_buckets + (nwins << (wbits - 1)));
-                gpu[i & 1].DtoH(res, d_buckets, sizeof(bucket_h) << (wbits - 1));
-                gpu[i & 1].sync();
+                gpu[(i + 2) % 3].DtoH(res, d_buckets, sizeof(bucket_h) << (wbits - 1));
             }
         }
         catch (const cuda_error &e)
@@ -602,7 +590,10 @@ public:
 #endif
         }
 
+
         collect(p, res, ones);
+
+
         out.add(p);
 
         return RustError{cudaSuccess};
@@ -929,8 +920,6 @@ void bucket_method_msm(
         d_nof_buckets_to_compute, num_of_window * size, stream);
     CUDA_OK(cudaFreeAsync(encode_temp_storage, stream));
 
-
-
     unsigned *d_bucket_offsets; // stores where each new bucket begin; new means new `unique`
     CUDA_OK(cudaMalloc(&d_bucket_offsets, sizeof(unsigned) * total_num_of_buckets));
     unsigned *offsets_temp_storage{};
@@ -1011,8 +1000,8 @@ void bucket_method_msm(
     CUDA_OK(cudaMemcpyAsync(&h_nof_large_buckets, nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
 
     unsigned h_max_res[2];
-    CUDA_OK(cudaMemcpyAsync(&h_max_res[0], d_sorted_bucket_count, sizeof(unsigned) , cudaMemcpyDeviceToHost, stream));
-    CUDA_OK(cudaMemcpyAsync(&h_max_res[1], d_sorted_unique_bucket_indices, sizeof(unsigned) , cudaMemcpyDeviceToHost, stream));
+    CUDA_OK(cudaMemcpyAsync(&h_max_res[0], d_sorted_bucket_count, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
+    CUDA_OK(cudaMemcpyAsync(&h_max_res[1], d_sorted_unique_bucket_indices, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
     unsigned h_largest_bucket_count = h_max_res[0];
     unsigned h_nof_zero_large_buckets = h_max_res[1];
     unsigned large_buckets_to_compute =
@@ -1026,7 +1015,7 @@ void bucket_method_msm(
     if (large_buckets_to_compute > 0 && bucket_th > 0)
     {
         unsigned threads_per_bucket = min(MAX_TH,
-            1 << (unsigned)ceil(log2((h_largest_bucket_count + bucket_th - 1) / bucket_th)));
+                                          1 << (unsigned)ceil(log2((h_largest_bucket_count + bucket_th - 1) / bucket_th)));
         unsigned max_bucket_size_run_length = (h_largest_bucket_count + threads_per_bucket - 1) / threads_per_bucket;
         unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
         // printf("sizeof(P): %d, total_large_buckets_size: %d\n", sizeof(P), total_large_buckets_size);
@@ -1060,7 +1049,7 @@ void bucket_method_msm(
     }
     else
     {
-        h_nof_large_buckets = 0;  // if bucket_th = 0; there is no large buckets
+        h_nof_large_buckets = 0; // if bucket_th = 0; there is no large buckets
     }
 
     // launch the accumulation kernel with maximum threads

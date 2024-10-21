@@ -77,9 +77,15 @@ public:
     const int gpu_id;
 
 public:
-    stream_t(int id) : gpu_id(id)
+    stream_t(int id, bool blocking) : gpu_id(id)
     {
-        cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+        // printf("cuda create stream for gpu: %d, blocking: %d\n", id, blocking);
+        if (blocking) {
+    cudaStreamCreateWithFlags(&stream, cudaStreamDefault);
+        } else {
+              cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+        }
+
     }
     ~stream_t()
     {
@@ -174,14 +180,20 @@ public:
     inline void DtoH(T *dst, const void *src, size_t nelems,
                      size_t sz = sizeof(T)) const
     {
-        // printf("device to host, gpu_id: %d\n", gpu_id);
         if (sz == sizeof(T))
+        {
+            // printf("1D device to host, gpu_id: %d, stream: %d\n", gpu_id, stream);
             CUDA_OK(cudaMemcpyAsync(dst, src, nelems * sizeof(T),
                                     cudaMemcpyDeviceToHost, stream));
+        }
+
         else
+        {
+            // printf("2D device to host, gpu_id: %d\n", gpu_id);
             CUDA_OK(cudaMemcpy2DAsync(dst, sizeof(T), src, sz,
                                       std::min(sizeof(T), sz), nelems,
                                       cudaMemcpyDeviceToHost, stream));
+        }
     }
 
     template <typename T>
@@ -189,7 +201,7 @@ public:
                      size_t sz = sizeof(T)) const
     {
         if (sz == sizeof(T))
-            CUDA_OK(cudaMemcpyAsync(dst, src, nelems * sizeof(T),
+            CUDA_OK(cudaMemcpy(dst, src, nelems * sizeof(T),
                                     cudaMemcpyDeviceToDevice, stream));
         else
             CUDA_OK(cudaMemcpy2DAsync(dst, sizeof(T), src, sz,
@@ -207,6 +219,7 @@ public:
     inline void DtoH(std::vector<T> &dst, const void *src,
                      size_t sz = sizeof(T)) const
     {
+        printf("copy to host size: %d\n", dst.size());
         DtoH(&dst[0], src, dst.size(), sz);
     }
 
@@ -252,12 +265,13 @@ public:
     static const size_t FLIP_FLOP = 3;
 
 private:
-    int gpu_id, cuda_id;
+    int gpu_id;
+    int cuda_id; // cuda id is determined by `cudaGetDevice`
     cudaDeviceProp prop;
     size_t total_mem;
-    mutable stream_t zero = {gpu_id}; // the default stream, zero
+    mutable stream_t zero = {gpu_id, true}; // the default stream, zero
     // in each gpu, there are three streams by default, non blocking
-    mutable stream_t flipflop[FLIP_FLOP] = {gpu_id, gpu_id, gpu_id};
+    mutable stream_t flipflop[FLIP_FLOP] = {{gpu_id, true}, {gpu_id, true}, {gpu_id, true}};
     mutable thread_pool_t pool{"SPPARK_GPU_T_AFFINITY"};
 
 public:
@@ -371,7 +385,8 @@ public:
     inline void sync() const
     {
         zero.sync(); // sync the default stream
-        for (auto &f : flipflop){
+        for (auto &f : flipflop)
+        {
             f.sync();
         }
     }
@@ -454,7 +469,7 @@ public:
     // int gpu_id;
     char *name;
     size_t n_elements;
-    stream_t& stream;
+    stream_t &stream;
     bool manual_drop;
     dev_ptr_t(size_t nelems) : d_ptr(nullptr)
     {
@@ -465,7 +480,7 @@ public:
         }
     }
     // TODO: `manual_drop` and `alloc` can be reduced to one flag
-    dev_ptr_t(size_t nelems, stream_t &s, bool alloc,  bool manual_drop = false) : d_ptr(nullptr), stream(s), manual_drop(manual_drop)
+    dev_ptr_t(size_t nelems, stream_t &s, bool alloc, bool manual_drop = false) : d_ptr(nullptr), stream(s), manual_drop(manual_drop)
     {
         // printf("construct pointer on device: %d, nelems: %d, alloc: %d, manual_drop:%d\n",s.gpu_id, nelems, alloc, manual_drop);
         // manual_drop=false;
@@ -473,14 +488,15 @@ public:
         {
             n_elements = (nelems + WARP_SZ - 1) & ((size_t)0 - WARP_SZ); // make n multiples of 32
 
-            if (alloc) {
+            if (alloc)
+            {
                 this->alloc();
             }
         }
-
     }
     dev_ptr_t(const dev_ptr_t &r) = delete; // Copy constructor explicitly deleted
-    void set_device_ptr(T* ptr) {
+    void set_device_ptr(T *ptr)
+    {
         d_ptr = ptr;
     }
     dev_ptr_t &operator=(const dev_ptr_t &r) = delete; // Copy assignment operator explicitly deleted

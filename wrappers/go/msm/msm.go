@@ -48,10 +48,27 @@ func toCMSMConfig(cfg MSMConfig) C.MSM_Config {
 	}
 }
 
+// func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg MSMConfig) error {
+// 	ccfg := toCMSMConfig(cfg)
+// 	// fmt.Printf("start invoke mul pippenger %v\n", ccfg)
+// 	err := C.mult_pippenger(
+// 		C.uint(numGPU),
+// 		output,
+// 		input_points,
+// 		input_scalars,
+// 		ccfg,
+// 	)
+// 	C.fflush(C.stdout)
+// 	if err.code != 0 {
+// 		return fmt.Errorf("error: %s", C.GoString(err.message))
+// 	}
+// 	return nil
+// }
+
 func MSM_G1(output, input_points, input_scalars unsafe.Pointer, numGPU int, cfg MSMConfig) error {
 	ccfg := toCMSMConfig(cfg)
-	// fmt.Printf("start invoke mul pippenger %v\n", ccfg)
-	err := C.mult_pippenger(
+	// fmt.Printf("start invoke mult_pippenger_g2, npoints: %d\n", ccfg.npoints)
+	err := C.mult_pippenger_g1(
 		C.uint(numGPU),
 		output,
 		input_points,
