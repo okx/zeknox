@@ -235,3 +235,26 @@ gtest_discover_tests(test_bn254)
 
 # install(FILES src/lib.h
 #     DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+
+set(BN254_BENCH_SOURCES
+  bench_msm.cu
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/misc.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/naf.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/splitparstr.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/alt_bn128.cpp
+)
+include_directories(
+  field/
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
+)
+
+add_executable(bench_msm ${BN254_BENCH_SOURCES})
+target_include_directories(bench_msm PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
+target_include_directories(bench_msm PRIVATE ${PROJECT_CUDA_SOURCE_DIR}/depends/blst/src)
+target_link_directories(bench_msm PRIVATE ${PROJECT_CUDA_SOURCE_DIR}/depends/blst)
+target_link_libraries(bench_msm cryptocuda blst)
+if(OpenMP_CXX_FOUND)
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(bench_msm OpenMP::OpenMP_CXX)
+    endif()
+endif()
