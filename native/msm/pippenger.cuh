@@ -1,37 +1,29 @@
-#ifndef __CRYPTO_MSM_PIPPENGER_CUH__
-#define __CRYPTO_MSM_PIPPENGER_CUH__
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef __ZEKNOX_MSM_PIPPENGER_CUH__
+#define __ZEKNOX_MSM_PIPPENGER_CUH__
 
 #include <cuda.h>
-#include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
-#include <cassert>
-
-#include <utils/vec2d_t.hpp>
-#include <utils/slice_t.hpp>
 
 #include <utils/exception.cuh>
 #include <msm/kernels/pippenger_kernels.cuh>
 
-#ifndef WARP_SZ
-#define WARP_SZ 32
-#endif
-
-
+// TODO: need to dynamiclly set for different CUDA architecture
 #define MAX_TH 256
-#define WINDOW_BIT_SIZE 16
 
-#include <vector>
 #include <utils/exception.cuh>
 #include <utils/rusterror.h>
 #include <utils/gpu_t.cuh>
-#include <chrono>
 #include <msm/msm.h>
 
 /**
- * `P` result type
- * `A` point type
+ * `P` result type; should be in jacobian coordinates
+ * `A` point type; should be in affine coordinates
  * `S` scalar type
  */
 template <typename P, typename A, typename S>
@@ -40,8 +32,6 @@ class msm_t
     const gpu_t &gpu;
     size_t npoints;
     uint32_t wbits, nwins;
-// typedef g1_affine_t A;
-// typedef scalar_field_t S;
 public:
     A *d_points;
     S *d_scalars;
@@ -58,23 +48,22 @@ public:
     msm_t(A *points, S *scalars, size_t np, int device_id = -1)
         : gpu(select_gpu(device_id)), d_points(points), d_scalars(scalars)
     {
-        // std::cout << "Line: " << __LINE__ << "\n";
-        // printf("bucket_t::degree: %d\n", bucket_t::degree);
-        // npoints = (np + WARP_SZ - 1) & ((size_t)0 - WARP_SZ); // make npoints a multiple of WARP_SZ
-
+        // in theory, the best performance is achieved by setting wbins = lg2(msm_size);
         // confine the number of bits in each window in the ragne [10,18]
-        wbits = 17;
-        if (npoints > 192)
-        {
-            wbits = std::min(lg2(npoints), 18);
-            if (wbits < 10)
-                wbits = 10;
-        }
-        else if (npoints > 0)
-        {
-            wbits = 10;
-        }
-        nwins = (scalar_t::nbits - 1) / wbits + 1;
+        // TODO: the current sum kernel only works when wbits =16; need to make it more generic
+        // wbits = 17;
+        // if (npoints > 192)
+        // {
+        //     wbits = std::min(lg2(npoints), 18);
+        //     if (wbits < 10)
+        //         wbits = 10;
+        // }
+        // else if (npoints > 0)
+        // {
+        //     wbits = 10;
+        // }
+        wbits=16;
+        nwins = (S::nbits + wbits -1) / wbits ;
     }
     msm_t(int device_id = -1)
         : msm_t(nullptr, nullptr, 0, device_id) {
@@ -86,44 +75,43 @@ public:
 
     /**
      * this function computes msm using the bucket method
-     * @param bitsize, bit size of scalar; e.g 254 for BN254 field;
      * @param on_device whetehr put result on device; default is `false`
      */
     void bucket_method_msm(
         P *final_result,
-        A *points,
-        S *scalars,
         unsigned size,
         bool mont,
         bool on_device,
         bool big_triangle,
         unsigned large_bucket_factor)
     {
-        P *buckets;
 
         unsigned num_of_window = nwins; // number of windows
         unsigned msm_log_size = ceil(log2(size));
         unsigned num_of_windows_bitsize = ceil(log2(num_of_window));
         unsigned total_num_of_buckets = num_of_window << wbits; // each bucket module contains 1<<c buckets; total is num_of_window << c
-        // printf("bucket_method_msm, bitsize: %d, c: %d, num_of_window: %d, total_num_of_buckets:%d \n", bitsize, c, num_of_window, total_num_of_buckets);
-        CUDA_OK(cudaMallocAsync(&buckets, sizeof(P) * total_num_of_buckets, gpu));
+        // printf("bucket_method_msm, bitsize: %d, wbits: %d, num_of_window: %d, total_num_of_buckets:%d \n", S::nbits, wbits, num_of_window, total_num_of_buckets);
+
+        dev_ptr_t<P> d_buckets{total_num_of_buckets, gpu, ALLOC_MEM};
 
         // launch the bucket initialization kernel with maximum threads
         unsigned NUM_THREADS = 1 << 10; // NOTE: can tune this for better performance;
         unsigned NUM_BLOCKS = (total_num_of_buckets + NUM_THREADS - 1) / NUM_THREADS;
-        initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(buckets, total_num_of_buckets);
+        initialize_buckets_kernel<P><<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(&d_buckets[0], total_num_of_buckets);
 
         // indicate which bucket the scalar belongs to within each window; hence the total size is size*num_of_window;
         // additional size is allocated in the front for the following sorting purpose
-        unsigned *scalars_window_bucket_indices;
+        dev_ptr_t<unsigned> scalars_window_bucket_indices{
+            size * (num_of_window + 1),
+            gpu,
+            ALLOC_MEM};
         // binded to scalars scalars_window_bucket_indices
-        unsigned *points_window_bucket_indices;
-
-        CUDA_OK(cudaMallocAsync(&scalars_window_bucket_indices, sizeof(unsigned) * size * (num_of_window + 1), gpu));
-        CUDA_OK(cudaMallocAsync(&points_window_bucket_indices, sizeof(unsigned) * size * (num_of_window + 1), gpu));
+        dev_ptr_t<unsigned> points_window_bucket_indices{
+            size * (num_of_window + 1),
+            gpu,
+            ALLOC_MEM};
 
         // split scalars into digits
-        // printf("initialize split_scalars_kernel: size: %d, msm_log_size: %d, num_of_window: %d, bm_bitsize: %d \n", size, msm_log_size, num_of_window, bm_bitsize);
         if (mont)
         {
             transfrom_scalars_and_points_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, gpu>>>(d_scalars, d_points, size);
@@ -131,15 +119,15 @@ public:
 
         NUM_BLOCKS = (size + NUM_THREADS - 1) / NUM_THREADS;
         // `scalars_window_bucket_indices` & `points_window_bucket_indices` with offset `size`: leaving the first window free for the out of place sort later
-        split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(scalars_window_bucket_indices + size, points_window_bucket_indices + size, d_scalars, size, msm_log_size, num_of_window, num_of_windows_bitsize, wbits);
+        split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(&scalars_window_bucket_indices[0] + size, &points_window_bucket_indices[0] + size, d_scalars, size, msm_log_size, num_of_window, num_of_windows_bitsize, wbits);
 
         // sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
         unsigned *sort_indices_temp_storage{};
         size_t sort_indices_temp_storage_bytes;
         // Call the function initially with a NULL pointer to determine the required temporary storage size
         cub::DeviceRadixSort::SortPairs(
-            sort_indices_temp_storage, sort_indices_temp_storage_bytes, scalars_window_bucket_indices + size, scalars_window_bucket_indices,
-            points_window_bucket_indices + size, points_window_bucket_indices, size, 0, sizeof(unsigned) * 8, gpu);
+            sort_indices_temp_storage, sort_indices_temp_storage_bytes, &scalars_window_bucket_indices[0] + size, &scalars_window_bucket_indices[0],
+            &points_window_bucket_indices[0] + size, &points_window_bucket_indices[0], size, 0, sizeof(unsigned) * 8, gpu);
         CUDA_OK(cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, gpu));
         for (unsigned i = 0; i < num_of_window; i++)
         {
@@ -149,8 +137,8 @@ public:
             // the third last parameter is `begin_bit`, [optional] The least-significant bit index (inclusive) needed for key comparison
             // the second last parameter is `end_bit`, [optional] The most-significant bit index (exclusive) needed for key comparison (e.g., sizeof(unsigned int) * 8)
             cub::DeviceRadixSort::SortPairs(
-                sort_indices_temp_storage, sort_indices_temp_storage_bytes, scalars_window_bucket_indices + offset_in,
-                scalars_window_bucket_indices + offset_out, points_window_bucket_indices + offset_in, points_window_bucket_indices + offset_out, size, 0, sizeof(unsigned) * 8,
+                sort_indices_temp_storage, sort_indices_temp_storage_bytes, &scalars_window_bucket_indices[0] + offset_in,
+                &scalars_window_bucket_indices[0] + offset_out, &points_window_bucket_indices[0] + offset_in, &points_window_bucket_indices[0] + offset_out, size, 0, sizeof(unsigned) * 8,
                 gpu);
         }
         CUDA_OK(cudaFreeAsync(sort_indices_temp_storage, gpu));
@@ -160,37 +148,34 @@ public:
         //    1|0, 1|1, 1|2, ..., 1|(1<<c -1), \
         // ...
         // ]
-        unsigned *d_unique_bucket_indices;
-        unsigned *d_bucket_count;
-        unsigned *d_nof_buckets_to_compute;
-        CUDA_OK(cudaMallocAsync(&d_unique_bucket_indices, sizeof(unsigned) * total_num_of_buckets, gpu));
-        CUDA_OK(cudaMallocAsync(&d_bucket_count, sizeof(unsigned) * total_num_of_buckets, gpu));
-        CUDA_OK(cudaMallocAsync(&d_nof_buckets_to_compute, sizeof(unsigned), gpu));
+        dev_ptr_t<unsigned> d_unique_bucket_indices{total_num_of_buckets, gpu, ALLOC_MEM};
+        dev_ptr_t<unsigned> d_bucket_count{total_num_of_buckets, gpu, ALLOC_MEM};
+        dev_ptr_t<unsigned> d_nof_buckets_to_compute{1, gpu, ALLOC_MEM};
+
         unsigned *encode_temp_storage{};
         size_t encode_temp_storage_bytes = 0;
         // It identifies consecutive repeated elements (runs) in an input array and outputs unique elements along with the count of occurrences for each run
         cub::DeviceRunLengthEncode::Encode(
-            encode_temp_storage, encode_temp_storage_bytes, scalars_window_bucket_indices, d_unique_bucket_indices, d_bucket_count,
-            d_nof_buckets_to_compute, num_of_window * size, gpu);
+            encode_temp_storage, encode_temp_storage_bytes, &scalars_window_bucket_indices[0], &d_unique_bucket_indices[0], &d_bucket_count[0],
+            &d_nof_buckets_to_compute[0], num_of_window * size, gpu);
         CUDA_OK(cudaMallocAsync(&encode_temp_storage, encode_temp_storage_bytes, gpu));
         cub::DeviceRunLengthEncode::Encode(
-            encode_temp_storage, encode_temp_storage_bytes, scalars_window_bucket_indices, d_unique_bucket_indices, d_bucket_count,
-            d_nof_buckets_to_compute, num_of_window * size, gpu);
+            encode_temp_storage, encode_temp_storage_bytes, &scalars_window_bucket_indices[0], &d_unique_bucket_indices[0], &d_bucket_count[0],
+            &d_nof_buckets_to_compute[0], num_of_window * size, gpu);
         CUDA_OK(cudaFreeAsync(encode_temp_storage, gpu));
 
-        unsigned *d_bucket_offsets; // stores where each new bucket begin; new means new `unique`
-        CUDA_OK(cudaMalloc(&d_bucket_offsets, sizeof(unsigned) * total_num_of_buckets));
+        dev_ptr_t<unsigned> d_bucket_offsets{total_num_of_buckets, gpu, ALLOC_MEM}; // stores where each new bucket begin; new means new `unique`
         unsigned *offsets_temp_storage{};
         size_t offsets_temp_storage_bytes = 0;
         cub::DeviceScan::ExclusiveSum(
-            offsets_temp_storage, offsets_temp_storage_bytes, d_bucket_count, d_bucket_offsets, total_num_of_buckets, gpu);
+            offsets_temp_storage, offsets_temp_storage_bytes, &d_bucket_count[0], &d_bucket_offsets[0], total_num_of_buckets, gpu);
         CUDA_OK(cudaMalloc(&offsets_temp_storage, offsets_temp_storage_bytes));
         cub::DeviceScan::ExclusiveSum(
-            offsets_temp_storage, offsets_temp_storage_bytes, d_bucket_count, d_bucket_offsets, total_num_of_buckets, gpu);
+            offsets_temp_storage, offsets_temp_storage_bytes, &d_bucket_count[0], &d_bucket_offsets[0], total_num_of_buckets, gpu);
         CUDA_OK(cudaFreeAsync(offsets_temp_storage, gpu));
 
         unsigned h_nof_buckets_to_compute;
-        CUDA_OK(cudaMemcpyAsync(&h_nof_buckets_to_compute, d_nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
+        CUDA_OK(cudaMemcpyAsync(&h_nof_buckets_to_compute, &d_nof_buckets_to_compute[0], sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
 
         // if all points are 0 just return point 0
         if (h_nof_buckets_to_compute == 0)
@@ -208,40 +193,36 @@ public:
         }
 
         // sort by bucket sizes
-        unsigned *d_sorted_bucket_count;
-        CUDA_OK(cudaMallocAsync(&d_sorted_bucket_count, sizeof(unsigned) * h_nof_buckets_to_compute, gpu));
-        unsigned *d_sorted_bucket_offsets;
-        CUDA_OK(cudaMallocAsync(&d_sorted_bucket_offsets, sizeof(unsigned) * h_nof_buckets_to_compute, gpu));
+        dev_ptr_t<unsigned> d_sorted_bucket_count{h_nof_buckets_to_compute, gpu, ALLOC_MEM};
+        dev_ptr_t<unsigned> d_sorted_bucket_offsets{h_nof_buckets_to_compute, gpu, ALLOC_MEM};
         unsigned *sort_offsets_temp_storage{};
         size_t sort_offsets_temp_storage_bytes = 0;
         cub::DeviceRadixSort::SortPairsDescending(
-            sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, d_bucket_count, d_sorted_bucket_count, d_bucket_offsets,
-            d_sorted_bucket_offsets, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
+            sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, &d_bucket_count[0], &d_sorted_bucket_count[0], &d_bucket_offsets[0],
+            &d_sorted_bucket_offsets[0], h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
         CUDA_OK(cudaMallocAsync(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, gpu));
         cub::DeviceRadixSort::SortPairsDescending(
-            sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, d_bucket_count, d_sorted_bucket_count, d_bucket_offsets,
-            d_sorted_bucket_offsets, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
+            sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, &d_bucket_count[0], &d_sorted_bucket_count[0], &d_bucket_offsets[0],
+            &d_sorted_bucket_offsets[0], h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
         CUDA_OK(cudaFreeAsync(sort_offsets_temp_storage, gpu));
 
-        unsigned *d_sorted_unique_bucket_indices;
-        CUDA_OK(cudaMallocAsync(&d_sorted_unique_bucket_indices, sizeof(unsigned) * h_nof_buckets_to_compute, gpu));
+        dev_ptr_t<unsigned> d_sorted_unique_bucket_indices{h_nof_buckets_to_compute, gpu, ALLOC_MEM};
         unsigned *sort_single_temp_storage{};
         size_t sort_single_temp_storage_bytes = 0;
         cub::DeviceRadixSort::SortPairsDescending(
-            sort_single_temp_storage, sort_single_temp_storage_bytes, d_bucket_count, d_sorted_bucket_count, d_unique_bucket_indices,
-            d_sorted_unique_bucket_indices, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
+            sort_single_temp_storage, sort_single_temp_storage_bytes, &d_bucket_count[0], &d_sorted_bucket_count[0], &d_unique_bucket_indices[0],
+            &d_sorted_unique_bucket_indices[0], h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
         CUDA_OK(cudaMallocAsync(&sort_single_temp_storage, sort_single_temp_storage_bytes, gpu));
         cub::DeviceRadixSort::SortPairsDescending(
-            sort_single_temp_storage, sort_single_temp_storage_bytes, d_bucket_count, d_sorted_bucket_count, d_unique_bucket_indices,
-            d_sorted_unique_bucket_indices, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
+            sort_single_temp_storage, sort_single_temp_storage_bytes, &d_bucket_count[0], &d_sorted_bucket_count[0], &d_unique_bucket_indices[0],
+            &d_sorted_unique_bucket_indices[0], h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, gpu);
         CUDA_OK(cudaFreeAsync(sort_single_temp_storage, gpu));
 
         // find large buckets
         unsigned avarage_size = size / (1 << wbits);
         unsigned bucket_th = large_bucket_factor * avarage_size;
-        unsigned *nof_large_buckets;
-        CUDA_OK(cudaMallocAsync(&nof_large_buckets, sizeof(unsigned), gpu));
-        CUDA_OK(cudaMemset(nof_large_buckets, 0, sizeof(unsigned)));
+        dev_ptr_t<unsigned> d_nof_large_buckets{1, gpu, ALLOC_MEM};
+        CUDA_OK(cudaMemset(d_nof_large_buckets, 0, sizeof(unsigned)));
 
         unsigned TOTAL_THREADS = 129000; // TODO - device dependant
         unsigned cutoff_run_length = max(2, h_nof_buckets_to_compute / TOTAL_THREADS);
@@ -252,10 +233,10 @@ public:
         // printf("h_nof_buckets_to_compute: %d, cutoff_run_length: %d, cutoff_nof_runs: %d, NUM_BLOCKS: %d, NUM_THREADS: %d bucket_th: %d\n", h_nof_buckets_to_compute, cutoff_run_length, cutoff_nof_runs,
         //        NUM_BLOCKS, NUM_THREADS, bucket_th);
         find_cutoff_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
-            d_sorted_bucket_count, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
+            &d_sorted_bucket_count[0], h_nof_buckets_to_compute, bucket_th, cutoff_run_length, d_nof_large_buckets);
 
         unsigned h_nof_large_buckets;
-        CUDA_OK(cudaMemcpyAsync(&h_nof_large_buckets, nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
+        CUDA_OK(cudaMemcpyAsync(&h_nof_large_buckets, d_nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
 
         unsigned h_max_res[2];
         CUDA_OK(cudaMemcpyAsync(&h_max_res[0], d_sorted_bucket_count, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
@@ -266,7 +247,6 @@ public:
             h_nof_large_buckets > h_nof_zero_large_buckets ? h_nof_large_buckets - h_nof_zero_large_buckets : 0;
 
         P *large_buckets;
-
         // printf("large_buckets_to_compute: %d, bucket_th: %d \n", large_buckets_to_compute, bucket_th);
         if (large_buckets_to_compute > 0 && bucket_th > 0)
         {
@@ -282,8 +262,8 @@ public:
             // printf("NUM_BLOCKS: %d, NUM_THREADS: %d, h_nof_zero_large_buckets: %d, total_num_of_buckets: %d, max_bucket_size_run_length: %d\n",
             // NUM_BLOCKS, NUM_THREADS, h_nof_zero_large_buckets, total_num_of_buckets, max_bucket_size_run_length);
             accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
-                large_buckets, d_sorted_bucket_offsets + h_nof_zero_large_buckets, d_sorted_bucket_count + h_nof_zero_large_buckets,
-                d_sorted_unique_bucket_indices + h_nof_zero_large_buckets, points_window_bucket_indices, d_points, total_num_of_buckets,
+                large_buckets, &d_sorted_bucket_offsets[0] + h_nof_zero_large_buckets, &d_sorted_bucket_count[0] + h_nof_zero_large_buckets,
+                &d_sorted_unique_bucket_indices[0] + h_nof_zero_large_buckets, &points_window_bucket_indices[0], d_points, total_num_of_buckets,
                 large_buckets_to_compute, wbits + num_of_windows_bitsize, wbits, threads_per_bucket, max_bucket_size_run_length);
 
             // reduce
@@ -293,15 +273,15 @@ public:
                 NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
                 single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
                     large_buckets, large_buckets, s * 2, 0, 0, 0, s);
-
-                //   CHECK_LAST_CUDA_ERROR();
             }
 
             // distribute
             NUM_THREADS = min(MAX_TH, large_buckets_to_compute);
             NUM_BLOCKS = (large_buckets_to_compute + NUM_THREADS - 1) / NUM_THREADS;
-            distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
-                large_buckets, buckets, d_sorted_unique_bucket_indices + h_nof_zero_large_buckets, large_buckets_to_compute);
+            distribute_large_buckets_kernel<P><<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
+                large_buckets, d_buckets, &d_sorted_unique_bucket_indices[0] + h_nof_zero_large_buckets, large_buckets_to_compute);
+            CUDA_OK(cudaFreeAsync(large_buckets, gpu[2]));
+            gpu[2].sync();
         }
         else
         {
@@ -313,19 +293,11 @@ public:
         {
             NUM_THREADS = 1 << 8;
             NUM_BLOCKS = (h_nof_buckets_to_compute - h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
-            accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
-                buckets, d_sorted_bucket_offsets + h_nof_large_buckets, d_sorted_bucket_count + h_nof_large_buckets,
-                d_sorted_unique_bucket_indices + h_nof_large_buckets, points_window_bucket_indices, d_points, total_num_of_buckets,
+            accumulate_buckets_kernel<P, A><<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
+                &d_buckets[0], &d_sorted_bucket_offsets[0] + h_nof_large_buckets, &d_sorted_bucket_count[0] + h_nof_large_buckets,
+                &d_sorted_unique_bucket_indices[0] + h_nof_large_buckets, points_window_bucket_indices, d_points, total_num_of_buckets,
                 h_nof_buckets_to_compute - h_nof_large_buckets, wbits + num_of_windows_bitsize, wbits);
         }
-        // CUDA_OK(cudaFreeAsync(large_buckets, stream2));
-        // all the large buckets need to be accumulated before the final summation
-        CUDA_OK(cudaStreamSynchronize(gpu[2]));
-        CUDA_OK(cudaStreamDestroy(gpu[2]));
-
-        P *d_final_result;
-        if (!on_device)
-            CUDA_OK(cudaMallocAsync(&d_final_result, sizeof(P), gpu));
 
         P *final_results;
         if (big_triangle)
@@ -335,15 +307,15 @@ public:
             NUM_THREADS = num_of_window;
             NUM_BLOCKS = 1;
 
-            big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(buckets, final_results, num_of_window, wbits);
+            big_triangle_sum_kernel<P><<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(d_buckets, final_results, num_of_window, wbits);
         }
         else
         {
             unsigned source_bits_count = wbits;
             unsigned source_windows_count = num_of_window;
             unsigned source_buckets_count = total_num_of_buckets;
-            P *source_buckets = buckets;
-            buckets = nullptr;
+            P *source_buckets = &d_buckets[0];
+            // d_buckets = nullptr;
             P *target_buckets;
             P *temp_buckets1;
             P *temp_buckets2;
@@ -417,19 +389,19 @@ public:
                 }
                 if (target_bits_count == 1)
                 {
-                    num_of_window = scalar_t::nbits;
+                    num_of_window = S::nbits;
                     CUDA_OK(cudaMallocAsync(&final_results, sizeof(P) * num_of_window, gpu));
                     NUM_THREADS = 32;
                     NUM_BLOCKS = (num_of_window + NUM_THREADS - 1) / NUM_THREADS;
                     last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(target_buckets, final_results, num_of_window);
                     wbits = 1;
-                    CUDA_OK(cudaFreeAsync(source_buckets, gpu));
+                    // CUDA_OK(cudaFreeAsync(source_buckets, gpu));
                     CUDA_OK(cudaFreeAsync(target_buckets, gpu));
                     CUDA_OK(cudaFreeAsync(temp_buckets1, gpu));
                     CUDA_OK(cudaFreeAsync(temp_buckets2, gpu));
                     break;
                 }
-                CUDA_OK(cudaFreeAsync(source_buckets, gpu));
+                // CUDA_OK(cudaFreeAsync(source_buckets, gpu));
                 CUDA_OK(cudaFreeAsync(temp_buckets1, gpu));
                 CUDA_OK(cudaFreeAsync(temp_buckets2, gpu));
                 source_buckets = target_buckets;
@@ -442,68 +414,46 @@ public:
             }
         }
 
-        // printf("double and add \n");
-
+        // // printf("double and add \n");
         // launch the double and add kernel, a single thread
+        dev_ptr_t<P> d_final_result{1, gpu, ALLOC_MEM};
         final_accumulation_kernel<P, S>
             <<<1, 1, 0, gpu>>>(final_results, on_device ? final_result : d_final_result, 1, num_of_window, wbits);
-        //  printf("free \n");
 
         CUDA_OK(cudaFreeAsync(final_results, gpu));
-        CUDA_OK(cudaStreamSynchronize(gpu));
 
-        if (!on_device)
-            CUDA_OK(cudaMemcpyAsync(final_result, d_final_result, sizeof(P), cudaMemcpyDeviceToHost, gpu));
-
-        // free memory
         if (!on_device)
         {
-            CUDA_OK(cudaFreeAsync(d_points, gpu));
-            CUDA_OK(cudaFreeAsync(d_scalars, gpu));
-            CUDA_OK(cudaFreeAsync(d_final_result, gpu));
+            // printf("copy final result \n");
+            CUDA_OK(cudaMemcpyAsync(final_result, &d_final_result[0], sizeof(P), cudaMemcpyDeviceToHost, gpu));
         }
-        CUDA_OK(cudaFreeAsync(buckets, gpu));
 
-        CUDA_OK(cudaFreeAsync(scalars_window_bucket_indices, gpu));
-        CUDA_OK(cudaFreeAsync(points_window_bucket_indices, gpu));
-        CUDA_OK(cudaFreeAsync(d_unique_bucket_indices, gpu));
-        CUDA_OK(cudaFreeAsync(d_bucket_count, gpu));
-        CUDA_OK(cudaFreeAsync(d_nof_buckets_to_compute, gpu));
-        CUDA_OK(cudaFreeAsync(d_bucket_offsets, gpu));
-
-        CUDA_OK(cudaFreeAsync(d_sorted_bucket_count, gpu));
-        CUDA_OK(cudaFreeAsync(d_sorted_bucket_offsets, gpu));
-        CUDA_OK(cudaFreeAsync(d_sorted_unique_bucket_indices, gpu));
-        CUDA_OK(cudaFreeAsync(nof_large_buckets, gpu));
-        //   if (large_buckets_to_compute > 0 && bucket_th > 0) cudaFreeAsync(large_buckets, stream);
-        CUDA_OK(cudaStreamSynchronize(gpu));
-        CUDA_OK(cudaStreamDestroy(gpu));
+        gpu.sync();
+        return;
     }
-
-
 };
 
 /**
- * MSM on G1 curve using pippenger algorithm
+ * MSM on G1 or G2 curve using pippenger algorithm
  * @param out, MSM result; defined in Jacobian format; type is `point_t`, it contains X,Y,Z
  * @param points, the input points; defined in Affine format type is `affine_t`, it contains X,Y
  * @param scalars, the input scalars; Fr scalar field on the pairing curve
  * @param mont, specify whether the input scalars are in montgomery format
  *
- * @class bucket_t, defined as `xyzz_t` the extended jacobian format; contains X,Y,ZZ,ZZZ
  */
-template <class point_t, class affine_t, class scalar_t>
-static RustError mult_pippenger(point_t *out, affine_t *points, size_t npoints,
-                                scalar_t *scalars, bool mont,
-                                bool on_device,
-                                bool big_triangle,
-                                unsigned large_bucket_factor)
+template <class point_proj_t, class affine_t, class scalar_t>
+static RustError mult_pippenger_msm(point_proj_t *out, affine_t *points, size_t npoints,
+                                    scalar_t *scalars, bool mont,
+                                    bool on_device,
+                                    bool big_triangle,
+                                    unsigned large_bucket_factor)
 {
     try
     {
-        msm_t<point_t, affine_t, scalar_t> msm{points, scalars, npoints};
-        // msm.bucket_method_msm(*out, slice_t<affine_t>{points, npoints},
-        //                                 slice_t<affine_t>{scalars, npoints}, npoints, mont, on_device, big_triangle, large_bucket_factor);
+        // printf("mult_pippenger_msm, npoints: %d, mont:%d,on_device:%d, big_triangle:%d, large_bucket_factor:%d \n", npoints, mont, on_device, big_triangle, large_bucket_factor);
+        msm_t<point_proj_t, affine_t, scalar_t> msm{points, scalars, npoints};
+        msm.bucket_method_msm(
+            out, npoints, mont, on_device, big_triangle, large_bucket_factor);
         return RustError{0};
     }
     catch (const cuda_error &e)

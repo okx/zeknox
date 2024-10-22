@@ -18,6 +18,10 @@
 #define WARP_SZ 32
 #endif
 
+#define ALLOC_MEM true
+#define DO_NOT_ALLOC_MEM false
+#define LIFE_TIME_MANAGED_MANUALLY true
+
 class gpu_t;
 size_t ngpus();
 const gpu_t &select_gpu(int id = 0);
@@ -271,8 +275,8 @@ private:
     size_t total_mem;
     mutable stream_t zero = {gpu_id, true}; // the default stream, zero
     // in each gpu, there are three streams by default, non blocking
-    mutable stream_t flipflop[FLIP_FLOP] = {{gpu_id, true}, {gpu_id, true}, {gpu_id, true}};
-    mutable thread_pool_t pool{"SPPARK_GPU_T_AFFINITY"};
+    mutable stream_t flipflop[FLIP_FLOP] = {{gpu_id, false}, {gpu_id, false}, {gpu_id, false}};
+    mutable thread_pool_t pool{"GPU_T_AFFINITY"};
 
 public:
     gpu_t(int id, int real_id, const cudaDeviceProp &p)
