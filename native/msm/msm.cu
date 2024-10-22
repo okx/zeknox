@@ -18,7 +18,7 @@ RustError mult_pippenger_g1(uint32_t device_id,
                             void *input_scalars,
                             MSM_Config cfg)
 {
-    printf("mult_pippenger_g1,npoints:%d\n", cfg.npoints);
+    // printf("mult_pippenger_g1,npoints:%d\n", cfg.npoints);
     auto &gpu = select_gpu(device_id);
     gpu.select();
 
@@ -36,7 +36,7 @@ RustError mult_pippenger_g1(uint32_t device_id,
 
     if (cfg.are_inputs_on_device)
     {
-        printf("set input device pointer \n");
+        // printf("set input device pointer \n");
         d_input_points.set_device_ptr(reinterpret_cast<g1_affine_t *>(input_points));
         d_input_scalars.set_device_ptr(reinterpret_cast<scalar_field_t *>(input_scalars));
     }
