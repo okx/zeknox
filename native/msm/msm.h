@@ -44,7 +44,7 @@ typedef bucket_t::affine_t affine_t;
 typedef fr_t scalar_t;
 #endif
 // EXTERN RustError::by_value mult_pippenger(size_t device_id, point_t* out, affine_t* points, scalar_t* scalars, MSM_Config cfg);
-EXTERN RustError mult_pippenger(uint32_t device_id, void* out, void* points, void* scalars, MSM_Config cfg);
+// EXTERN RustError mult_pippenger(uint32_t device_id, void* out, void* points, void* scalars, MSM_Config cfg);
 
 #ifdef __cplusplus
 #include <primitives/field.cuh>
@@ -79,19 +79,18 @@ typedef Projective<
 
 // EXTERN RustError::by_value mult_pippenger_g2(g2_projective_t *out, g2_affine_t *points, size_t msm_size, scalar_field_t *scalars, size_t large_bucket_factor, bool on_device,
 //                                              bool big_triangle);
-EXTERN RustError mult_pippenger_g2(uint32_t device_id,
-void *result,
- void *input_points,
- void *input_scalars,
-// uint32_t npoints
-MSM_Config cfg
-);
+// EXTERN RustError mult_pippenger_g2(uint32_t device_id,
+// void *result,
+//  void *input_points,
+//  void *input_scalars,
+// // uint32_t npoints
+// MSM_Config cfg
+// );
 
 EXTERN RustError mult_pippenger_g1(uint32_t device_id,
 void *result,
  void *input_points,
  void *input_scalars,
-// uint32_t npoints
 MSM_Config cfg
 );
 #endif // FEATURE_BN254

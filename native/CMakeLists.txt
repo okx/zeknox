@@ -125,7 +125,6 @@ set(LIB_CUDA_SRC
 
 if (BUILD_MSM)
     list(APPEND LIB_CUDA_SRC msm/msm.cu)
-    list(APPEND LIB_CUDA_SRC msm/sort.cu)
 endif()
 
 add_library(${LIB_CUDA_NAME} OBJECT ${LIB_CUDA_SRC})

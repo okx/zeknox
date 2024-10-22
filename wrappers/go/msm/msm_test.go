@@ -92,7 +92,7 @@ func TestMsmG1(t *testing.T) {
 	fillRandomBasesG1(points[:])
 
 	// CPU
-	cpuResult := curve.G1Jac{}
+	cpuResult := curve.G1Affine{}
 	_, err := cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{NbTasks: 16})
 	if err != nil {
 		t.Errorf("cpu msm error: %s", err.Error())
@@ -102,10 +102,10 @@ func TestMsmG1(t *testing.T) {
 	// GPU host input
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = false
-	cfg.ArePointsInMont = true
 	cfg.Npoints = npoints
-	cfg.FfiAffineSz = 64
-	gpuResult := curve.G1Jac{}
+	cfg.ArePointsInMont = true
+	cfg.LargeBucketFactor = 2
+	gpuResult := curve.G1Affine{}
 	if err := MSM_G1(unsafe.Pointer(&gpuResult), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg); err != nil {
 		t.Errorf("invoke msm gpu error: %s", err.Error())
 	}
