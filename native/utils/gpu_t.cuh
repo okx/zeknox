@@ -205,7 +205,7 @@ public:
                      size_t sz = sizeof(T)) const
     {
         if (sz == sizeof(T))
-            CUDA_OK(cudaMemcpy(dst, src, nelems * sizeof(T),
+            CUDA_OK(cudaMemcpyAsync(dst, src, nelems * sizeof(T),
                                     cudaMemcpyDeviceToDevice, stream));
         else
             CUDA_OK(cudaMemcpy2DAsync(dst, sizeof(T), src, sz,
