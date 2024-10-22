@@ -17,16 +17,10 @@
 #ifndef WARP_SZ
 #define WARP_SZ 32
 #endif
-#ifdef __GNUC__
-#define asm __asm__ __volatile__
-#else
-#define asm asm volatile
-#endif
+
 
 #define MAX_TH 256
 #define WINDOW_BIT_SIZE 16
-
-#undef asm
 
 #include <vector>
 #include <utils/exception.cuh>
