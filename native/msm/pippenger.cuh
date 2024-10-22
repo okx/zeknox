@@ -76,7 +76,7 @@ public:
         }
         nwins = (scalar_t::nbits - 1) / wbits + 1;
     }
-    inline msm_t(int device_id = -1)
+    msm_t(int device_id = -1)
         : msm_t(nullptr, nullptr, 0, device_id) {
           };
     ~msm_t()

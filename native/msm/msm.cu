@@ -50,8 +50,8 @@ RustError mult_pippenger_g1(uint32_t device_id,
 
     g1_projective_t *result_jac = new g1_projective_t();
 
-    RustError r = mult_pippenger<g1_projective_t, g1_affine_t, scalar_field_t>(
-        result_jac, &d_input_points[0],  cfg.npoints, &d_input_scalars[0], cfg.are_points_in_mont, cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
+    // RustError r = mult_pippenger<g1_projective_t, g1_affine_t, scalar_field_t>(
+    //     result_jac, &d_input_points[0],  cfg.npoints, &d_input_scalars[0], cfg.are_points_in_mont, cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
 
     g1_affine_t gpu_result_affine = g1_projective_t::to_affine(*result_jac);
     if (cfg.are_points_in_mont)
@@ -64,7 +64,7 @@ RustError mult_pippenger_g1(uint32_t device_id,
         *reinterpret_cast<g1_affine_t *>(result) = gpu_result_affine;
     }
 
-    return r;
+    return RustError{0};
 }
 
 // // RustError mult_pippenger_g2(g2_projective_t *result, g2_affine_t *input_points, size_t msm_size, scalar_field_t *input_scalars, size_t large_bucket_factor, bool on_device, bool big_triangle)
