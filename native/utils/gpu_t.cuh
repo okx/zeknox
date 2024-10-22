@@ -1,9 +1,7 @@
-// Copyright Supranational LLC
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
+// the code snipet is based from Supranational sppark lib; many cusotmizations have been made
 
-#ifndef __SPPARK_UTIL_GPU_T_CUH__
-#define __SPPARK_UTIL_GPU_T_CUH__
+#ifndef __ZEKNOX_UTIL_GPU_T_CUH__
+#define __ZEKNOX_UTIL_GPU_T_CUH__
 
 #ifndef __CUDACC__
 #include <cuda_runtime.h>
@@ -14,9 +12,8 @@
 #endif
 
 #include <atomic>
-
+#include <vector>
 #include "exception.cuh"
-#include "slice_t.hpp"
 #include "assert.h"
 
 #ifndef WARP_SZ
@@ -143,16 +140,6 @@ public:
     template <typename T, typename U>
     inline void HtoD(T *dst, const std::vector<U> &src,
                      size_t sz = sizeof(T)) const
-    {
-        HtoD(dst, &src[0], src.size(), sz);
-    }
-    template <typename T, typename U>
-    inline void HtoD(T &dst, slice_t<U> src, size_t sz = sizeof(T)) const
-    {
-        HtoD(&dst, &src[0], src.size(), sz);
-    }
-    template <typename T, typename U>
-    inline void HtoD(T *dst, slice_t<U> src, size_t sz = sizeof(T)) const
     {
         HtoD(dst, &src[0], src.size(), sz);
     }
