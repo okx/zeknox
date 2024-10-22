@@ -127,7 +127,7 @@ public:
         // Call the function initially with a NULL pointer to determine the required temporary storage size
         cub::DeviceRadixSort::SortPairs(
             sort_indices_temp_storage, sort_indices_temp_storage_bytes, &scalars_window_bucket_indices[0] + size, &scalars_window_bucket_indices[0],
-            &points_window_bucket_indices[0] + size, &points_window_bucket_indices[0], size, 0, sizeof(unsigned) * 8, gpu);
+            &points_window_bucket_indices[0] + size, &points_window_bucket_indices[0], size, 0, wbits, gpu);
         CUDA_OK(cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, gpu));
         for (unsigned i = 0; i < num_of_window; i++)
         {
@@ -138,7 +138,7 @@ public:
             // the second last parameter is `end_bit`, [optional] The most-significant bit index (exclusive) needed for key comparison (e.g., sizeof(unsigned int) * 8)
             cub::DeviceRadixSort::SortPairs(
                 sort_indices_temp_storage, sort_indices_temp_storage_bytes, &scalars_window_bucket_indices[0] + offset_in,
-                &scalars_window_bucket_indices[0] + offset_out, &points_window_bucket_indices[0] + offset_in, &points_window_bucket_indices[0] + offset_out, size, 0, sizeof(unsigned) * 8,
+                &scalars_window_bucket_indices[0] + offset_out, &points_window_bucket_indices[0] + offset_in, &points_window_bucket_indices[0] + offset_out, size, 0, wbits,
                 gpu);
         }
         CUDA_OK(cudaFreeAsync(sort_indices_temp_storage, gpu));
