@@ -263,16 +263,6 @@ public:
     inline operator stream_t &() const { return zero; }
     inline operator cudaStream_t() const { return zero; }
 
-    // inline size_t ncpus() const { return pool.size(); }
-    // template <class Workable>
-    // inline void spawn(Workable work) const { pool.spawn(work); }
-    // template <class Workable>
-    // inline void par_map(size_t num_items, size_t stride, Workable work,
-    //                     size_t max_workers = 0) const
-    // {
-    //     pool.par_map(num_items, stride, work, max_workers);
-    // }
-
     /*stream allocate memory, return the pointer to the allocation*/
     inline void *Dmalloc(size_t sz) const
     {
