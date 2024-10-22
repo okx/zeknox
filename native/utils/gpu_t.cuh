@@ -9,7 +9,12 @@
 #include <cuda_runtime.h>
 #endif
 
-#include "thread_pool_t.hpp"
+#if __cplusplus < 201103L && !(defined(_MSVC_LANG) && _MSVC_LANG >= 201103L)
+# error C++11 or later is required.
+#endif
+
+#include <atomic>
+
 #include "exception.cuh"
 #include "slice_t.hpp"
 #include "assert.h"
@@ -152,34 +157,6 @@ public:
         HtoD(dst, &src[0], src.size(), sz);
     }
 
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), dim3 gridDim, dim3 blockDim,
-                            size_t shared_sz,
-                            Types... args) const
-    {
-        if (gpu_props(gpu_id).sharedMemPerBlock < shared_sz)
-            CUDA_OK(cudaFuncSetAttribute(f, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_sz));
-        if (gridDim.x == 0 || blockDim.x == 0)
-        {
-            int blockSize, minGridSize;
-
-            CUDA_OK(cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, f));
-            if (blockDim.x == 0)
-                blockDim.x = blockSize;
-            if (gridDim.x == 0)
-                gridDim.x = minGridSize;
-        }
-        void *va_args[sizeof...(args)] = {&args...};
-        CUDA_OK(cudaLaunchCooperativeKernel((const void *)f, gridDim, blockDim,
-                                            va_args, shared_sz, stream));
-    }
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), const launch_params_t &lps,
-                            Types... args) const
-    {
-        launch_coop(f, lps.gridDim, lps.blockDim, lps.shared, args...);
-    }
-
     template <typename T>
     inline void DtoH(T *dst, const void *src, size_t nelems,
                      size_t sz = sizeof(T)) const
@@ -276,7 +253,6 @@ private:
     mutable stream_t zero = {gpu_id, true}; // the default stream, zero
     // in each gpu, there are three streams by default, non blocking
     mutable stream_t flipflop[FLIP_FLOP] = {{gpu_id, false}, {gpu_id, false}, {gpu_id, false}};
-    mutable thread_pool_t pool{"GPU_T_AFFINITY"};
 
 public:
     gpu_t(int id, int real_id, const cudaDeviceProp &p)
@@ -300,15 +276,15 @@ public:
     inline operator stream_t &() const { return zero; }
     inline operator cudaStream_t() const { return zero; }
 
-    inline size_t ncpus() const { return pool.size(); }
-    template <class Workable>
-    inline void spawn(Workable work) const { pool.spawn(work); }
-    template <class Workable>
-    inline void par_map(size_t num_items, size_t stride, Workable work,
-                        size_t max_workers = 0) const
-    {
-        pool.par_map(num_items, stride, work, max_workers);
-    }
+    // inline size_t ncpus() const { return pool.size(); }
+    // template <class Workable>
+    // inline void spawn(Workable work) const { pool.spawn(work); }
+    // template <class Workable>
+    // inline void par_map(size_t num_items, size_t stride, Workable work,
+    //                     size_t max_workers = 0) const
+    // {
+    //     pool.par_map(num_items, stride, work, max_workers);
+    // }
 
     /*stream allocate memory, return the pointer to the allocation*/
     inline void *Dmalloc(size_t sz) const
@@ -342,21 +318,6 @@ public:
                      size_t sz = sizeof(T)) const
     {
         HtoD(&dst, &src[0], src.size(), sz);
-    }
-
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), dim3 gridDim, dim3 blockDim,
-                            size_t shared_sz,
-                            Types... args) const
-    {
-        zero.launch_coop(f, gridDim, blockDim, shared_sz,
-                         args...);
-    }
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), const launch_params_t &lps,
-                            Types... args) const
-    {
-        zero.launch_coop(f, lps, args...);
     }
 
     template <typename T>
