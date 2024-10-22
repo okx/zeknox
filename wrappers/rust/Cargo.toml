@@ -2,7 +2,7 @@
 name = "cryptography_cuda"
 version = "0.1.0"
 edition = "2021"
-authors = [ "" ]
+authors = [""]
 description = "An implementation of cryptography using cuda"
 homepage = ""
 repository = "https://github.com/okx/cryptography_cuda.git"
@@ -13,14 +13,6 @@ include = [
     "/src/**",
     "/cryptography_cuda/native/**",
 ]
-
-[[bench]]
-name = "gpu_fft"
-harness = false
-
-[[bench]]
-name = "cpu_fft"
-harness = false
 
 [[bench]]
 name = "gpu_fft_batch"
