@@ -32,6 +32,7 @@ class msm_t
     const gpu_t &gpu;
     size_t npoints;
     uint32_t wbits, nwins;
+
 public:
     A *d_points;
     S *d_scalars;
@@ -62,8 +63,8 @@ public:
         // {
         //     wbits = 10;
         // }
-        wbits=16;
-        nwins = (S::nbits + wbits -1) / wbits ;
+        wbits = 16;
+        nwins = (S::nbits + wbits - 1) / wbits;
     }
     msm_t(int device_id = -1)
         : msm_t(nullptr, nullptr, 0, device_id) {
@@ -80,7 +81,8 @@ public:
     void bucket_method_msm(
         P *final_result,
         unsigned size,
-        bool mont,
+        bool are_point_in_mont,
+        bool are_scalar_in_mont,
         bool on_device,
         bool big_triangle,
         unsigned large_bucket_factor)
@@ -112,9 +114,13 @@ public:
             ALLOC_MEM};
 
         // split scalars into digits
-        if (mont)
+        if (are_point_in_mont)
         {
-            transfrom_scalars_and_points_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, gpu>>>(d_scalars, d_points, size);
+            transfrom_points_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, gpu>>>(d_points, size);
+        }
+        if (are_scalar_in_mont)
+        {
+            transfrom_scalars_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, gpu>>>(d_scalars, size);
         }
 
         NUM_BLOCKS = (size + NUM_THREADS - 1) / NUM_THREADS;
@@ -438,22 +444,22 @@ public:
  * @param out, MSM result; defined in Jacobian format; type is `point_t`, it contains X,Y,Z
  * @param points, the input points; defined in Affine format type is `affine_t`, it contains X,Y
  * @param scalars, the input scalars; Fr scalar field on the pairing curve
- * @param mont, specify whether the input scalars are in montgomery format
+ * @param are_point_in_mont, specify whether the input scalars are in montgomery format
  *
  */
 template <class point_proj_t, class affine_t, class scalar_t>
 static RustError mult_pippenger_msm(point_proj_t *out, affine_t *points, size_t npoints,
-                                    scalar_t *scalars, bool mont,
+                                    scalar_t *scalars, bool are_point_in_mont,bool are_scalar_in_mont,
                                     bool on_device,
                                     bool big_triangle,
                                     unsigned large_bucket_factor)
 {
     try
     {
-        // printf("mult_pippenger_msm, npoints: %d, mont:%d,on_device:%d, big_triangle:%d, large_bucket_factor:%d \n", npoints, mont, on_device, big_triangle, large_bucket_factor);
+        // printf("mult_pippenger_msm, npoints: %d, are_point_in_mont:%d,on_device:%d, big_triangle:%d, large_bucket_factor:%d \n", npoints, are_point_in_mont, on_device, big_triangle, large_bucket_factor);
         msm_t<point_proj_t, affine_t, scalar_t> msm{points, scalars, npoints};
         msm.bucket_method_msm(
-            out, npoints, mont, on_device, big_triangle, large_bucket_factor);
+            out, npoints, are_point_in_mont, are_scalar_in_mont, on_device, big_triangle, large_bucket_factor);
         return RustError{0};
     }
     catch (const cuda_error &e)

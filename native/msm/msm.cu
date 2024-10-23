@@ -9,6 +9,7 @@
 #include <utils/gpu_t.cuh>
 #include <utils/all_gpus.hpp>
 #include <msm/pippenger.cuh>
+// #include <cstdio>
 
 #ifdef FEATURE_BN254
 
@@ -50,10 +51,10 @@ RustError mult_pippenger_g1(uint32_t device_id,
     g1_projective_t *result_jac = new g1_projective_t();
 
     RustError r = mult_pippenger_msm<g1_projective_t, g1_affine_t, scalar_field_t>(
-        result_jac, &d_input_points[0], cfg.npoints, &d_input_scalars[0], cfg.are_points_in_mont, cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
+        result_jac, &d_input_points[0], cfg.npoints, &d_input_scalars[0], cfg.are_input_point_in_mont, cfg.are_input_scalar_in_mont, cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
 
     g1_affine_t gpu_result_affine = g1_projective_t::to_affine(*result_jac);
-    if (cfg.are_points_in_mont)
+    if (cfg.are_output_point_in_mont)
     {
         g1_affine_t gpu_result_affine_mont = g1_affine_t::to_montgomery(gpu_result_affine);
         *reinterpret_cast<g1_affine_t *>(result) = gpu_result_affine_mont;
@@ -77,7 +78,7 @@ RustError mult_pippenger_g2(uint32_t device_id,
                             void *input_scalars,
                             MSM_Config cfg)
 {
-    // printf("mult_pippenger_g2,npoints:%d\n", cfg.npoints);
+    // printf("mult_pippenger_g2, input_scalars: %p, input_points: %p, npoints:%d\n", input_scalars, input_points, cfg.npoints);
     auto &gpu = select_gpu(device_id);
     gpu.select();
 
@@ -109,10 +110,16 @@ RustError mult_pippenger_g2(uint32_t device_id,
     g2_projective_t *result_jac = new g2_projective_t();
 
     RustError r = mult_pippenger_msm<g2_projective_t, g2_affine_t, scalar_field_t>(
-        result_jac, &d_input_points[0], cfg.npoints, &d_input_scalars[0], cfg.are_points_in_mont, cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
+        result_jac,
+        &d_input_points[0],
+        cfg.npoints,
+        &d_input_scalars[0],
+        cfg.are_input_point_in_mont,
+        cfg.are_input_scalar_in_mont,
+        cfg.are_outputs_on_device, cfg.big_triangle, cfg.large_bucket_factor);
 
     g2_affine_t gpu_result_affine = g2_projective_t::to_affine(*result_jac);
-    if (cfg.are_points_in_mont)
+    if (cfg.are_output_point_in_mont)
     {
         g2_affine_t gpu_result_affine_mont = g2_affine_t::to_montgomery(gpu_result_affine);
         *reinterpret_cast<g2_affine_t *>(result) = gpu_result_affine_mont;

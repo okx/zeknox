@@ -211,13 +211,21 @@ __global__ void initialize_buckets_kernel(P *buckets, unsigned N)
 
 // TODO: try to combine with other kernels. One thread can work on many points
 template <typename P>
-__global__ void transfrom_scalars_and_points_from_mont(scalar_field_t *scalars, P *points, size_t size)
+__global__ void transfrom_points_from_mont( P *points, size_t size)
+{
+  unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (tid < size)
+  {
+    *(points + tid) = P::from_montgomery(*(points + tid));
+  }
+}
+
+__global__ void transfrom_scalars_from_mont(scalar_field_t *scalars, size_t size)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid < size)
   {
     *(scalars + tid) = scalar_field_t::from_montgomery(*(scalars + tid));
-    *(points + tid) = P::from_montgomery(*(points + tid));
   }
 }
 

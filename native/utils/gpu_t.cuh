@@ -86,12 +86,14 @@ public:
     stream_t(int id, bool blocking) : gpu_id(id)
     {
         // printf("cuda create stream for gpu: %d, blocking: %d\n", id, blocking);
-        if (blocking) {
-    cudaStreamCreateWithFlags(&stream, cudaStreamDefault);
-        } else {
-              cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+        if (blocking)
+        {
+            cudaStreamCreateWithFlags(&stream, cudaStreamDefault);
         }
-
+        else
+        {
+            cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+        }
     }
     ~stream_t()
     {
@@ -447,7 +449,7 @@ public:
 
         if (d_ptr && !manual_drop)
         {
-            // printf("drop device pointer, named: %s, on device: %d\n", name, stream.gpu_id);
+            // printf("drop device pointer,  on device: %d\n", stream.gpu_id);
             cudaFree((void *)d_ptr);
         }
     }
