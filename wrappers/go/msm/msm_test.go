@@ -1,13 +1,16 @@
 package msm
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/okx/cryptography_cuda/wrappers/go/device"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	curve "github.com/consensys/gnark-crypto/ecc/bn254"
@@ -137,6 +140,60 @@ func TestMsmG2(t *testing.T) {
 	}
 }
 
+func TestMsmG1G2ReusePointer(t *testing.T) {
+	const npoints uint32 = 1 << 10
+	var (
+		pointsG1  [npoints]curve.G1Affine
+		pointsG2  [npoints]curve.G2Affine
+		scalarsG1 [npoints]fr.Element
+		scalarsG2 [npoints]fr.Element
+	)
+	fillRandomScalars(scalarsG1[:])
+	fillRandomScalars(scalarsG2[:])
+	fillRandomBasesG1(pointsG1[:])
+	fillRandomBasesG2(pointsG2[:])
+
+	g, _ := errgroup.WithContext(context.Background())
+	testG1 := func(cpuG1Result curve.G1Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G1Affine]) error {
+		gpuResult := curve.G1Affine{}
+		gnarkMsmG1(&gpuResult, devicePoints, deviceScalars)
+		if !assert.True(t, cpuG1Result.Equal(&gpuResult), "gpu result is incorrect") {
+			return fmt.Errorf("gpu result is incorrect")
+		}
+		return nil
+	}
+	testG2 := func(cpuG2Result curve.G2Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G2Affine]) error {
+		gpuResult := curve.G2Affine{}
+		gnarkMsmG2(&gpuResult, devicePoints, deviceScalars)
+		if !assert.True(t, cpuG2Result.Equal(&gpuResult), "gpu result is incorrect") {
+			return fmt.Errorf("gpu result is incorrect")
+		}
+		return nil
+	}
+
+	// Reuse the same points for multiple msm calls
+	deviceGlobalG1 := copyToDevice(pointsG1[:])
+	deviceGlobalG2 := copyToDevice(pointsG2[:])
+	// simulate gnark prover in multiple rounds
+	for i := 0; i < 3; i++ {
+		cpuG1Result := curve.G1Affine{}
+		cpuG1Result.MultiExp(pointsG1[:], scalarsG1[:], ecc.MultiExpConfig{})
+		cpuG2Result := curve.G2Affine{}
+		cpuG2Result.MultiExp(pointsG2[:], scalarsG2[:], ecc.MultiExpConfig{})
+		deviceScalarsG1 := copyToDevice(scalarsG1[:])
+		deviceScalarsG2 := copyToDevice(scalarsG2[:])
+		g.Go(func() error {
+			return testG1(cpuG1Result, &deviceScalarsG1, &deviceGlobalG1)
+		})
+		g.Go(func() error {
+			return testG2(cpuG2Result, &deviceScalarsG2, &deviceGlobalG2)
+		})
+		if err := g.Wait(); err != nil {
+			t.Errorf("error: %s", err.Error())
+		}
+	}
+}
+
 func fillRandomScalars(sampleScalars []fr.Element) {
 	// ensure every words of the scalars are filled
 	for i := 0; i < len(sampleScalars); i++ {
@@ -145,15 +202,19 @@ func fillRandomScalars(sampleScalars []fr.Element) {
 }
 
 func fillRandomBasesG1(samplePoints []curve.G1Affine) {
+	maxScalar := fr.Modulus()
+	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < len(samplePoints); i++ {
-		randomInt := big.NewInt(rand.Int63())
+		randomInt := new(big.Int).Rand(randSource, maxScalar)
 		samplePoints[i].ScalarMultiplicationBase(randomInt)
 	}
 }
 
 func fillRandomBasesG2(samplePoints []curve.G2Affine) {
+	maxScalar := fr.Modulus()
+	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < len(samplePoints); i++ {
-		randomInt := big.NewInt(rand.Int63())
+		randomInt := new(big.Int).Rand(randSource, maxScalar)
 		samplePoints[i].ScalarMultiplicationBase(randomInt)
 	}
 }
