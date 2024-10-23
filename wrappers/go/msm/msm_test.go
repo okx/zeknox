@@ -46,7 +46,7 @@ func BenchmarkMsmG1(b *testing.B) {
 		hostPoints := onHost(points[:])
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			gnarkMsmG1(&gpuResult, &hostPoints, &hostScalars)
+			gnarkMsm(&gpuResult, &hostPoints, &hostScalars)
 		}
 	})
 
@@ -57,7 +57,7 @@ func BenchmarkMsmG1(b *testing.B) {
 		devicePoints := copyToDevice(points[:])
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			gnarkMsmG1(&gpuResult, &devicePoints, &deviceScalars)
+			gnarkMsm(&gpuResult, &devicePoints, &deviceScalars)
 		}
 		deviceScalars.Free()
 		devicePoints.Free()
@@ -85,7 +85,7 @@ func TestMsmG1(t *testing.T) {
 	gpuResult := curve.G1Affine{}
 	hostScalars := onHost(scalars[:])
 	hostPoints := onHost(points[:])
-	gnarkMsmG1(&gpuResult, &hostPoints, &hostScalars)
+	gnarkMsm(&gpuResult, &hostPoints, &hostScalars)
 	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
 		t.Logf("cpuResult: %s", cpuResult.String())
 		t.Logf("gpuResult: %s", gpuResult.String())
@@ -95,7 +95,7 @@ func TestMsmG1(t *testing.T) {
 	gpuResult = curve.G1Affine{}
 	deviceScalars := copyToDevice(scalars[:])
 	devicePoints := copyToDevice(points[:])
-	gnarkMsmG1(&gpuResult, &devicePoints, &deviceScalars)
+	gnarkMsm(&gpuResult, &devicePoints, &deviceScalars)
 	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
 		t.Logf("cpuResult: %s", cpuResult.String())
 		t.Logf("gpuResult: %s", gpuResult.String())
@@ -123,7 +123,7 @@ func TestMsmG2(t *testing.T) {
 	gpuResult := curve.G2Affine{}
 	hostScalars := onHost(scalars[:])
 	hostPoints := onHost(points[:])
-	gnarkMsmG2(&gpuResult, &hostPoints, &hostScalars)
+	gnarkMsm(&gpuResult, &hostPoints, &hostScalars)
 	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
 		t.Logf("cpuResult: %s", cpuResult.String())
 		t.Logf("gpuResult: %s", gpuResult.String())
@@ -133,7 +133,7 @@ func TestMsmG2(t *testing.T) {
 	gpuResult = curve.G2Affine{}
 	deviceScalars := copyToDevice(scalars[:])
 	devicePoints := copyToDevice(points[:])
-	gnarkMsmG2(&gpuResult, &devicePoints, &deviceScalars)
+	gnarkMsm(&gpuResult, &devicePoints, &deviceScalars)
 	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
 		t.Logf("cpuResult: %s", cpuResult.String())
 		t.Logf("gpuResult: %s", gpuResult.String())
@@ -154,17 +154,17 @@ func TestMsmG1G2ReusePointer(t *testing.T) {
 	fillRandomBasesG2(pointsG2[:])
 
 	g, _ := errgroup.WithContext(context.Background())
-	testG1 := func(cpuG1Result curve.G1Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G1Affine]) error {
+	testG1 := func(cfg MSMConfig, cpuG1Result curve.G1Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G1Affine]) error {
 		gpuResult := curve.G1Affine{}
-		gnarkMsmG1(&gpuResult, devicePoints, deviceScalars)
+		gnarkMsm(&gpuResult, devicePoints, deviceScalars, cfg)
 		if !assert.True(t, cpuG1Result.Equal(&gpuResult), "gpu result is incorrect") {
 			return fmt.Errorf("gpu result is incorrect")
 		}
 		return nil
 	}
-	testG2 := func(cpuG2Result curve.G2Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G2Affine]) error {
+	testG2 := func(cfg MSMConfig, cpuG2Result curve.G2Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G2Affine]) error {
 		gpuResult := curve.G2Affine{}
-		gnarkMsmG2(&gpuResult, devicePoints, deviceScalars)
+		gnarkMsm(&gpuResult, devicePoints, deviceScalars, cfg)
 		if !assert.True(t, cpuG2Result.Equal(&gpuResult), "gpu result is incorrect") {
 			return fmt.Errorf("gpu result is incorrect")
 		}
@@ -172,10 +172,17 @@ func TestMsmG1G2ReusePointer(t *testing.T) {
 	}
 
 	// Reuse the same points for multiple msm calls
+	// simulate gnark prover in multiple rounds
 	deviceGlobalG1 := copyToDevice(pointsG1[:])
 	deviceGlobalG2 := copyToDevice(pointsG2[:])
-	// simulate gnark prover in multiple rounds
+	cfg := DefaultMSMConfig()
+	cfg.AreInputPointInMont = true
+	cfg.AreInputScalarInMont = true
 	for i := 0; i < 3; i++ {
+		if i > 0 {
+			// only the first round is in montgomery form
+			cfg.AreInputPointInMont = false
+		}
 		cpuG1Result := curve.G1Affine{}
 		cpuG1Result.MultiExp(pointsG1[:], scalarsG1[:], ecc.MultiExpConfig{})
 		cpuG2Result := curve.G2Affine{}
@@ -183,10 +190,10 @@ func TestMsmG1G2ReusePointer(t *testing.T) {
 		deviceScalarsG1 := copyToDevice(scalarsG1[:])
 		deviceScalarsG2 := copyToDevice(scalarsG2[:])
 		g.Go(func() error {
-			return testG1(cpuG1Result, &deviceScalarsG1, &deviceGlobalG1)
+			return testG1(cfg, cpuG1Result, &deviceScalarsG1, &deviceGlobalG1)
 		})
 		g.Go(func() error {
-			return testG2(cpuG2Result, &deviceScalarsG2, &deviceGlobalG2)
+			return testG2(cfg, cpuG2Result, &deviceScalarsG2, &deviceGlobalG2)
 		})
 		if err := g.Wait(); err != nil {
 			t.Errorf("error: %s", err.Error())
@@ -247,41 +254,41 @@ func ReverseBytes(arr []byte) {
 	}
 }
 
-func gnarkMsmG1(res *curve.G1Affine, points *device.HostOrDeviceSlice[curve.G1Affine], scalars *device.HostOrDeviceSlice[fr.Element]) {
+func gnarkMsm[T curve.G1Affine | curve.G2Affine](res *T, points *device.HostOrDeviceSlice[T], scalars *device.HostOrDeviceSlice[fr.Element], optionalCfg ...MSMConfig) {
 	if points.Len() != scalars.Len() {
 		panic("points and scalars must have the same length")
 	}
-	cfg := DefaultMSMConfig()
+	var cfg MSMConfig
+	if len(optionalCfg) > 0 {
+		// alter AreInputPointInMont and AreInputScalarInMont
+		cfg = optionalCfg[0]
+	} else {
+		cfg = DefaultMSMConfig()
+		cfg.AreInputPointInMont = true
+		cfg.AreInputScalarInMont = true
+	}
 	cfg.Npoints = uint32(points.Len())
-	cfg.ArePointsInMont = true
+	cfg.AreOutputPointInMont = true
 	cfg.LargeBucketFactor = 2
 	if points.IsOnDevice() && scalars.IsOnDevice() {
 		cfg.AreInputsOnDevice = true
 	} else {
 		cfg.AreInputsOnDevice = false
 	}
-	err := MSM_G1(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), 0, cfg)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func gnarkMsmG2(res *curve.G2Affine, points *device.HostOrDeviceSlice[curve.G2Affine], scalars *device.HostOrDeviceSlice[fr.Element]) {
-	if points.Len() != scalars.Len() {
-		panic("points and scalars must have the same length")
-	}
-	cfg := DefaultMSMConfig()
-	cfg.Npoints = uint32(points.Len())
-	cfg.ArePointsInMont = true
-	cfg.LargeBucketFactor = 2
-	if points.IsOnDevice() && scalars.IsOnDevice() {
-		cfg.AreInputsOnDevice = true
-	} else {
-		cfg.AreInputsOnDevice = false
-	}
-	err := MSM_G2(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), 0, cfg)
-	if err != nil {
-		panic(err)
+	// Use type assertion to call the appropriate function
+    switch any(res).(type) {
+    case *curve.G1Affine:
+        err := MSM_G1(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), 0, cfg)
+        if err != nil {
+            panic(err)
+        }
+    case *curve.G2Affine:
+        err := MSM_G2(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), 0, cfg)
+        if err != nil {
+            panic(err)
+        }
+	default:
+		panic("unsupported type")
 	}
 }
 
