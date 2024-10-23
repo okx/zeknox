@@ -140,7 +140,7 @@ func TestMsmG2(t *testing.T) {
 	}
 }
 
-func TestParallelMsmG1G2(t *testing.T) {
+func TestMsmG1G2ReusePointer(t *testing.T) {
 	const npoints uint32 = 1 << 10
 	var (
 		pointsG1  [npoints]curve.G1Affine
@@ -154,57 +154,43 @@ func TestParallelMsmG1G2(t *testing.T) {
 	fillRandomBasesG2(pointsG2[:])
 
 	g, _ := errgroup.WithContext(context.Background())
-	testG1 := func(scalars []fr.Element, points []curve.G1Affine) error {
-		cpuResult := curve.G1Affine{}
-		_, err := cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{})
-		if err != nil {
-			return err
-		}
+	testG1 := func(cpuG1Result curve.G1Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G1Affine]) error {
 		gpuResult := curve.G1Affine{}
-		hostScalars := copyToDevice(scalars[:])
-		hostPoints := copyToDevice(points[:])
-		gnarkMsmG1(&gpuResult, &hostPoints, &hostScalars)
-		if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
+		gnarkMsmG1(&gpuResult, devicePoints, deviceScalars)
+		if !assert.True(t, cpuG1Result.Equal(&gpuResult), "gpu result is incorrect") {
 			return fmt.Errorf("gpu result is incorrect")
 		}
 		return nil
 	}
-	testG2 := func(scalars []fr.Element, points []curve.G2Affine) error {
-		cpuResult := curve.G2Affine{}
-		_, err := cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{})
-		if err != nil {
-			return err
-		}
+	testG2 := func(cpuG2Result curve.G2Affine, deviceScalars *device.HostOrDeviceSlice[fr.Element], devicePoints *device.HostOrDeviceSlice[curve.G2Affine]) error {
 		gpuResult := curve.G2Affine{}
-		hostScalars := copyToDevice(scalars[:])
-		hostPoints := copyToDevice(points[:])
-		gnarkMsmG2(&gpuResult, &hostPoints, &hostScalars)
-		if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
+		gnarkMsmG2(&gpuResult, devicePoints, deviceScalars)
+		if !assert.True(t, cpuG2Result.Equal(&gpuResult), "gpu result is incorrect") {
 			return fmt.Errorf("gpu result is incorrect")
 		}
 		return nil
 	}
 
-	g.Go(func() error {
-		return testG1(scalarsG1[:npoints/2], pointsG1[:npoints/2])
-	})
-	g.Go(func() error {
-		return testG1(scalarsG1[npoints/2:], pointsG1[npoints/2:])
-	})
-	g.Go(func() error {
-		return testG1(scalarsG1[:], pointsG1[:])
-	})
-	g.Go(func() error {
-		return testG2(scalarsG2[:npoints/2], pointsG2[:npoints/2])
-	})
-	g.Go(func() error {
-		return testG2(scalarsG2[npoints/2:], pointsG2[npoints/2:])
-	})
-	g.Go(func() error {
-		return testG2(scalarsG2[:], pointsG2[:])
-	})
-	if err := g.Wait(); err != nil {
-		t.Errorf("error: %s", err.Error())
+	// Reuse the same points for multiple msm calls
+	deviceGlobalG1 := copyToDevice(pointsG1[:])
+	deviceGlobalG2 := copyToDevice(pointsG2[:])
+	// simulate gnark prover in multiple rounds
+	for i := 0; i < 3; i++ {
+		cpuG1Result := curve.G1Affine{}
+		cpuG1Result.MultiExp(pointsG1[:], scalarsG1[:], ecc.MultiExpConfig{})
+		cpuG2Result := curve.G2Affine{}
+		cpuG2Result.MultiExp(pointsG2[:], scalarsG2[:], ecc.MultiExpConfig{})
+		deviceScalarsG1 := copyToDevice(scalarsG1[:])
+		deviceScalarsG2 := copyToDevice(scalarsG2[:])
+		g.Go(func() error {
+			return testG1(cpuG1Result, &deviceScalarsG1, &deviceGlobalG1)
+		})
+		g.Go(func() error {
+			return testG2(cpuG2Result, &deviceScalarsG2, &deviceGlobalG2)
+		})
+		if err := g.Wait(); err != nil {
+			t.Errorf("error: %s", err.Error())
+		}
 	}
 }
 
