@@ -1,4 +1,4 @@
-module github.com/okx/cryptography_cuda/wrappers/go
+module github.com/okx/cryptography_cuda
 
 go 1.22.2
 
