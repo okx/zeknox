@@ -18,30 +18,27 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
     
-  defaults:
-      run:
-        working-directory: native
+    defaults:
+        run:
+          working-directory: native
+          
+    steps:
+      - uses: Jimver/cuda-toolkit@v0.2.18
+        id: cuda-toolkit
+        with:
+          cuda: '12.3.0'
+      - run: echo "Installed cuda version is:${{steps.cuda-toolkit.outputs.cuda}}" 
+      - run: echo "Cuda install location:${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+      - run: nvcc -V
         
-  steps:
-    - uses: Jimver/cuda-toolkit@v0.2.18
-      id: cuda-toolkit
-      with:
-        cuda: '12.3.0'
-    
-    - run: echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"
-    
-    - run: echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
-    
-    - run: nvcc -V
-      
-    - uses: actions/checkout@v4
-
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      - uses: actions/checkout@v4
+  
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+  
+      - name: Build
+        # Build your program with the given configuration
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
