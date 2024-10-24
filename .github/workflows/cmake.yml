@@ -30,16 +30,15 @@ jobs:
           method: 'network'
           sub-packages: '["nvcc", "cudart", "toolkit"]'
       - uses: actions/checkout@v4
-      - run: echo "Installed cuda version is:${{steps.cuda-toolkit.outputs.cuda}}" 
-      - run: echo "Cuda install location:${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
-      - run: nvcc -V
-        
-      - name: Configure CMake
+      
+      - name: Configure default goldilocks
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-  
-      - name: Build
-        # Build your program with the given configuration
+      - name: Build default 
         run: cmake --build build --config ${{env.BUILD_TYPE}}
-
+        
+      - name: Configure bn254 & MSM
+        run: cmake -B build-bn254 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_MSM=ON -DG2_ENABLED=ON -DCURVE=BN254
+      - name: Build bn254 & MSM
+        run: cmake --build build-bn254 --config ${{env.BUILD_TYPE}}
