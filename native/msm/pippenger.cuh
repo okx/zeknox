@@ -529,23 +529,17 @@ public:
 
                 gpu[(i + 2) % 3].wait(ev); /// cost 1ms
 
-
                 batch_addition<bucket_t><<<gpu.sm_count(), BATCH_ADD_BLOCK_SIZE,
                                            0, gpu[(i + 2) % 3]>>>(
                     &d_buckets[nwins << (wbits - 1)], &d_points[d_off], num,
                     &d_digits[0][0], d_hist[0][0]); // cost 50us
 
-
                 CUDA_OK(cudaGetLastError());
-
 
                 gpu[(i + 2) % 3].launch_coop(accumulate<bucket_t, affine_h>,
                                              {gpu.sm_count(), 0},
                                              d_buckets, nwins, wbits, &d_points[d_off], d_digits, d_hist, i & 1);
                 gpu[(i + 2) % 3].record(ev);
-
-
-
 
                 integrate<bucket_t><<<nwins, MSM_NTHREADS,
                                       sizeof(bucket_t) * MSM_NTHREADS / bucket_t::degree,
@@ -553,7 +547,6 @@ public:
                     d_buckets, nwins, wbits, scalar_t::bit_length());
 
                 CUDA_OK(cudaGetLastError());
-
 
                 if (i < batch - 1)
                 {
@@ -590,9 +583,7 @@ public:
 #endif
         }
 
-
         collect(p, res, ones);
-
 
         out.add(p);
 
@@ -788,17 +779,18 @@ static RustError mult_pippenger(point_t *out, affine_t *points, size_t npoints,
  * @param msm_size, total number of points
  */
 template <typename S, typename P, typename A>
-static RustError mult_pippenger_g2_internal(
+static RustError mult_pippenger_internal(
     P *result,
     A *points,
     S *scalars,
     unsigned msm_size,
-    bool mont,
+    bool are_point_in_mont,
+    bool are_scalar_in_mont,
     bool on_device,
     bool big_triangle,
     unsigned large_bucket_factor)
 {
-    bucket_method_msm(S::NBITS, WINDOW_BIT_SIZE, scalars, points, msm_size, mont, result, on_device, big_triangle, large_bucket_factor);
+    bucket_method_msm(S::NBITS, WINDOW_BIT_SIZE, scalars, points, msm_size, are_point_in_mont, are_scalar_in_mont, result, on_device, big_triangle, large_bucket_factor);
     RustError r{0};
     return r;
 }
@@ -815,7 +807,8 @@ void bucket_method_msm(
     S *scalars,
     A *points,
     unsigned size,
-    bool mont,
+    bool are_point_in_mont,
+    bool are_scalar_in_mont,
     P *final_result,
     bool on_device,
     bool big_triangle,
@@ -866,11 +859,14 @@ void bucket_method_msm(
 
     // split scalars into digits
     // printf("initialize split_scalars_kernel: size: %d, msm_log_size: %d, num_of_window: %d, bm_bitsize: %d \n", size, msm_log_size, num_of_window, bm_bitsize);
-    if (mont)
+    if (are_point_in_mont)
     {
-        transfrom_scalars_and_points_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, stream>>>(d_scalars, d_points, size);
+        transfrom_points_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, stream>>>(d_points, size);
     }
-
+    if (are_scalar_in_mont)
+    {
+        transfrom_scalars_from_mont<<<(size + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS, 0, stream>>>(d_scalars, size);
+    }
     NUM_BLOCKS = (size + NUM_THREADS - 1) / NUM_THREADS;
     // `scalars_window_bucket_indices` & `points_window_bucket_indices` with offset `size`: leaving the first window free for the out of place sort later
     split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(scalars_window_bucket_indices + size, points_window_bucket_indices + size, d_scalars, size, msm_log_size, num_of_window, num_of_windows_bitsize, c);
