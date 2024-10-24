@@ -180,6 +180,9 @@ if(USE_AVX512)
 endif()
 endif() # BUILD_TESTS
 
+install(TARGETS ${LIB_NAME} DESTINATION /usr/local/lib)
+install(FILES ${PROJECT_SOURCE_DIR}/depends/blst/libblst.a DESTINATION /usr/local/lib)
+
 else() # USE_CUDA
 # only C++ support
 
