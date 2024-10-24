@@ -50,19 +50,8 @@ public:
         : gpu(select_gpu(device_id)), d_points(points), d_scalars(scalars)
     {
         // in theory, the best performance is achieved by setting wbins = lg2(msm_size);
-        // confine the number of bits in each window in the ragne [10,18]
-        // TODO: the current sum kernel only works when wbits =16; need to make it more generic
-        // wbits = 17;
-        // if (npoints > 192)
-        // {
-        //     wbits = std::min(lg2(npoints), 18);
-        //     if (wbits < 10)
-        //         wbits = 10;
-        // }
-        // else if (npoints > 0)
-        // {
-        //     wbits = 10;
-        // }
+        // Note: however, the current sum kernel only works for seveval windows bits of power of 2;
+        // because it needs to divide further into two sub windows
         wbits = 16;
         nwins = (S::nbits + wbits - 1) / wbits;
     }
@@ -376,21 +365,24 @@ public:
                          * there are two calls to single_stage_multi_reduction_kernel
                          * it splits windows of bitsize c into windows of bitsize c/2, and the first call computes the lower window and the second computes higher.
                          * An example for c=4, it looks like:
-                         * 1*P_1 + 2*P_2 + ... + 15*P_15 = ((P_1 + P_2 + P_9 + P_13) + ... + 3*(P_3 + P_7 + P_11 + P_15)) + 4*((P_4 + P_5 + P_6 + P_7) + ... + 3*(P_12 + P_13 + P_14 + P_15))
+                         * 1*P_1 + 2*P_2 + ... + 15*P_15 = ((P_1 + P_5 + P_9 + P_13) + 2*(P_2 + P_6 + P_10 + P_14) + 3*(P_3 + P_7 + P_11 + P_15)) + 4*((P_4 + P_5 + P_6 + P_7) + 2*(P_8 + P_9 + P_10 + P_11) + 3*(P_12 + P_13 + P_14 + P_15))
                          * The first sum is the first single_stage_multi_reduction_kernel and the second sum (that's multiplied by 4) is the second call
                          */
                         unsigned nof_threads = (source_buckets_count >> (1 + j));
                         NUM_THREADS = min(MAX_TH, nof_threads);
                         NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+
+                        unsigned write_stride = j == target_bits_count - 1 ? 1 << target_bits_count : 0;
+
                         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
                             j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
-                            1 << (source_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 0, 0, nof_threads);
+                            1 << (source_bits_count - j), write_stride, 0, 0, nof_threads);
 
                         NUM_THREADS = min(MAX_TH, nof_threads);
                         NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
                         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
                             j == 0 ? source_buckets : temp_buckets2, j == target_bits_count - 1 ? target_buckets : temp_buckets2,
-                            1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0, nof_threads);
+                            1 << (target_bits_count - j), write_stride, 1, 0, nof_threads);
                     }
                 }
                 if (target_bits_count == 1)

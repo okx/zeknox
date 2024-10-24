@@ -111,8 +111,8 @@ __global__ void last_pass_kernel(P *final_buckets, P *final_sums, unsigned num_s
 
 template <typename P>
 __global__ void single_stage_multi_reduction_kernel(
-    P *v,
-    P *v_r,
+    P *src_buckets,
+    P *target_buckets,
     unsigned block_size,
     unsigned write_stride,
     unsigned write_phase,
@@ -133,10 +133,10 @@ __global__ void single_stage_multi_reduction_kernel(
   unsigned write_ind = tid;
   unsigned v_r_key =
       write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
-  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
-                        : v[read_ind] + v[read_ind + jump];
+  P v_r_value = padding ? (tid % (2 * padding) < padding) ? src_buckets[read_ind] + src_buckets[read_ind + jump] : P::zero()
+                        : src_buckets[read_ind] + src_buckets[read_ind + jump];
 
-  v_r[v_r_key] = v_r_value;
+  target_buckets[v_r_key] = v_r_value;
 }
 
 // this kernel sums across windows
