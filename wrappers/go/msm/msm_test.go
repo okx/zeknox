@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const deviceId = 0
+const deviceId = 1
 
 func BenchmarkMsmG1(b *testing.B) {
 	// Gnark 300w constraint MSM G1 total size
@@ -53,6 +53,49 @@ func BenchmarkMsmG1(b *testing.B) {
 	// GPU, data already on device
 	b.Run(fmt.Sprintf("GPU device input %d", npoints), func(b *testing.B) {
 		gpuResult := curve.G1Affine{}
+		deviceScalars := copyToDevice(scalars[:])
+		devicePoints := copyToDevice(points[:])
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			gnarkMsm(&gpuResult, &devicePoints, &deviceScalars)
+		}
+		deviceScalars.Free()
+		devicePoints.Free()
+	})
+}
+
+func BenchmarkMsmG2(b *testing.B) {
+	const npoints uint32 = 1<<22
+	var (
+		points  [npoints]curve.G2Affine
+		scalars [npoints]fr.Element
+	)
+	fillRandomScalars(scalars[:])
+	fillBenchBasesG2(points[:])
+
+	// CPU
+	b.Run(fmt.Sprintf("CPU %d", npoints), func(b *testing.B) {
+		b.ResetTimer()
+		cpuResult := curve.G2Affine{}
+		for i := 0; i < b.N; i++ {
+			cpuResult.MultiExp(points[:], scalars[:], ecc.MultiExpConfig{})
+		}
+	})
+
+	// GPU, include time to copy data to device
+	b.Run(fmt.Sprintf("GPU host input %d", npoints), func(b *testing.B) {
+		gpuResult := curve.G2Affine{}
+		hostScalars := onHost(scalars[:])
+		hostPoints := onHost(points[:])
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			gnarkMsm(&gpuResult, &hostPoints, &hostScalars)
+		}
+	})
+
+	// GPU, data already on device
+	b.Run(fmt.Sprintf("GPU device input %d", npoints), func(b *testing.B) {
+		gpuResult := curve.G2Affine{}
 		deviceScalars := copyToDevice(scalars[:])
 		devicePoints := copyToDevice(points[:])
 		b.ResetTimer()
@@ -251,6 +294,22 @@ func fillBenchBasesG1(samplePoints []curve.G1Affine) {
 	}
 }
 
+func fillBenchBasesG2(samplePoints []curve.G2Affine) {
+	var r big.Int
+	r.SetString("340444420969191673093399857471996460938405", 10)
+	samplePoints[0].ScalarMultiplication(&samplePoints[0], &r)
+
+	one := samplePoints[0].X.A0
+	one.SetOne()
+
+	for i := 1; i < len(samplePoints); i++ {
+		samplePoints[i].X.A0.Add(&samplePoints[i-1].X.A0, &one)
+		samplePoints[i].X.A1.Add(&samplePoints[i-1].X.A1, &one)
+		samplePoints[i].Y.A0.Sub(&samplePoints[i-1].Y.A0, &one)
+		samplePoints[i].Y.A1.Sub(&samplePoints[i-1].Y.A1, &one)
+	}
+}
+
 func ReverseBytes(arr []byte) {
 	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
 		arr[i], arr[j] = arr[j], arr[i]
@@ -281,12 +340,12 @@ func gnarkMsm[T curve.G1Affine | curve.G2Affine](res *T, points *device.HostOrDe
 	// Use type assertion to call the appropriate function
     switch any(res).(type) {
     case *curve.G1Affine:
-        err := MSM_G1(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), 0, cfg)
+        err := MSM_G1(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), deviceId, cfg)
         if err != nil {
             panic(err)
         }
     case *curve.G2Affine:
-        err := MSM_G2(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), 0, cfg)
+        err := MSM_G2(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), deviceId, cfg)
         if err != nil {
             panic(err)
         }
