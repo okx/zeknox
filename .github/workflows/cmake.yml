@@ -29,7 +29,7 @@ jobs:
           cuda: '12.3.0'
           method: 'network'
           sub-packages: '["nvcc", "cudart"]'
-          non-cuda-sub-packages: '["curand"]'
+          non-cuda-sub-packages: '["libcurand"]'
       - uses: actions/checkout@v4
       - run: echo "Installed cuda version is:${{steps.cuda-toolkit.outputs.cuda}}" 
       - run: echo "Cuda install location:${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
