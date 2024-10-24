@@ -39,7 +39,9 @@ func BenchmarkMsmG1(b *testing.B) {
 
 	// GPU config
 	cfg := DefaultMSMConfig()
-	cfg.ArePointsInMont = true
+	cfg.AreInputPointInMont = true
+	cfg.AreInputScalarInMont = true
+	cfg.AreOutputPointInMont = true
 	cfg.Npoints = npoints
 	cfg.FfiAffineSz = 64
 
@@ -102,7 +104,9 @@ func TestMsmG1(t *testing.T) {
 	// GPU host input
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = false
-	cfg.ArePointsInMont = true
+	cfg.AreInputPointInMont = true
+	cfg.AreInputScalarInMont = true
+	cfg.AreOutputPointInMont = true
 	cfg.Npoints = npoints
 	cfg.LargeBucketFactor = 2
 	gpuResult := curve.G1Affine{}
@@ -185,7 +189,9 @@ func TestMsmG2InputsOnDevice(t *testing.T) {
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = true
 	cfg.Npoints = npoints
-	cfg.ArePointsInMont = true
+	cfg.AreInputPointInMont = true
+	cfg.AreInputScalarInMont = true
+	cfg.AreOutputPointInMont = true
 	cfg.LargeBucketFactor = 2
 	err = MSM_G2(unsafe.Pointer(&gpuResultAffine), d_points.AsPtr(), d_scalars.AsPtr(), 0, cfg)
 	if err != nil {
@@ -221,7 +227,9 @@ func TestMsmG2InputsNotOnDevice(t *testing.T) {
 	cfg := DefaultMSMConfig()
 	cfg.AreInputsOnDevice = false
 	cfg.Npoints = npoints
-	cfg.ArePointsInMont = true
+	cfg.AreInputPointInMont = true
+	cfg.AreInputScalarInMont = true
+	cfg.AreOutputPointInMont = true
 	cfg.LargeBucketFactor = 2
 	err = MSM_G2(unsafe.Pointer(&gpuResultAffine), unsafe.Pointer(&points[0]), unsafe.Pointer(&scalars[0]), 0, cfg)
 	if err != nil {
