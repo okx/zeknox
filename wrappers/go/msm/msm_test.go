@@ -179,8 +179,11 @@ func TestMsmG1G2ReusePointer(t *testing.T) {
 	cfg.AreInputPointInMont = true
 	cfg.AreInputScalarInMont = true
 	for i := 0; i < 3; i++ {
-		if i > 0 {
-			// only the first round is in montgomery form
+		if i == 0 {
+			// points in 1st round are in montgomery form
+			cfg.AreInputPointInMont = true
+		} else {
+			// After 1st round, points are converted to affine form
 			cfg.AreInputPointInMont = false
 		}
 		cpuG1Result := curve.G1Affine{}
