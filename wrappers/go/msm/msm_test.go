@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const deviceId = 1
+const deviceId = 0
 
 func BenchmarkMsmG1(b *testing.B) {
 	// Gnark 300w constraint MSM G1 total size
@@ -65,7 +65,7 @@ func BenchmarkMsmG1(b *testing.B) {
 }
 
 func BenchmarkMsmG2(b *testing.B) {
-	const npoints uint32 = 1<<22
+	const npoints uint32 = 1 << 22
 	var (
 		points  [npoints]curve.G2Affine
 		scalars [npoints]fr.Element
@@ -338,17 +338,17 @@ func gnarkMsm[T curve.G1Affine | curve.G2Affine](res *T, points *device.HostOrDe
 		cfg.AreInputsOnDevice = false
 	}
 	// Use type assertion to call the appropriate function
-    switch any(res).(type) {
-    case *curve.G1Affine:
-        err := MSM_G1(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), deviceId, cfg)
-        if err != nil {
-            panic(err)
-        }
-    case *curve.G2Affine:
-        err := MSM_G2(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), deviceId, cfg)
-        if err != nil {
-            panic(err)
-        }
+	switch any(res).(type) {
+	case *curve.G1Affine:
+		err := MSM_G1(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), deviceId, cfg)
+		if err != nil {
+			panic(err)
+		}
+	case *curve.G2Affine:
+		err := MSM_G2(unsafe.Pointer(res), points.AsPtr(), scalars.AsPtr(), deviceId, cfg)
+		if err != nil {
+			panic(err)
+		}
 	default:
 		panic("unsupported type")
 	}
