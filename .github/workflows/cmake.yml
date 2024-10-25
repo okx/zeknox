@@ -45,7 +45,7 @@ jobs:
 
       - name: Build cpp wrapper
         working-directory: wrappers/cpp
-        run: sh build_dep.sh
+        run: ./build_gmp.sh host
       - name: Configure cpp wrapper
         working-directory: wrappers/cpp
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254 -DG2_ENABLED=ON
