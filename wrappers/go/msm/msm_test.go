@@ -176,6 +176,8 @@ func TestMsmG2(t *testing.T) {
 	gpuResult = curve.G2Affine{}
 	deviceScalars := copyToDevice(scalars[:])
 	devicePoints := copyToDevice(points[:])
+	defer deviceScalars.Free()
+	defer devicePoints.Free()
 	gnarkMsm(&gpuResult, &devicePoints, &deviceScalars)
 	if !assert.True(t, cpuResult.Equal(&gpuResult), "gpu result is incorrect") {
 		t.Logf("cpuResult: %s", cpuResult.String())
@@ -201,7 +203,7 @@ func TestMsmG1G2ReusePointer(t *testing.T) {
 		gpuResult := curve.G1Affine{}
 		gnarkMsm(&gpuResult, devicePoints, deviceScalars, cfg)
 		if !assert.True(t, cpuG1Result.Equal(&gpuResult), "gpu result is incorrect") {
-			return fmt.Errorf("gpu result is incorrect")
+			return fmt.Errorf("G1 gpu result is incorrect, gpuResult isInfinity: %t", gpuResult.IsInfinity())
 		}
 		return nil
 	}
@@ -209,15 +211,21 @@ func TestMsmG1G2ReusePointer(t *testing.T) {
 		gpuResult := curve.G2Affine{}
 		gnarkMsm(&gpuResult, devicePoints, deviceScalars, cfg)
 		if !assert.True(t, cpuG2Result.Equal(&gpuResult), "gpu result is incorrect") {
-			return fmt.Errorf("gpu result is incorrect")
+			return fmt.Errorf("G2 gpu result is incorrect")
 		}
 		return nil
 	}
 
+	cpuG1Result := curve.G1Affine{}
+	cpuG1Result.MultiExp(pointsG1[:], scalarsG1[:], ecc.MultiExpConfig{})
+	cpuG2Result := curve.G2Affine{}
+	cpuG2Result.MultiExp(pointsG2[:], scalarsG2[:], ecc.MultiExpConfig{})
 	// Reuse the same points for multiple msm calls
 	// simulate gnark prover in multiple rounds
 	deviceGlobalG1 := copyToDevice(pointsG1[:])
 	deviceGlobalG2 := copyToDevice(pointsG2[:])
+	defer deviceGlobalG1.Free()
+	defer deviceGlobalG2.Free()
 	cfg := DefaultMSMConfig()
 	cfg.AreInputPointInMont = true
 	cfg.AreInputScalarInMont = true
@@ -229,12 +237,10 @@ func TestMsmG1G2ReusePointer(t *testing.T) {
 			// After 1st round, points are converted to affine form
 			cfg.AreInputPointInMont = false
 		}
-		cpuG1Result := curve.G1Affine{}
-		cpuG1Result.MultiExp(pointsG1[:], scalarsG1[:], ecc.MultiExpConfig{})
-		cpuG2Result := curve.G2Affine{}
-		cpuG2Result.MultiExp(pointsG2[:], scalarsG2[:], ecc.MultiExpConfig{})
 		deviceScalarsG1 := copyToDevice(scalarsG1[:])
 		deviceScalarsG2 := copyToDevice(scalarsG2[:])
+		defer deviceScalarsG1.Free()
+		defer deviceScalarsG2.Free()
 		g.Go(func() error {
 			return testG1(cfg, cpuG1Result, &deviceScalarsG1, &deviceGlobalG1)
 		})
