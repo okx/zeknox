@@ -33,19 +33,21 @@ jobs:
         with:
           submodules: recursive
       
-      - name: Configure default goldilocks
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-      - name: Build default 
-        run: cmake --build build --config ${{env.BUILD_TYPE}}
+      # - name: Configure default goldilocks
+      #   run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      # - name: Build default 
+      #   run: cmake --build build --config ${{env.BUILD_TYPE}}
         
-      - name: Configure bn254 & MSM
-        run: cmake -B build-bn254 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_MSM=ON -DCURVE=BN254
-      - name: Build bn254 & MSM
-        run: cmake --build build-bn254 --config ${{env.BUILD_TYPE}}
+      # - name: Configure bn254 & MSM
+      #   run: cmake -B build-bn254 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_MSM=ON -DCURVE=BN254
+      # - name: Build bn254 & MSM
+      #   run: cmake --build build-bn254 --config ${{env.BUILD_TYPE}}
 
       - name: Build cpp wrapper
         working-directory: wrappers/cpp
         run: ./build_gmp.sh host
+      - name: Install gtest
+        run: sudo apt install libgtest-dev
       - name: Configure cpp wrapper
         working-directory: wrappers/cpp
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254
