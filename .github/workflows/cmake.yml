@@ -17,11 +17,7 @@ jobs:
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
-    
-    defaults:
-        run:
-          working-directory: native
-          
+
     steps:
       - uses: Jimver/cuda-toolkit@v0.2.18
         id: cuda-toolkit
@@ -32,26 +28,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      
+
       - name: Configure default goldilocks
+        working-directory: native
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
       - name: Build default and install
+        working-directory: native
         run: sudo cmake --build build --config ${{env.BUILD_TYPE}} --target install
-        
+
       - name: Configure bn254 & MSM
+        working-directory: native
         run: cmake -B build-bn254 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_MSM=ON -DCURVE=BN254
       - name: Build bn254 & MSM
+        working-directory: native
         run: cmake --build build-bn254 --config ${{env.BUILD_TYPE}}
 
-      - name: Install gmp
+      - name: Install dependencies for cpp wrapper
         working-directory: wrappers/cpp
-        run: ./build_gmp.sh host
-      - name: Install gtest
-        run: sudo apt install libgtest-dev nasm
+        run: ./build_gmp.sh host && sudo apt install libgtest-dev nasm
       - name: Configure cpp wrapper
         working-directory: wrappers/cpp
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254
       - name: Build cpp wrapper
         working-directory: wrappers/cpp
         run: cmake --build build --config ${{env.BUILD_TYPE}}
-      
+
