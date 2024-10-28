@@ -55,7 +55,6 @@ final_accumulation_kernel(P *final_sums, P *final_results, unsigned nof_msms, un
   final_results[tid] = final_result + final_sums[tid * num_of_windows];
 }
 
-
 /**
  * @param bucket_offsets, stores the index where new unique bucket begins; bucket might contains multiple scalars; it's sorted by counts in descending order
  */
@@ -112,8 +111,8 @@ __global__ void last_pass_kernel(P *final_buckets, P *final_sums, unsigned num_s
 
 template <typename P>
 __global__ void single_stage_multi_reduction_kernel(
-    P *v,
-    P *v_r,
+    P *src_buckets,
+    P *target_buckets,
     unsigned block_size,
     unsigned write_stride,
     unsigned write_phase,
@@ -134,10 +133,10 @@ __global__ void single_stage_multi_reduction_kernel(
   unsigned write_ind = tid;
   unsigned v_r_key =
       write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
-  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
-                        : v[read_ind] + v[read_ind + jump];
+  P v_r_value = padding ? (tid % (2 * padding) < padding) ? src_buckets[read_ind] + src_buckets[read_ind + jump] : P::zero()
+                        : src_buckets[read_ind] + src_buckets[read_ind + jump];
 
-  v_r[v_r_key] = v_r_value;
+  target_buckets[v_r_key] = v_r_value;
 }
 
 // this kernel sums across windows
@@ -185,7 +184,7 @@ __global__ void accumulate_buckets_kernel(
   }
 
   // unsigned msm_index = unique_bucket_indices[tid] >> msm_idx_shift;
-  unsigned bucket_index = unique_bucket_indices[tid] & ((1 << msm_idx_shift) - 1);//  msm_index * nof_buckets + ();
+  unsigned bucket_index = unique_bucket_indices[tid] & ((1 << msm_idx_shift) - 1); //  msm_index * nof_buckets + ();
 
   const unsigned bucket_offset = bucket_offsets[tid];
   const unsigned bucket_size = bucket_count[tid];
@@ -211,20 +210,30 @@ __global__ void initialize_buckets_kernel(P *buckets, unsigned N)
 }
 
 // TODO: try to combine with other kernels. One thread can work on many points
-__global__ void transfrom_scalars_and_points_from_mont(scalar_field_t *scalars, g2_affine_t *points, size_t size)
+template <typename P>
+__global__ void transfrom_points_from_mont( P *points, size_t size)
+{
+  unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (tid < size)
+  {
+    *(points + tid) = P::from_montgomery(*(points + tid));
+  }
+}
+
+__global__ void transfrom_scalars_from_mont(scalar_field_t *scalars, size_t size)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid < size)
   {
     *(scalars + tid) = scalar_field_t::from_montgomery(*(scalars + tid));
-    *(points + tid) = g2_affine_t::from_montgomery(*(points + tid));
   }
 }
 
 /**
  * this kernel splits the scalars into digits of size c; each thread splits a single scalar into num_of_windows digits
- * @param buckets_indices, indicate the bucket index of each scalar of a window. the size of `buckets_indices` is `msm_size`*`num_windows`;the value is the bit concanation of
- * `window_index | window_idx | bucket_index`; concat window_index with bucket_index is required to index all bucket across all windows
+ * @param buckets_indices, indicate the bucket index of each scalar of a window. the size of `buckets_indices` is `msm_size`*`num_windows`;
+ * the value is the bit concanation of
+ * `window_idx | bucket_index`; concat window_idx with bucket_index is required to index all bucket across all windows
  * @param num_windows number of windows; for BN254, the size of bits is 254; if window bit size is `c` = 16; num_windows = ceil(254/16) = 16
  */
 template <typename S>
@@ -241,7 +250,6 @@ __global__ void split_scalars_kernel(
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   unsigned bucket_index;
   unsigned current_index;
-  unsigned window_index = tid >> msm_log_size; // TODO: since tid < msm_size; window_index would always be 0; can remove this.
   if (tid < msm_size)
   {
     S scalar = scalars[tid];
@@ -251,7 +259,7 @@ __global__ void split_scalars_kernel(
       // printf("tid: %d, window_idx: %d, bucket_index: %d\n", tid, window_idx, bucket_index);
       current_index = window_idx * msm_size + tid;
       buckets_indices[current_index] =
-          (window_index << (c + bm_bitsize)) | (window_idx << c) | bucket_index; // the bucket module number and the msm number are appended at the msbs
+          (window_idx << c) | bucket_index; // the bucket module number and the msm number are appended at the msbs
       if (scalar == S::zero() || bucket_index == 0)
       {
         buckets_indices[current_index] = 0; // will be skipped
