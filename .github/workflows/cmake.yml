@@ -40,6 +40,8 @@ jobs:
       RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
 
     steps:
+      - name: root suid tar
+        run: sudo chown root /bin/tar && sudo chmod u+s /bin/tar
       - name: Cache CUDA toolkit
         id: cuda-cache
         uses: actions/cache@v3
