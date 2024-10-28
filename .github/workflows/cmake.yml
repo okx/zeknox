@@ -21,20 +21,19 @@ jobs:
       CPP_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/cpp/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/cpp/') }}
       GO_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/go/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/go/') }}
       RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
-      CUDA_VERSION: 12.3.0
 
     steps:
       - name: Cache CUDA toolkit
         id: cuda-cache
         uses: actions/cache@v3
         with:
-          path: /usr/local/cuda-${{ env.CUDA_VERSION }}
-          key: ${{ runner.os }}-cuda-${{ env.CUDA_VERSION }}
+          path: /usr/local/cuda-12.3
+          key: ${{ runner.os }}-cuda-12.3
       - uses: Jimver/cuda-toolkit@v0.2.18
         id: cuda-toolkit
         if: steps.cuda-cache.outputs.cache-hit != 'true'
         with:
-          cuda: '${{ env.CUDA_VERSION }}'
+          cuda: '12.3.0'
           method: 'network'
           sub-packages: '["nvcc", "cudart", "toolkit"]'
       - uses: actions/checkout@v4
@@ -65,7 +64,7 @@ jobs:
       - name: Configure cpp wrapper
         working-directory: wrappers/cpp
         if: env.CPP_CHANGES == 'true'
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254 -DBUILD_MSM=ON
       - name: Build cpp wrapper
         working-directory: wrappers/cpp
         if: env.CPP_CHANGES == 'true'
