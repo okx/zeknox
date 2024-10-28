@@ -349,7 +349,7 @@ TEST(altBn128, msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
     MSM_Config cfg{
         ffi_affine_sz : static_cast<uint32_t>(sz),
         npoints : static_cast<uint32_t>(NMExp),
-        are_input_point_in_mont : false,
+        are_input_point_in_mont : true,
         are_input_scalar_in_mont : false,
         are_output_point_in_mont : false,
         are_inputs_on_device : false,
@@ -365,9 +365,10 @@ TEST(altBn128, msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
         x : F1.zero(),
         y : F1.zero(),
     };
-    F1.copy(gpu_point_result.x, *gpu_x);
-    F1.copy(gpu_point_result.y, *gpu_y);
-    print_g1_point_affine(gpu_point_result);
+    uint32_t *x = gpu_result->x.export_limbs();
+    uint32_t *y = gpu_result->y.export_limbs();
+    F1.fromRprLE(gpu_point_result.x, (uint8_t *)(x), 32);
+    F1.fromRprLE(gpu_point_result.y, (uint8_t *)(y), 32);
     ASSERT_TRUE(G1.eq(p1, gpu_point_result));
     delete[] bases;
     delete[] scalars;
@@ -427,7 +428,7 @@ TEST(altBn128, msm_inputs_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
     MSM_Config cfg{
         ffi_affine_sz : static_cast<uint32_t>(sz),
         npoints : static_cast<uint32_t>(NMExp),
-        are_input_point_in_mont : false,
+        are_input_point_in_mont : true,
         are_input_scalar_in_mont : false,
         are_output_point_in_mont : false,
         are_inputs_on_device : true,
