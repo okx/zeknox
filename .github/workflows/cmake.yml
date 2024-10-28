@@ -107,11 +107,11 @@ jobs:
         with:
           components: rustfmt
           cache: false
-      - name: Check Rust Format
-        working-directory: wrappers/rust
-        if: env.RUST_CHANGES == 'true'
-        run: cargo fmt --check
       - name: Build Rust wrapper
         working-directory: wrappers/rust
         if: env.RUST_CHANGES == 'true'
         run: cargo build
+      - name: Check Rust Format
+        working-directory: wrappers/rust
+        if: env.RUST_CHANGES == 'true'
+        run: cargo fmt --check
