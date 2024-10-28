@@ -341,7 +341,7 @@ TEST(altBn128, msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
 
     ASSERT_TRUE(G1.eq(p1, p2));
 
- set   g1_affine_t *gpu_result = new g1_affine_t{};
+    g1_affine_t *gpu_result = new g1_affine_t{};
     size_t sz = sizeof(g1_affine_t);
 
     std::cout << "size of g1_affine_t: " << sizeof(g1_affine_t) << " size of scalar_field_t: " << sizeof(scalar_field_t) << std::endl;
@@ -480,21 +480,17 @@ TEST(altBn128, msm_bn254_g2_curve_gpu_consistency_with_cpu)
         points[i] = (i % msm_size < 10) ? g2_projective_t::to_affine(g2_projective_t::rand_host()) : points[i - 10];
         scalars[i] = scalar_field_t::rand_host();
     }
-    size_t large_bucket_factor = 2;
-    g2_projective_t *gpu_result_projective = new g2_projective_t();
+    uint32_t large_bucket_factor = 2;
+    g2_affine_t *gpu_result_affine = new g2_affine_t();
     // std::cout << gpu_result_projective[0] << std::endl;
     // std::cout << "size of affine_t: " << sizeof(affine_t) << " size of fr_t: " << sizeof(fr_t) << std::endl;
     size_t device_id = 0;
     MSM_Config cfg{
-        npoints : msm_size,
+        npoints : static_cast<uint32_t>(N),
         are_inputs_on_device : false,
         large_bucket_factor : large_bucket_factor,
     };
-    mult_pippenger_g2(device_id, gpu_result_projective, points, scalars, cfg);
-
-    // std::cout << *gpu_result_projective << std::endl;
-    g2_affine_t gpu_result_affine = g2_projective_t::to_affine(*gpu_result_projective);
-    // std::cout << gpu_result_affine << std::endl;
+    mult_pippenger_g2(device_id, gpu_result_affine, points, scalars, cfg);
 
     G2Point cpu_result_projective;
     G2PointAffine cpu_result_affine;
@@ -518,10 +514,10 @@ TEST(altBn128, msm_bn254_g2_curve_gpu_consistency_with_cpu)
     G2.copy(cpu_result_affine, cpu_result_projective);
 
     G2PointAffine gpu_result_affine_in_host_format;
-    uint32_t *x_real = gpu_result_affine.x.real.export_limbs();
-    uint32_t *x_imag = gpu_result_affine.x.imaginary.export_limbs();
-    uint32_t *y_real = gpu_result_affine.y.real.export_limbs();
-    uint32_t *y_imag = gpu_result_affine.y.imaginary.export_limbs();
+    uint32_t *x_real = gpu_result_affine->x.real.export_limbs();
+    uint32_t *x_imag = gpu_result_affine->x.imaginary.export_limbs();
+    uint32_t *y_real = gpu_result_affine->y.real.export_limbs();
+    uint32_t *y_imag = gpu_result_affine->y.imaginary.export_limbs();
     F1.fromRprLE(gpu_result_affine_in_host_format.x.a, (uint8_t *)(x_real), 32);
     F1.fromRprLE(gpu_result_affine_in_host_format.x.b, (uint8_t *)(x_imag), 32);
     F1.fromRprLE(gpu_result_affine_in_host_format.y.a, (uint8_t *)(y_real), 32);
