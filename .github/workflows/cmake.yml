@@ -56,3 +56,26 @@ jobs:
         working-directory: wrappers/cpp
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
+      - name: Check Go formatting
+        working-directory: wrappers/go
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go code is not properly formatted:"
+            gofmt -l .
+            exit 1
+          fi
+      - name: Build Go wrapper
+        working-directory: wrappers/go
+        run: go build -v ./...
+
+      - uses: moonrepo/setup-rust@v1
+        name: Setup Rust Toolchain
+        with:
+          components: rustfmt
+          cache: false
+      - name: Check Rust Format
+        working-directory: wrappers/rust
+        run: cargo fmt --check
+      - name: Build Rust wrapper
+        working-directory: wrappers/rust
+        run: cargo build
