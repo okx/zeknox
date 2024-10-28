@@ -125,7 +125,6 @@ set(LIB_CUDA_SRC
 
 if (BUILD_MSM)
     list(APPEND LIB_CUDA_SRC msm/msm.cu)
-    list(APPEND LIB_CUDA_SRC msm/sort.cu)
 endif()
 
 add_library(${LIB_CUDA_NAME} OBJECT ${LIB_CUDA_SRC})
@@ -180,6 +179,9 @@ if(USE_AVX512)
     target_compile_options(${EXE_TESTS_CUDA_NAME} PRIVATE -march=native)
 endif()
 endif() # BUILD_TESTS
+
+install(TARGETS ${LIB_NAME} DESTINATION /usr/local/lib)
+install(FILES ${PROJECT_SOURCE_DIR}/depends/blst/libblst.a DESTINATION /usr/local/lib)
 
 else() # USE_CUDA
 # only C++ support

@@ -56,6 +56,13 @@ func (h *HostOrDeviceSlice[T]) OnHost(src []T) {
 	h.isDevice = false
 }
 
+func NewEmpty[T any]() *HostOrDeviceSlice[T] {
+	return &HostOrDeviceSlice[T]{
+		host:     nil,
+		isDevice: false,
+	}
+}
+
 func CudaMalloc[T any](deviceID int, count int) (*HostOrDeviceSlice[T], error) {
 	size := count * int(unsafe.Sizeof(*new(T)))
 	if size == 0 {

@@ -20,7 +20,6 @@
 
 #include <cuda.h>
 #include <utils/gpu_t.cuh>
-#include <utils/cuda_available.hpp>
 #include <utils/all_gpus.hpp>
 #include <ntt/ntt.cuh>
 #include "lib.h"
