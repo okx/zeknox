@@ -35,8 +35,8 @@ jobs:
       
       - name: Configure default goldilocks
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-      - name: Build default 
-        run: cmake --build build --config ${{env.BUILD_TYPE}}
+      - name: Build default and install
+        run: sudo cmake --build build --config ${{env.BUILD_TYPE}} --target install
         
       - name: Configure bn254 & MSM
         run: cmake -B build-bn254 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_MSM=ON -DCURVE=BN254
