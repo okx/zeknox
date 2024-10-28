@@ -6,6 +6,23 @@ on:
   push:
     branches: [ "master", "dev", "ci" ]
   pull_request:
+  workflow_dispatch:  # Add this to enable manual triggers
+    inputs:
+      cpp_changes:
+        description: 'Cpp Wrapper'
+        required: false
+        type: boolean
+        default: false
+      go_changes:
+        description: 'Go Wrapper'
+        required: false
+        type: boolean
+        default: false
+      rust_changes:
+        description: 'Rust Wrapper'
+        required: false
+        type: boolean
+        default: false
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -18,12 +35,9 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
     env:
-      # CPP_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/cpp/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/cpp/') }}
-      # GO_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/go/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/go/') }}
-      # RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
-      CPP_CHANGES: true
-      GO_CHANGES: true
-      RUST_CHANGES: true
+      CPP_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/cpp/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/cpp/') }}
+      GO_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/go/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/go/') }}
+      RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
 
     steps:
       - name: Cache CUDA toolkit
