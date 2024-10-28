@@ -17,12 +17,24 @@ jobs:
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
+    env:
+      CPP_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/cpp/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/cpp/') }}
+      GO_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/go/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/go/') }}
+      RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
+      CUDA_VERSION: 12.3.0
 
     steps:
+      - name: Cache CUDA toolkit
+        id: cuda-cache
+        uses: actions/cache@v3
+        with:
+          path: /usr/local/cuda-${{ env.CUDA_VERSION }}
+          key: ${{ runner.os }}-cuda-${{ env.CUDA_VERSION }}
       - uses: Jimver/cuda-toolkit@v0.2.18
         id: cuda-toolkit
+        if: steps.cuda-cache.outputs.cache-hit != 'true'
         with:
-          cuda: '12.3.0'
+          cuda: '${{ env.CUDA_VERSION }}'
           method: 'network'
           sub-packages: '["nvcc", "cudart", "toolkit"]'
       - uses: actions/checkout@v4
@@ -48,16 +60,20 @@ jobs:
 
       - name: Install dependencies for cpp wrapper
         working-directory: wrappers/cpp
+        if: env.CPP_CHANGES == 'true'
         run: ./build_gmp.sh host && sudo apt install libgtest-dev nasm
       - name: Configure cpp wrapper
         working-directory: wrappers/cpp
+        if: env.CPP_CHANGES == 'true'
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254
       - name: Build cpp wrapper
         working-directory: wrappers/cpp
+        if: env.CPP_CHANGES == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Check Go formatting
         working-directory: wrappers/go
+        if: env.GO_CHANGES == 'true'
         run: |
           if [ -n "$(gofmt -l .)" ]; then
             echo "Go code is not properly formatted:"
@@ -66,16 +82,20 @@ jobs:
           fi
       - name: Build Go wrapper
         working-directory: wrappers/go
+        if: env.GO_CHANGES == 'true'
         run: go build -v ./...
 
       - uses: moonrepo/setup-rust@v1
         name: Setup Rust Toolchain
+        if: env.RUST_CHANGES == 'true'
         with:
           components: rustfmt
           cache: false
       - name: Check Rust Format
         working-directory: wrappers/rust
+        if: env.RUST_CHANGES == 'true'
         run: cargo fmt --check
       - name: Build Rust wrapper
         working-directory: wrappers/rust
+        if: env.RUST_CHANGES == 'true'
         run: cargo build
