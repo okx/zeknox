@@ -1,10 +1,10 @@
 package lib
 
 import (
+	"github.com/okx/cryptography_cuda/wrappers/go/device"
 	"math"
 	"testing"
 	"unsafe"
-	"github.com/okx/cryptography_cuda/wrappers/go/device"
 )
 
 func TestListDevicesInfo(t *testing.T) {
