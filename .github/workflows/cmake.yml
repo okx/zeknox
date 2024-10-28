@@ -47,7 +47,7 @@ jobs:
         working-directory: wrappers/cpp
         run: ./build_gmp.sh host
       - name: Install gtest
-        run: sudo apt install libgtest-dev
+        run: sudo apt install libgtest-dev nasm
       - name: Configure cpp wrapper
         working-directory: wrappers/cpp
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254
