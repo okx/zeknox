@@ -341,38 +341,34 @@ TEST(altBn128, msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
 
     ASSERT_TRUE(G1.eq(p1, p2));
 
-    point_t *gpu_result = new point_t{};
-    size_t sz = sizeof(affine_t);
+ set   g1_affine_t *gpu_result = new g1_affine_t{};
+    size_t sz = sizeof(g1_affine_t);
 
-    std::cout << "size of affine_t: " << sizeof(affine_t) << " size of fr_t: " << sizeof(fr_t) << std::endl;
+    std::cout << "size of g1_affine_t: " << sizeof(g1_affine_t) << " size of scalar_field_t: " << sizeof(scalar_field_t) << std::endl;
     size_t device_id = 0;
     MSM_Config cfg{
-        ffi_affine_sz : sz,
-        npoints : NMExp,
-        are_points_in_mont : false,
+        ffi_affine_sz : static_cast<uint32_t>(sz),
+        npoints : static_cast<uint32_t>(NMExp),
+        are_input_point_in_mont : false,
+        are_input_scalar_in_mont : false,
+        are_output_point_in_mont : false,
         are_inputs_on_device : false,
         are_outputs_on_device : false,
     };
-    mult_pippenger(device_id, gpu_result, (affine_t *)bases, (fr_t *)scalars, cfg);
+    mult_pippenger_g1(device_id, gpu_result, (g1_affine_t *)bases, (scalar_field_t *)scalars, cfg);
 
     // remain in Montgmery Space
-    F1Element *gpu_x = (F1Element *)(&gpu_result->X);
-    F1Element *gpu_y = (F1Element *)(&gpu_result->Y);
-    F1Element *gpu_z = (F1Element *)(&gpu_result->Z);
+    F1Element *gpu_x = (F1Element *)(&gpu_result->y);
+    F1Element *gpu_y = (F1Element *)(&gpu_result->y);
 
-    G1Point gpu_point_result{
+    G1PointAffine gpu_point_result{
         x : F1.zero(),
         y : F1.zero(),
-        zz : F1.zero(),
-        zzz : F1.zero(),
     };
     F1.copy(gpu_point_result.x, *gpu_x);
     F1.copy(gpu_point_result.y, *gpu_y);
-    F1.square(gpu_point_result.zz, *gpu_z);
-    F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
-    print_g1_point(gpu_point_result);
+    print_g1_point_affine(gpu_point_result);
     ASSERT_TRUE(G1.eq(p1, gpu_point_result));
-    std::cout << "end success" << std::endl;
     delete[] bases;
     delete[] scalars;
 }
@@ -423,45 +419,42 @@ TEST(altBn128, msm_inputs_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
 
     ASSERT_TRUE(G1.eq(p1, p2));
 
-    point_t *gpu_result = new point_t{};
-    size_t sz = sizeof(affine_t);
+    g1_affine_t *gpu_result = new g1_affine_t{};
+    size_t sz = sizeof(g1_affine_t);
 
-    std::cout << "size of affine_t: " << sizeof(affine_t) << " size of fr_t: " << sizeof(fr_t) << std::endl;
+    std::cout << "size of g1_affine_t: " << sizeof(g1_affine_t) << " size of scalar_field_t: " << sizeof(scalar_field_t) << std::endl;
     size_t device_id = 0;
     MSM_Config cfg{
-        ffi_affine_sz : sz,
-        npoints : NMExp,
-        are_points_in_mont : false,
+        ffi_affine_sz : static_cast<uint32_t>(sz),
+        npoints : static_cast<uint32_t>(NMExp),
+        are_input_point_in_mont : false,
+        are_input_scalar_in_mont : false,
+        are_output_point_in_mont : false,
         are_inputs_on_device : true,
         are_outputs_on_device : false,
     };
 
-    affine_t *d_points;
-    cudaMalloc((void **)&d_points, NMExp * sizeof(affine_t));
-    cudaMemcpy(d_points, bases, NMExp * sizeof(affine_t), cudaMemcpyHostToDevice);
+    g1_affine_t *d_points;
+    cudaMalloc((void **)&d_points, NMExp * sizeof(g1_affine_t));
+    cudaMemcpy(d_points, bases, NMExp * sizeof(g1_affine_t), cudaMemcpyHostToDevice);
 
-    fr_t *d_scalars;
-    cudaMalloc((void **)&d_scalars, NMExp * sizeof(fr_t));
-    cudaMemcpy(d_scalars, scalars, NMExp * sizeof(fr_t), cudaMemcpyHostToDevice);
+    scalar_field_t *d_scalars;
+    cudaMalloc((void **)&d_scalars, NMExp * sizeof(scalar_field_t));
+    cudaMemcpy(d_scalars, scalars, NMExp * sizeof(scalar_field_t), cudaMemcpyHostToDevice);
 
-    mult_pippenger(device_id, gpu_result, (affine_t *)d_points, (fr_t *)d_scalars, cfg);
+    mult_pippenger_g1(device_id, gpu_result, (g1_affine_t *)d_points, (scalar_field_t *)d_scalars, cfg);
 
     // remain in Montgmery Space
-    F1Element *gpu_x = (F1Element *)(&gpu_result->X);
-    F1Element *gpu_y = (F1Element *)(&gpu_result->Y);
-    F1Element *gpu_z = (F1Element *)(&gpu_result->Z);
+    F1Element *gpu_x = (F1Element *)(&gpu_result->x);
+    F1Element *gpu_y = (F1Element *)(&gpu_result->y);
 
-    G1Point gpu_point_result{
+    G1PointAffine gpu_point_result{
         x : F1.zero(),
         y : F1.zero(),
-        zz : F1.zero(),
-        zzz : F1.zero(),
     };
     F1.copy(gpu_point_result.x, *gpu_x);
     F1.copy(gpu_point_result.y, *gpu_y);
-    F1.square(gpu_point_result.zz, *gpu_z);
-    F1.mul(gpu_point_result.zzz, gpu_point_result.zz, *gpu_z);
-    print_g1_point(gpu_point_result);
+    print_g1_point_affine(gpu_point_result);
     ASSERT_TRUE(G1.eq(p1, gpu_point_result));
 
     delete[] bases;
