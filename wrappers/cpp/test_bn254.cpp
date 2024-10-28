@@ -244,7 +244,7 @@ TEST(altBn128, fft_cpu_self_consistency)
 //     delete[] cpu_data_in;
 //     delete[] gpu_data_in;
 // }
-
+#ifdef BUILD_MSM
 TEST(altBn128, msm_bn254_g1_cpu_self_consistency)
 {
 
@@ -452,9 +452,10 @@ TEST(altBn128, msm_inputs_on_device_bn254_g1_curve_gpu_consistency_with_cpu)
         x : F1.zero(),
         y : F1.zero(),
     };
-    F1.copy(gpu_point_result.x, *gpu_x);
-    F1.copy(gpu_point_result.y, *gpu_y);
-    print_g1_point_affine(gpu_point_result);
+    uint32_t *x = gpu_result->x.export_limbs();
+    uint32_t *y = gpu_result->y.export_limbs();
+    F1.fromRprLE(gpu_point_result.x, (uint8_t *)(x), 32);
+    F1.fromRprLE(gpu_point_result.y, (uint8_t *)(y), 32);
     ASSERT_TRUE(G1.eq(p1, gpu_point_result));
 
     delete[] bases;
@@ -588,9 +589,9 @@ TEST(altBn128, msm_bn254_g2_curve_gpu_consistency_with_cpu)
 
 //     ASSERT_TRUE(G2.eq(result_gpu, cpu_result_expected));
 // }
-#endif
-
-#endif
+#endif // G2_ENABLED
+#endif // BUILD_MSM
+#endif // FEATURE_BN254
 int main(int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
