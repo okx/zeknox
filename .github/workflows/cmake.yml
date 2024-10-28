@@ -4,7 +4,7 @@ name: CMake Cuda Build
 
 on:
   push:
-    # branches: [ "master", "dev" ]
+    branches: [ "master", "dev", "ci" ]
   pull_request:
 
 env:
@@ -18,9 +18,12 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
     env:
-      CPP_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/cpp/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/cpp/') }}
-      GO_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/go/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/go/') }}
-      RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
+      # CPP_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/cpp/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/cpp/') }}
+      # GO_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/go/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/go/') }}
+      # RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
+      CPP_CHANGES: true
+      GO_CHANGES: true
+      RUST_CHANGES: true
 
     steps:
       - name: Cache CUDA toolkit
