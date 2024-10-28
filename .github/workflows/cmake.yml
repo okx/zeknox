@@ -29,6 +29,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Build blst
+        working-directory: native/depends/blst
+        run: ./build.sh
       - name: Configure default goldilocks
         working-directory: native
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
