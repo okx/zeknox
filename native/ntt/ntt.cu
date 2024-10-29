@@ -6,6 +6,7 @@
 #include <cassert>
 #include <map>
 #include <vector>
+#include <array>
 #include <iostream>
 
 #define TRANSPOSE_BLOCK_DIM 32

@@ -3,7 +3,8 @@ use std::env;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use cryptography_cuda::{
-    device::memory::HostOrDeviceSlice, get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, lde_batch_multi_gpu, types::NTTConfig
+    device::memory::HostOrDeviceSlice, get_number_of_gpus_rs, init_coset_rs,
+    init_twiddle_factors_rs, lde_batch_multi_gpu, types::NTTConfig,
 };
 use plonky2_field::{
     goldilocks_field::GoldilocksField,
@@ -76,8 +77,7 @@ fn bench_multi_gpu_lde_batch(c: &mut Criterion) {
         group.sample_size(10).bench_function(
             &format!(
                 "Multi gpu lde on {} GPUs with lg_n size of 2^{}",
-                ngpus,
-                log_n_sizes
+                ngpus, log_n_sizes
             ),
             |b| {
                 b.iter(|| {
@@ -95,10 +95,7 @@ fn bench_multi_gpu_lde_batch(c: &mut Criterion) {
         );
 
         group.sample_size(10).bench_function(
-            &format!(
-                "Multi gpu lde on 1 GPU with lg_n size of 2^{}",
-                log_n_sizes
-            ),
+            &format!("Multi gpu lde on 1 GPU with lg_n size of 2^{}", log_n_sizes),
             |b| {
                 b.iter(|| {
                     lde_batch_multi_gpu(
