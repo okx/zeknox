@@ -267,7 +267,7 @@ public:
                 NUM_THREADS = min(MAX_TH, s);
                 NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
                 single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
-                    large_buckets, large_buckets, s * 2, 0, 0, 0, s);
+                    large_buckets, large_buckets, s * 2, 0, 0, s);
             }
 
             // distribute
@@ -376,13 +376,13 @@ public:
 
                         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
                             j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
-                            1 << (source_bits_count - j), write_stride, 0, 0, nof_threads);
+                            1 << (source_bits_count - j), write_stride, 0, nof_threads);
 
                         NUM_THREADS = min(MAX_TH, nof_threads);
                         NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
                         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
                             j == 0 ? source_buckets : temp_buckets2, j == target_bits_count - 1 ? target_buckets : temp_buckets2,
-                            1 << (target_bits_count - j), write_stride, 1, 0, nof_threads);
+                            1 << (target_bits_count - j), write_stride, 1, nof_threads);
                     }
                 }
                 if (target_bits_count == 1)

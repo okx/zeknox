@@ -116,7 +116,6 @@ __global__ void single_stage_multi_reduction_kernel(
     unsigned block_size,
     unsigned write_stride,
     unsigned write_phase,
-    unsigned padding,
     unsigned num_of_threads)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -126,16 +125,12 @@ __global__ void single_stage_multi_reduction_kernel(
   }
 
   int jump = block_size / 2;
-  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
-  int block_id = tid_p / jump;
-  int block_tid = tid_p % jump;
+  int block_id = tid / jump;
+  int block_tid = tid % jump;
   unsigned read_ind = block_size * block_id + block_tid;
-  unsigned write_ind = tid;
   unsigned v_r_key =
-      write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
-  P v_r_value = padding ? (tid % (2 * padding) < padding) ? src_buckets[read_ind] + src_buckets[read_ind + jump] : P::zero()
-                        : src_buckets[read_ind] + src_buckets[read_ind + jump];
-
+      write_stride ? ((tid / write_stride) * 2 + write_phase) * write_stride + tid % write_stride : tid;
+  P v_r_value = src_buckets[read_ind] + src_buckets[read_ind + jump];
   target_buckets[v_r_key] = v_r_value;
 }
 
