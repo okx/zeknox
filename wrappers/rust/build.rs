@@ -14,9 +14,11 @@ fn build_device_wrapper() {
         .join("cuda_runtime_api.h")
         .to_string_lossy()
         .to_string();
+    let binding_path = PathBuf::from("src/device").join("bindings.rs");
     println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rerun-if-changed={}", cuda_runtime_api_path);
+    println!("cargo:rerun-if-changed={}", binding_path.to_string_lossy().to_string());
 
     let bindings = bindgen::Builder::default()
         .header(cuda_runtime_api_path)
@@ -64,7 +66,7 @@ fn build_device_wrapper() {
         .expect("Unable to generate bindings");
 
     fs::write(
-        PathBuf::from("src/device").join("bindings.rs"),
+        binding_path,
         bindings.to_string(),
     )
     .expect("Couldn't write bindings!");
