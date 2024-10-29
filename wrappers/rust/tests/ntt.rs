@@ -3,13 +3,14 @@ use std::ops::Mul;
 use cryptography_cuda::device::memory::HostOrDeviceSlice;
 use cryptography_cuda::{
     init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch, lde_batch_multi_gpu,
-    naive_transpose_rev_batch, ntt_batch, transpose_rev_batch, types::*,
+    ntt_batch, transpose_rev_batch, types::*,
 };
 use plonky2_field::fft::{fft, ifft};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::{PolynomialCoeffs, PolynomialValues};
 use plonky2_field::types::{Field, PrimeField64};
 use rand::random;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::utils::transpose_and_rev;
 
@@ -260,75 +261,6 @@ fn test_ntt_batch_on_device() {
 }
 
 #[test]
-fn test_naive_transpose_rev() {
-    let lg_domain_size = 22;
-    let domain_size = 1usize << lg_domain_size;
-    let batches = 85;
-
-    let total_elements = domain_size * batches;
-    // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
-
-    let mut input1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-    let mut input2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-
-    let mut cpu_buffer: Vec<Vec<u64>> = Vec::new();
-    for _k in 0..batches / 2 {
-        cpu_buffer.push(input1.clone());
-        cpu_buffer.push(input2.clone());
-    }
-    if batches % 2 == 1 {
-        cpu_buffer.push(input1.clone());
-    }
-
-    let mut device_data: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
-    let mut device_data2: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
-    for k in 0..batches / 2 {
-        let _ = device_data.copy_from_host_offset(
-            input1.as_mut_slice(),
-            2 * k * domain_size,
-            domain_size,
-        );
-        let _ = device_data.copy_from_host_offset(
-            input2.as_mut_slice(),
-            (2 * k + 1) * domain_size,
-            domain_size,
-        );
-    }
-    if batches % 2 == 1 {
-        let _ = device_data.copy_from_host_offset(
-            input1.as_mut_slice(),
-            (batches - 1) * domain_size,
-            domain_size,
-        );
-    }
-
-    let mut cfg = TransposeConfig::default();
-    cfg.batches = batches as u32;
-    cfg.are_inputs_on_device = true;
-    cfg.are_outputs_on_device = true;
-    // println!("device data len: {:?}", device_data.len());
-    naive_transpose_rev_batch(
-        DEFAULT_GPU,
-        device_data2.as_mut_ptr(),
-        device_data.as_mut_ptr(),
-        lg_domain_size,
-        cfg.clone(),
-    );
-
-    let mut host_output = vec![0; total_elements];
-    // println!("start copy to host");
-    device_data2
-        .copy_to_host(host_output.as_mut_slice(), total_elements)
-        .unwrap();
-
-    let cpu_results_tranposed = transpose_and_rev(&cpu_buffer, lg_domain_size);
-    let cpu_results: Vec<u64> = cpu_results_tranposed.into_iter().flatten().collect();
-    assert_eq!(host_output, cpu_results);
-}
-
-#[test]
 fn test_transpose_rev() {
     let lg_domain_size = 22;
     let domain_size = 1usize << lg_domain_size;
@@ -460,7 +392,7 @@ fn test_ntt_batch_with_coset() {
 }
 
 #[test]
-fn test_compute_batched_lde() {
+fn test_compute_batched_lde_coeff_form() {
     let lg_n: usize = 1;
     let rate_bits = 1;
     let lg_domain_size = lg_n + rate_bits;
@@ -536,6 +468,11 @@ fn test_compute_batched_lde() {
     cfg_lde.with_coset = true;
 
     let mut gpu_lde_output = vec![0; (1 << lg_domain_size) * batches];
+    if cfg_lde.is_coeffs {
+        println!("is coeff form!");
+    }else{
+        println!("is point value form!");
+    }
     lde_batch(
         DEFAULT_GPU as usize,
         gpu_lde_output.as_mut_ptr(),
@@ -547,7 +484,104 @@ fn test_compute_batched_lde() {
 }
 
 #[test]
-fn test_compute_batched_lde_data_on_device() {
+fn test_compute_batched_lde_value_form() {
+    let lg_n: usize = 1;
+    let rate_bits = 1;
+    let lg_domain_size = lg_n + rate_bits;
+    let batches = 1;
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_n);
+    init_coset_rs(
+        DEFAULT_GPU as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    let input_size = 1usize << lg_n;
+
+    let input_values = (0..batches)
+        .into_iter()
+        .map(|_| {
+            let cpu_buffer: Vec<u64> = (0..input_size).map(|_| random_fr()).collect();
+            let cpu_values = cpu_buffer
+                .iter()
+                .map(|i| GoldilocksField::from_canonical_u64(*i))
+                .collect::<Vec<GoldilocksField>>();
+            let cpu_poly: PolynomialValues<GoldilocksField> =
+                PolynomialValues { values: cpu_values };
+            cpu_poly
+        })
+        .collect::<Vec<PolynomialValues<GoldilocksField>>>();
+
+    let input_coeffs = input_values
+        .clone()
+        .into_par_iter()
+        .map(|p| {
+            p.ifft()
+        })
+        .collect::<Vec<_>>();
+
+    let mut cpu_polys_coeffs: Vec<GoldilocksField> = input_coeffs
+        .iter()
+        .flat_map(|p| {
+            let p_extended = p.lde(rate_bits);
+            let modified_poly: PolynomialCoeffs<GoldilocksField> = GoldilocksField::coset_shift()
+                .powers()
+                .zip(&p_extended.coeffs)
+                .map(|(r, &c)| r * c)
+                .collect::<Vec<_>>()
+                .into();
+            modified_poly.coeffs
+        })
+        .collect();
+
+    let mut cfg = NTTConfig::default();
+    cfg.batches = batches as u32;
+    // println!("ntt config {:?}", cfg);
+    ntt_batch(
+        DEFAULT_GPU as usize,
+        cpu_polys_coeffs.as_mut_ptr(),
+        lg_domain_size,
+        cfg,
+    );
+
+    let cpu_outputs = cpu_polys_coeffs
+        .iter()
+        .map(|x| x.to_canonical_u64())
+        .collect::<Vec<u64>>();
+
+    // println!("inputs: {:?}", inputs);
+    let mut gpu_buffer: Vec<u64> = input_values
+        .clone()
+        .into_iter()
+        .flat_map(|p| {
+            let values = p
+                .values
+                .iter()
+                .map(|x| x.to_canonical_u64())
+                .collect::<Vec<u64>>();
+            return values;
+        })
+        .collect();
+    let mut cfg_lde = NTTConfig::default();
+    cfg_lde.batches = batches as u32;
+    cfg_lde.extension_rate_bits = rate_bits as u32;
+    cfg_lde.with_coset = true;
+    cfg_lde.is_coeffs = false;
+
+    let mut gpu_lde_output = vec![0; (1 << lg_domain_size) * batches];
+    lde_batch(
+        DEFAULT_GPU as usize,
+        gpu_lde_output.as_mut_ptr(),
+        gpu_buffer.as_mut_ptr(),
+        lg_n,
+        cfg_lde,
+    );
+    assert_eq!(cpu_outputs, gpu_lde_output);
+}
+
+#[test]
+fn test_compute_batched_lde_data_on_device_coeff_form() {
     let lg_n: usize = 17;
     let rate_bits = 3;
     let lg_domain_size = lg_n + rate_bits;
@@ -644,13 +678,13 @@ fn test_compute_batched_lde_data_on_device() {
 }
 
 #[test]
-fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
+fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_coeff_form() {
     let lg_n: usize = 17;
     let rate_bits = 3;
     let lg_domain_size = lg_n + rate_bits;
     let input_domain_size = 1usize << lg_n;
     let output_domain_size = 1usize << (lg_n + rate_bits);
-    let batches = 10;
+    let batches = 30;
 
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
@@ -716,8 +750,6 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
             4,
             cfg_lde.clone(),
             lg_n,
-            total_num_input_elements,
-            total_num_output_elements,
         );
 
         // println!("LDE completed");
@@ -736,6 +768,119 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
         cfg_lde_copy.batches = batches as u32;
         cfg_lde_copy.extension_rate_bits = rate_bits as u32;
         cfg_lde_copy.with_coset = true;
+
+        let mut gpu_lde_output_copy = vec![0; total_num_output_elements];
+        let mut lde_copy_buffer = host_inputs.clone();
+
+        lde_batch(
+            DEFAULT_GPU as usize,
+            gpu_lde_output_copy.as_mut_ptr(),
+            lde_copy_buffer.as_mut_ptr(),
+            lg_n,
+            cfg_lde_copy,
+        );
+
+        assert_eq!(gpu_lde_output_copy, host_output);
+    }
+}
+
+
+#[test]
+fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_value_form() {
+    let lg_n: usize = 17;
+    let rate_bits = 3;
+    let lg_domain_size = lg_n + rate_bits;
+    let input_domain_size = 1usize << lg_n;
+    let output_domain_size = 1usize << (lg_n + rate_bits);
+    let batches = 30;
+
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU3 as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU4 as usize, lg_domain_size);
+
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_n);
+    init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_n);
+    init_twiddle_factors_rs(DEFAULT_GPU3 as usize, lg_n);
+    init_twiddle_factors_rs(DEFAULT_GPU4 as usize, lg_n);
+
+    init_coset_rs(
+        DEFAULT_GPU as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+    init_coset_rs(
+        DEFAULT_GPU2 as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    init_coset_rs(
+        DEFAULT_GPU3 as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    init_coset_rs(
+        DEFAULT_GPU4 as usize,
+        lg_domain_size,
+        GoldilocksField::coset_shift().to_canonical_u64(),
+    );
+
+    for i in 0..10 {
+        println!("Starting test: {:?}", i + 1);
+        let total_num_input_elements = input_domain_size * batches;
+        let total_num_output_elements = output_domain_size * batches;
+
+        let mut host_inputs: Vec<u64> = (0..batches)
+            .collect::<Vec<usize>>()
+            .iter()
+            .map(|_| {
+                (0..input_domain_size)
+                    .map(|_| random_fr())
+                    .collect::<Vec<u64>>()
+            })
+            .flatten()
+            .collect();
+
+        // println!("Length of inputs: {:?}", host_inputs.len());
+
+        // lde rust allocate to gpu prior to api call
+        let mut device_output_data: HostOrDeviceSlice<'_, u64> =
+            HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_num_output_elements).unwrap();
+
+        let mut cfg_lde = NTTConfig::default();
+        cfg_lde.batches = batches as u32;
+        cfg_lde.extension_rate_bits = rate_bits as u32;
+        cfg_lde.with_coset = true;
+        cfg_lde.are_inputs_on_device = true;
+        cfg_lde.are_outputs_on_device = true;
+        cfg_lde.is_multi_gpu = true;
+        cfg_lde.is_coeffs = false;
+
+        lde_batch_multi_gpu(
+            device_output_data.as_mut_ptr(),
+            host_inputs.as_mut_ptr(),
+            4,
+            cfg_lde.clone(),
+            lg_n,
+        );
+
+        let mut host_output = vec![0; batches * output_domain_size];
+
+        let _ = device_output_data.copy_to_host_offset(
+            host_output.as_mut_slice(),
+            0,
+            output_domain_size * batches,
+        );
+        println!("LDE completed, copied from gpu");
+
+        // lde gpu copy from host during api call
+        let mut cfg_lde_copy = NTTConfig::default();
+        cfg_lde_copy.batches = batches as u32;
+        cfg_lde_copy.extension_rate_bits = rate_bits as u32;
+        cfg_lde_copy.with_coset = true;
+        cfg_lde_copy.is_coeffs = false;
 
         let mut gpu_lde_output_copy = vec![0; total_num_output_elements];
         let mut lde_copy_buffer = host_inputs.clone();

@@ -40,14 +40,10 @@ EXTERN RustError compute_batched_lde(size_t device_id, void *output, void *input
 
 EXTERN RustError compute_batched_lde_multi_gpu(void *output, void *input, uint32_t num_gpu, NTT_Direction ntt_direction,
                                                NTT_Config cfg,
-                                               uint32_t lg_domain_size,
-                                               size_t total_num_input_elements,
-                                               size_t total_num_output_elements);
+                                               uint32_t lg_domain_size);
 
 EXTERN RustError compute_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
                                        NTT_TransposeConfig cfg);
 
-EXTERN RustError compute_naive_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
-                                             NTT_TransposeConfig cfg);
 
 #endif // ZEKNOX_CUDA_LIB_H_

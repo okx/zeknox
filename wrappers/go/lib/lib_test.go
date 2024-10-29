@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 	"unsafe"
+
 	"github.com/okx/cryptography_cuda/wrappers/go/device"
 )
 
@@ -102,7 +103,7 @@ func TestLDEBatchMultiGPU(t *testing.T) {
 
 	cfg := DefaultNTTConfig()
 	cfg.ExtensionRateBits = uint32(rateBits)
-	err = LDEBatchMultiGPU(pb, pa, num, cfg, logDomainSize, batches*(1<<logn), batches*(1<<logDomainSize))
+	err = LDEBatchMultiGPU(pb, pa, num, cfg, logDomainSize)
 	if err != nil {
 		t.Errorf("LDEBatchMultiGPU() error = %v", err)
 	}

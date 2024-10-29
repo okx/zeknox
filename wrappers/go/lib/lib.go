@@ -29,6 +29,7 @@ func toCNTTConfig(cfg NTTConfig) C.NTT_Config {
 		are_outputs_on_device: C.char(BoolToInt8(cfg.AreOutputsOnDevice)),
 		with_coset:            C.char(BoolToInt8(cfg.WithCoset)),
 		is_multi_gpu:          C.char(BoolToInt8(cfg.IsMultiGPU)),
+		is_coeffs:             C.char(BoolToInt8(cfg.IsCoeffs)),
 		salt_size:             C.uint(cfg.SaltSize),
 	}
 }
@@ -98,7 +99,7 @@ func LDEBatch(deviceID int, output, input unsafe.Pointer, logNSize int, cfg NTTC
 	return nil
 }
 
-func LDEBatchMultiGPU(output, input unsafe.Pointer, numGPU int, cfg NTTConfig, logNSize, totalNumInputElements, totalNumOutputElements int) error {
+func LDEBatchMultiGPU(output, input unsafe.Pointer, numGPU int, cfg NTTConfig, logNSize int) error {
 	ccfg := toCNTTConfig(cfg)
 	err := C.compute_batched_lde_multi_gpu(
 		output,
@@ -107,8 +108,6 @@ func LDEBatchMultiGPU(output, input unsafe.Pointer, numGPU int, cfg NTTConfig, l
 		C.NTT_Direction(C.forward),
 		ccfg,
 		C.uint(logNSize),
-		C.size_t(totalNumInputElements),
-		C.size_t(totalNumOutputElements),
 	)
 	if err.code != 0 {
 		return fmt.Errorf("error: %s", C.GoString(err.message))

@@ -97,9 +97,9 @@ extern "C"
 #endif
     RustError
     compute_batched_lde_multi_gpu(void *output, void *input, uint32_t num_gpu, NTT_Direction ntt_direction,
-                                  NTT_Config cfg, uint32_t lg_domain_size, size_t total_num_input_elements, size_t total_num_output_elements)
+                                  NTT_Config cfg, uint32_t lg_domain_size)
 {
-    return ntt::batch_lde_multi_gpu((fr_t *)output, (fr_t *)input, num_gpu, ntt_direction, cfg, lg_domain_size, total_num_input_elements, total_num_output_elements);
+    return ntt::batch_lde_multi_gpu((fr_t *)output, (fr_t *)input, num_gpu, ntt_direction, cfg, lg_domain_size);
 }
 
 #if defined(EXPOSE_C_INTERFACE)
@@ -110,18 +110,7 @@ extern "C"
                           NTT_TransposeConfig cfg)
 {
     auto &gpu = select_gpu(device_id);
-    return ntt::compute_transpose_rev(gpu, (fr_t*)output, (fr_t*)input, lg_n, cfg);
-}
-
-#if defined(EXPOSE_C_INTERFACE)
-extern "C"
-#endif
-    RustError
-    compute_naive_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
-                                NTT_TransposeConfig cfg)
-{
-    auto &gpu = select_gpu(device_id);
-    return ntt::compute_naive_transpose_rev(gpu, (fr_t*)output, (fr_t*)input, lg_n, cfg);
+    return ntt::transpose_and_bit_rev_batch(gpu, (fr_t*)output, (fr_t*)input, lg_n, cfg);
 }
 
 #if defined(EXPOSE_C_INTERFACE)

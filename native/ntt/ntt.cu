@@ -51,7 +51,7 @@ namespace ntt {
     }
 
     /**
-     * Transposes a matrix into a new matrix
+     * Transposes a m x n matrix into a new n x m matrix with the indexes bit reversed after the transpose.
      * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
      * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
      * @param n length of `arr`.
@@ -71,19 +71,68 @@ namespace ntt {
         transpose_rev_kernel<<<blocks_dim, threads_dim, BLOCK_DIM*(BLOCK_DIM + 1)*sizeof(fr_t), stream>>>(in_arr, out_arr, n, lg_n, batch_size);
     }
 
-    /**
-     * Transposes a matrix into a new matrix and performs a bit rev on the new matrix
+     /**
+     * A wrapper to transpose and do a bit reverse on a single GPU. It is mainly used for benchmarks and for the rust wrapper.
      * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
      * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
      * @param n length of `arr`.
      * @param batch_size the size of the batch.
      */
-    inline void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream) {
-        int number_of_threads = MAX_THREADS_BATCH;
-        int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
-        naive_transpose_rev_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
+    RustError transpose_and_bit_rev_batch(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg) {
+        try {
+            size_t size = static_cast<size_t>(1 << lg_n);
+            size_t total_elements = size * cfg.batches;
+
+            dev_ptr_t<fr_t> d_input{
+                total_elements,
+                gpu,
+                cfg.are_inputs_on_device ? false : true,  // if inputs are already on device, no need to alloc input memory
+                true                                      // drop input pointer after transpose
+            };
+
+            if (cfg.are_inputs_on_device) {
+                d_input.set_device_ptr(input);
+            } else {
+                gpu.HtoD(&d_input[0], input, total_elements);
+            }
+
+            dev_ptr_t<fr_t> d_transpose_output{
+                total_elements,
+                gpu,
+                cfg.are_outputs_on_device ? false : true,
+                cfg.are_outputs_on_device ? true : false};
+
+            if (cfg.are_outputs_on_device) {
+                d_transpose_output.set_device_ptr(output);
+            }
+
+            transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
+
+            if (!cfg.are_outputs_on_device) {
+                gpu.DtoH(output, &d_transpose_output[0], total_elements);
+            }
+
+            gpu.sync();
+        }
+        catch (const cuda_error &e) {
+#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
+            return RustError{e.code(), e.what()};
+#else
+            return RustError{e.code()};
+#endif
+        }
+        return RustError{cudaSuccess};
     }
 
+    /**
+     * This is an extension of the polynomial array in coeffs form by padding with 0s.
+     * @brief Extends from m x n to m x (n * 2^extension_rate_bits.)
+     * @param output output matrix
+     * @param arr input matrix
+     * @param n cols in input matrix
+     * @param extension_rate_bits extnesion factor
+     * @param batch_size number of rows in matrix (m)
+     */
     inline void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream) {
         int number_of_threads = MAX_THREADS_BATCH;
         size_t n_extend = static_cast<size_t>(1 << (logn + extension_rate_bits));
@@ -181,112 +230,6 @@ namespace ntt {
         return RustError{cudaSuccess};
     }
 
-    /**
-     * Used for benchmarking and wrapping into rust
-     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
-     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
-     * @param n length of `arr`.
-     * @param batch_size the size of the batch.
-     */
-    RustError compute_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg) {
-        try {
-            size_t size = static_cast<size_t>(1 << lg_n);
-            size_t total_elements = size * cfg.batches;
-
-            dev_ptr_t<fr_t> d_input{
-                total_elements,
-                gpu,
-                cfg.are_inputs_on_device ? false : true,  // if inputs are already on device, no need to alloc input memory
-                true                                      // drop input pointer after transpose
-            };
-
-            if (cfg.are_inputs_on_device) {
-                d_input.set_device_ptr(input);
-            } else {
-                gpu.HtoD(&d_input[0], input, total_elements);
-            }
-
-            dev_ptr_t<fr_t> d_transpose_output{
-                total_elements,
-                gpu,
-                cfg.are_outputs_on_device ? false : true,
-                cfg.are_outputs_on_device ? true : false};
-
-            if (cfg.are_outputs_on_device) {
-                d_transpose_output.set_device_ptr(output);
-            }
-
-            transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
-            if (!cfg.are_outputs_on_device) {
-                gpu.DtoH(output, &d_transpose_output[0], total_elements);
-            }
-
-            gpu.sync();
-        }
-        catch (const cuda_error &e) {
-#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-            return RustError{e.code(), e.what()};
-#else
-            return RustError{e.code()};
-#endif
-        }
-        return RustError{cudaSuccess};
-    }
-
-    /**
-     * Used for benchmarking and wrapping into rust
-     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
-     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
-     * @param n length of `arr`.
-     * @param batch_size the size of the batch.
-     */
-    RustError compute_naive_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg) {
-        try {
-            size_t size = static_cast<size_t>(1 << lg_n);
-            size_t total_elements = size * cfg.batches;
-
-            dev_ptr_t<fr_t> d_input{
-                total_elements,
-                gpu,
-                cfg.are_inputs_on_device ? false : true,  // if inputs are already on device, no need to alloc input memory
-                cfg.are_outputs_on_device ? true : false  // if keep output on device; let the user drop the pointer
-            };
-
-            if (cfg.are_inputs_on_device) {
-                d_input.set_device_ptr(input);
-            } else {
-                gpu.HtoD(&d_input[0], input, total_elements);
-            }
-
-            dev_ptr_t<fr_t> d_transpose_output{
-                total_elements,
-                gpu,
-                cfg.are_outputs_on_device ? false : true,
-                cfg.are_outputs_on_device ? true : false};
-
-            if (cfg.are_outputs_on_device) {
-                d_transpose_output.set_device_ptr(output);
-            }
-
-            naive_transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
-            if (!cfg.are_outputs_on_device) {
-                gpu.DtoH(output, &d_transpose_output[0], total_elements);
-            }
-
-            gpu.sync();
-        }
-        catch (const cuda_error &e) {
-#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-            return RustError{e.code(), e.what()};
-#else
-            return RustError{e.code()};
-#endif
-        }
-        return RustError{cudaSuccess};
-    }
-
     RustError init_coset(const gpu_t &gpu, size_t lg_domain_size, fr_t coset_gen) {
         gpu.select();
         // printf("start init coset gpu id : %d\n", gpu.id());
@@ -301,17 +244,13 @@ namespace ntt {
     }
 
     /**
-     * assume without coset
+     * A batch NTT operation. Depending on the config, can be a iNTT or NTT and with or without coset.
      * \param gpu, which gpu to use, default is 0
      * \param inout, input and output fr array
      * \param lg_domain_size 2^{lg_domain_size} = N, where N is size of input array
-     * \param batches, The number of NTT batches to compute. Default value: 1.
-     * \param order, specify the input output order (N: natural order, R: reversed order, default is NN)
      * \param direction, direction of NTT, farward, or inverse, default is farward
-     * \param type, standard or coset, standard is the standard NTT, coset is the evaluation of shifted domain, default is standard
-     * \param are_outputs_on_device
+     * \param cfg NTT_config for the ntt operation
      */
-    // static
     RustError batch_ntt(const gpu_t &gpu, fr_t *inout, uint32_t lg_domain_size, NTT_Direction direction, NTT_Config cfg) {
         // printf("inside batch ntt with coset: %d\n", cfg.with_coset);
         if (lg_domain_size == 0)
@@ -371,18 +310,20 @@ namespace ntt {
     }
 
     /**
-     * assume with coset and that buffer has already been allocated in GPU with id 0
-     * \param lg_n , logn before extension
+     * A batch NTT operation on multiple GPUs. Depending on the config, can be a iNTT or NTT and with or without coset.
+     * \param num_gpu, number of gpus being used for the multigpu lde.
+     * \param inputs, input and output fr array
+     * \param lg_n 2^{lg_n} = N, where N is size of input array
+     * \param direction, direction of NTT, farward, or inverse, default is farward
+     * \param cfg NTT_config for the ntt operation
      */
-    RustError batch_lde_multi_gpu(fr_t *output, fr_t *inputs, size_t num_gpu, NTT_Direction direction, NTT_Config cfg, size_t lg_n, size_t total_num_input_elements, size_t total_num_output_elements) {
-        if (total_num_input_elements == 0 || lg_n == 0 || cfg.extension_rate_bits < 1) {
-            // printf("invalid input : %d\n", cfg.with_coset);
+    RustError batch_lde_multi_gpu(fr_t *output, fr_t *inputs, size_t num_gpu, NTT_Direction direction, NTT_Config cfg, size_t lg_n) {
+        if (cfg.batches == 0 || lg_n == 0 || cfg.extension_rate_bits < 1) {
             return RustError{cudaErrorInvalidValue};
         }
 
         try {
-            // printf("Multi-GPU LDE-starting\n");
-
+            size_t total_num_output_elements = cfg.batches * (1 << (lg_n + cfg.extension_rate_bits));
             uint32_t num_batches_per_gpu = (cfg.batches + num_gpu - 1) / num_gpu;
             uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu - 1));
             if (cfg.batches < num_gpu) {
@@ -437,8 +378,15 @@ namespace ntt {
 
                 output_pointers.emplace_back(&output_data[0]);
 
+                // If the form is in point value form, we first do a ifft
+                if (!cfg.is_coeffs) {
+                    fr_t *d_twiddle_ifft;
+                    d_twiddle_ifft = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_n);
+                    uint32_t n_twiddles_ifft = (1 << lg_n);
+                    ntt_inplace_batch_template(input_data, d_twiddle_ifft, n_twiddles_ifft, batches, true, false, coset_ptr_arr[gpu.id()], gpu);
+                }
+
                 extend_inputs_batch(&output_data[0], &input_data[0], static_cast<size_t>(1 << lg_n), lg_n, cfg.extension_rate_bits, batches, gpu);
-                // gpu.sync();
 
                 if (direction == NTT_Direction::inverse) {
                     reverse_order_batch(&output_data[0], size, lg_output_domain_size, batches, gpu);
@@ -538,6 +486,7 @@ namespace ntt {
             uint32_t n_twiddles = size;
 
             fr_t *d_twiddle;
+
             if (direction == NTT_Direction::inverse) {
                 d_twiddle = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_output_domain_size);
             } else {
@@ -562,7 +511,6 @@ namespace ntt {
             }
 
             size_t total_output_elements = size * (cfg.batches + cfg.salt_size);
-            int input_output_bytes = total_output_elements * sizeof(fr_t);
             dev_ptr_t<fr_t> d_output{
                 total_output_elements,
                 gpu,
@@ -573,10 +521,18 @@ namespace ntt {
                 d_output.set_device_ptr(output);
             }
 
+            // If the form is in point value form, we first
+            if (!cfg.is_coeffs) {
+                fr_t *d_twiddle_ifft;
+                d_twiddle_ifft = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_n);
+                uint32_t n_twiddles_ifft = (1 << lg_n);
+                ntt_inplace_batch_template(d_input, d_twiddle_ifft, n_twiddles_ifft, cfg.batches, true, false, coset_ptr_arr[gpu.id()], gpu);
+            }
+
             extend_inputs_batch(&d_output[0], &d_input[0], static_cast<size_t>(1 << lg_n), lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
 
             if (direction == NTT_Direction::inverse) {
-                reverse_order_batch(d_output, size, lg_output_domain_size, cfg.batches, gpu);
+                reverse_order_batch(d_input, size, lg_n, cfg.batches, gpu);
             }
             // printf("start inplace batch template, with coset: %d \n", cfg.with_coset);
             ntt_inplace_batch_template(d_output, d_twiddle, n_twiddles, cfg.batches, direction == NTT_Direction::inverse, cfg.with_coset, coset_ptr_arr[gpu.id()], gpu);

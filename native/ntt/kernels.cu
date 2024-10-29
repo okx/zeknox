@@ -8,6 +8,9 @@
 
 #define BLOCK_DIM 32
 
+/**
+ * Bit reversal perumuation of an array. See : https://en.wikipedia.org/wiki/Bit-reversal_permutation
+ */
 __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
     int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -29,10 +32,12 @@ __global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint3
 }
 
 /**
+ * Extends the batch of polynomials with padded 0 values (Note this polynomial is in point-value form).
+ * We append each polynomial (represented as a row in the matrix) with a
+ * set of 0's till the array is of length n_extended. (n_extended columns)
  *
- * n, n before extension
- * n_extended, n after extension
- * logn, after extension
+ * m, n before extension
+ * m, n_extended after extension
  */
 __global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, uint32_t n_extend, uint32_t batch_size)
 {
@@ -42,8 +47,8 @@ __global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, u
         int idx = threadId % n_extend;
         int batch_idx = threadId / n_extend;
 
-        if (
-            idx < n)
+        // Is not an extended input
+        if (idx < n)
         {
 
             output[batch_idx * n_extend + idx] = input[batch_idx * n + idx];
@@ -52,7 +57,6 @@ __global__ void degree_extension_kernel(fr_t *output, fr_t *input, uint32_t n, u
         {
             output[batch_idx * n_extend + idx] = fr_t::zero();
         }
-        // printf("index: %d, val: %lu \n", batch_idx * n_extend + idx, output[batch_idx * n_extend + idx]);
     }
 }
 
@@ -81,18 +85,17 @@ __global__ void gen_random_salt_kernel(fr_t *arr, uint32_t size, uint32_t salt_s
 }
 
 /**
- * Fast transpose from NVIDIA. Takes array and returns its transpose
+ * Fast transpose from NVIDIA found at https://developer.nvidia.com/blog/using-shared-memory-cuda-cc/ along by a bit reversal permutation of the transposed matrix.
+ * Takes n x m matrix and returns its transposed m x n matrix with the values being bit reversed.
+ * We use shared memory 'cache' blocks for coalesce memory efficiency improvement
+ * use dynamically allocated shared memory: https://developer.nvidia.com/blog/using-shared-memory-cuda-cc/and https://stackoverflow.com/questions/69963358/how-to-fix-warning-dynamic-initialization-is-not-supported-for-a-function-scop
  * @param in_arr input array of type E (elements).
  * @param out_arr output array of type E (elements).
  * @param n column size of in_arr.
  * @param batch_size row size of in_arr.
- * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
  */
 __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
 {
-    // We use shared memory 'cache' blocks for coalesce memory efficiency improvement
-    // use dynamically allocated shared memory: https://developer.nvidia.com/blog/using-shared-memory-cuda-cc/
-    // and https://stackoverflow.com/questions/69963358/how-to-fix-warning-dynamic-initialization-is-not-supported-for-a-function-scop
     extern __shared__ fr_t block[];
 
     // Get indexes
@@ -131,30 +134,6 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
     }
 }
 
-/**
- * Fast transpose from NVIDIA. Takes array and returns its transpose
- * @param in_arr input array of type E (elements).
- * @param out_arr output array of type E (elements).
- * @param n column size of in_arr.
- * @param batch_size row size of in_arr.
- * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
- */
-__global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
-{
-    // Get indexes
-    int threadId = blockIdx.x * blockDim.x + threadIdx.x;
-    if (threadId < n * batch_size)
-    {
-        int j_idx = threadId % n;
-        int i_idx = threadId / n;
-
-        j_idx = __brev(j_idx) >> (32 - lg_n);
-        int idx_swapped = j_idx * batch_size + i_idx;
-
-        out_arr[idx_swapped] = in_arr[threadId];
-    }
-}
-
 __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
 {
     for (uint32_t i = 0; i < n_twiddles; i++)
@@ -169,7 +148,7 @@ __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr
 }
 
 /**
- * Cooley-Tukey NTT.
+ * Cooley-Tukey NTT implementation, see: https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm .
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type E (elements).
  * @param n length of d_arr.
@@ -248,7 +227,7 @@ __global__ void template_normalize_kernel(fr_t *arr, uint32_t n, fr_t n_inv)
 }
 
 /**
- * Cooley-Tuckey NTT.
+ * Cooley-Tukey NTT implementation, see: https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm .
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type E (elements).
  * @param n length of d_arr.
@@ -410,26 +389,6 @@ __global__ void ntt_template_kernel_shared(
             }
         }
     }
-}
-
-template <unsigned int z_count>
-__device__ __forceinline__ void transpose(fr_t r[z_count])
-{
-    extern __shared__ fr_t shared_exchange[];
-    fr_t(*xchg)[z_count] = reinterpret_cast<decltype(xchg)>(shared_exchange);
-
-    const unsigned int x = threadIdx.x & (z_count - 1);
-    const unsigned int y = threadIdx.x & ~(z_count - 1);
-
-#pragma unroll
-    for (int z = 0; z < z_count; z++)
-        xchg[y + z][x] = r[z];
-
-    __syncwarp();
-
-#pragma unroll
-    for (int z = 0; z < z_count; z++)
-        r[z] = xchg[y + x][z];
 }
 
 #endif /**ZEKNOX_CUDA_NTTT_KERNELS_CU_ */

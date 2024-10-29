@@ -41,19 +41,9 @@ extern "C" {
         ntt_direction: types::NTTDirection,
         cfg: types::NTTConfig,
         lg_domain_size: usize,
-        total_num_input_elements: usize,
-        total_num_output_elements: usize,
     ) -> error::Error;
 
     fn compute_transpose_rev(
-        device_id: i32,
-        output: *mut core::ffi::c_void,
-        input: *mut core::ffi::c_void,
-        lg_n: usize,
-        cfg: types::TransposeConfig,
-    ) -> error::Error;
-
-    fn compute_naive_transpose_rev(
         device_id: i32,
         output: *mut core::ffi::c_void,
         input: *mut core::ffi::c_void,
@@ -144,8 +134,6 @@ pub fn lde_batch_multi_gpu<T>(
     num_gpu: usize,
     cfg: NTTConfig,
     log_n_size: usize,
-    total_num_input_elements: usize,
-    total_num_output_elements: usize,
 ) {
     let err = unsafe {
         // println!("In compute_batched_lde_multi_gpu {:?}", total_num_input_elements);
@@ -156,8 +144,6 @@ pub fn lde_batch_multi_gpu<T>(
             types::NTTDirection::Forward,
             cfg,
             log_n_size,
-            total_num_input_elements,
-            total_num_output_elements,
         )
     };
 
@@ -213,28 +199,6 @@ pub fn transpose_rev_batch<T>(
 ) {
     let err = unsafe {
         compute_transpose_rev(
-            device_id,
-            output as *mut core::ffi::c_void,
-            input as *mut core::ffi::c_void,
-            log_n_size,
-            cfg,
-        )
-    };
-
-    if err.code != 0 {
-        panic!("{}", String::from(err));
-    }
-}
-
-pub fn naive_transpose_rev_batch<T>(
-    device_id: i32,
-    output: *mut T,  // &mut [T],
-    input: *const T, // &mut [T],
-    log_n_size: usize,
-    cfg: TransposeConfig,
-) {
-    let err = unsafe {
-        compute_naive_transpose_rev(
             device_id,
             output as *mut core::ffi::c_void,
             input as *mut core::ffi::c_void,
