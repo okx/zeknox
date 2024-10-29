@@ -21,6 +21,21 @@
 #include <utils/gpu_t.cuh>
 #include <msm/msm.h>
 
+unsigned int nearest_power_of_two(unsigned int n) {
+    if (n == 0) return 1;
+    if ((n & (n - 1)) == 0) return n;
+
+    // Find the highest bit position (most significant bit)
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+
+    return n + 1;
+}
+
 /**
  * `P` result type; should be in jacobian coordinates
  * `A` point type; should be in affine coordinates
@@ -52,7 +67,7 @@ public:
         // in theory, the best performance is achieved by setting wbins = lg2(msm_size);
         // Note: however, the current sum kernel only works for seveval windows bits of power of 2;
         // because it needs to divide further into two sub windows
-        wbits = 16;
+        wbits = min(nearest_power_of_two(lg2(np)), 16);
         nwins = (S::nbits + wbits - 1) / wbits;
     }
     msm_t(int device_id = -1)
