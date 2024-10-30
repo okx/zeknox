@@ -22,9 +22,6 @@ fn random_fr() -> u64 {
 }
 
 const DEFAULT_GPU: i32 = 0;
-const DEFAULT_GPU2: i32 = 1;
-const DEFAULT_GPU3: i32 = 2;
-const DEFAULT_GPU4: i32 = 3;
 
 #[test]
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
@@ -699,7 +696,6 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_coeff_form() {
 
     for i in 0..10 {
         println!("Starting test: {:?}", i + 1);
-        let total_num_input_elements = input_domain_size * batches;
         let total_num_output_elements = output_domain_size * batches;
 
         let mut host_inputs: Vec<u64> = (0..batches)
@@ -793,7 +789,6 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_value_form() {
 
     for i in 0..10 {
         println!("Starting test: {:?}", i + 1);
-        let total_num_input_elements = input_domain_size * batches;
         let total_num_output_elements = output_domain_size * batches;
 
         let mut host_inputs: Vec<u64> = (0..batches)
