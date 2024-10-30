@@ -26,7 +26,7 @@ inline T& pow_byref(T& val, U p)
     T sqr = val;
     val = T::csel(val, T::one(), p&1);
 
-    #pragma unroll 1
+    // #pragma unroll 1
     while (p >>= 1) {
         sqr.sqr();
         if (p&1)

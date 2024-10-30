@@ -1,22 +1,28 @@
-// Copyright Supranational LLC
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
+// the code snipet is based from Supranational sppark lib; many cusotmizations have been made
 
-#ifndef __SPPARK_UTIL_GPU_T_CUH__
-#define __SPPARK_UTIL_GPU_T_CUH__
+#ifndef __ZEKNOX_UTIL_GPU_T_CUH__
+#define __ZEKNOX_UTIL_GPU_T_CUH__
 
 #ifndef __CUDACC__
 #include <cuda_runtime.h>
 #endif
 
-#include "thread_pool_t.hpp"
+#if __cplusplus < 201103L && !(defined(_MSVC_LANG) && _MSVC_LANG >= 201103L)
+# error C++11 or later is required.
+#endif
+
+#include <atomic>
+#include <vector>
 #include "exception.cuh"
-#include "slice_t.hpp"
 #include "assert.h"
 
 #ifndef WARP_SZ
 #define WARP_SZ 32
 #endif
+
+#define ALLOC_MEM true
+#define DO_NOT_ALLOC_MEM false
+#define LIFE_TIME_MANAGED_MANUALLY true
 
 class gpu_t;
 size_t ngpus();
@@ -77,9 +83,17 @@ public:
     const int gpu_id;
 
 public:
-    stream_t(int id) : gpu_id(id)
+    stream_t(int id, bool blocking) : gpu_id(id)
     {
-        cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+        // printf("cuda create stream for gpu: %d, blocking: %d\n", id, blocking);
+        if (blocking)
+        {
+            cudaStreamCreateWithFlags(&stream, cudaStreamDefault);
+        }
+        else
+        {
+            cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+        }
     }
     ~stream_t()
     {
@@ -131,57 +145,25 @@ public:
     {
         HtoD(dst, &src[0], src.size(), sz);
     }
-    template <typename T, typename U>
-    inline void HtoD(T &dst, slice_t<U> src, size_t sz = sizeof(T)) const
-    {
-        HtoD(&dst, &src[0], src.size(), sz);
-    }
-    template <typename T, typename U>
-    inline void HtoD(T *dst, slice_t<U> src, size_t sz = sizeof(T)) const
-    {
-        HtoD(dst, &src[0], src.size(), sz);
-    }
-
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), dim3 gridDim, dim3 blockDim,
-                            size_t shared_sz,
-                            Types... args) const
-    {
-        if (gpu_props(gpu_id).sharedMemPerBlock < shared_sz)
-            CUDA_OK(cudaFuncSetAttribute(f, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_sz));
-        if (gridDim.x == 0 || blockDim.x == 0)
-        {
-            int blockSize, minGridSize;
-
-            CUDA_OK(cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, f));
-            if (blockDim.x == 0)
-                blockDim.x = blockSize;
-            if (gridDim.x == 0)
-                gridDim.x = minGridSize;
-        }
-        void *va_args[sizeof...(args)] = {&args...};
-        CUDA_OK(cudaLaunchCooperativeKernel((const void *)f, gridDim, blockDim,
-                                            va_args, shared_sz, stream));
-    }
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), const launch_params_t &lps,
-                            Types... args) const
-    {
-        launch_coop(f, lps.gridDim, lps.blockDim, lps.shared, args...);
-    }
 
     template <typename T>
     inline void DtoH(T *dst, const void *src, size_t nelems,
                      size_t sz = sizeof(T)) const
     {
-        // printf("device to host, gpu_id: %d\n", gpu_id);
         if (sz == sizeof(T))
+        {
+            // printf("1D device to host, gpu_id: %d, stream: %d\n", gpu_id, stream);
             CUDA_OK(cudaMemcpyAsync(dst, src, nelems * sizeof(T),
                                     cudaMemcpyDeviceToHost, stream));
+        }
+
         else
+        {
+            // printf("2D device to host, gpu_id: %d\n", gpu_id);
             CUDA_OK(cudaMemcpy2DAsync(dst, sizeof(T), src, sz,
                                       std::min(sizeof(T), sz), nelems,
                                       cudaMemcpyDeviceToHost, stream));
+        }
     }
 
     template <typename T>
@@ -207,6 +189,7 @@ public:
     inline void DtoH(std::vector<T> &dst, const void *src,
                      size_t sz = sizeof(T)) const
     {
+        printf("copy to host size: %d\n", dst.size());
         DtoH(&dst[0], src, dst.size(), sz);
     }
 
@@ -252,13 +235,13 @@ public:
     static const size_t FLIP_FLOP = 3;
 
 private:
-    int gpu_id, cuda_id;
+    int gpu_id;
+    int cuda_id; // cuda id is determined by `cudaGetDevice`
     cudaDeviceProp prop;
     size_t total_mem;
-    mutable stream_t zero = {gpu_id}; // the default stream, zero
+    mutable stream_t zero = {gpu_id, true}; // the default stream, zero
     // in each gpu, there are three streams by default, non blocking
-    mutable stream_t flipflop[FLIP_FLOP] = {gpu_id, gpu_id, gpu_id};
-    mutable thread_pool_t pool{"SPPARK_GPU_T_AFFINITY"};
+    mutable stream_t flipflop[FLIP_FLOP] = {{gpu_id, false}, {gpu_id, false}, {gpu_id, false}};
 
 public:
     gpu_t(int id, int real_id, const cudaDeviceProp &p)
@@ -281,16 +264,6 @@ public:
     stream_t &operator[](size_t i) const { return flipflop[i % FLIP_FLOP]; }
     inline operator stream_t &() const { return zero; }
     inline operator cudaStream_t() const { return zero; }
-
-    inline size_t ncpus() const { return pool.size(); }
-    template <class Workable>
-    inline void spawn(Workable work) const { pool.spawn(work); }
-    template <class Workable>
-    inline void par_map(size_t num_items, size_t stride, Workable work,
-                        size_t max_workers = 0) const
-    {
-        pool.par_map(num_items, stride, work, max_workers);
-    }
 
     /*stream allocate memory, return the pointer to the allocation*/
     inline void *Dmalloc(size_t sz) const
@@ -326,21 +299,6 @@ public:
         HtoD(&dst, &src[0], src.size(), sz);
     }
 
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), dim3 gridDim, dim3 blockDim,
-                            size_t shared_sz,
-                            Types... args) const
-    {
-        zero.launch_coop(f, gridDim, blockDim, shared_sz,
-                         args...);
-    }
-    template <typename... Types>
-    inline void launch_coop(void (*f)(Types...), const launch_params_t &lps,
-                            Types... args) const
-    {
-        zero.launch_coop(f, lps, args...);
-    }
-
     template <typename T>
     inline void DtoH(T *dst, const void *src, size_t nelems,
                      size_t sz = sizeof(T)) const
@@ -371,7 +329,8 @@ public:
     inline void sync() const
     {
         zero.sync(); // sync the default stream
-        for (auto &f : flipflop){
+        for (auto &f : flipflop)
+        {
             f.sync();
         }
     }
@@ -454,7 +413,7 @@ public:
     // int gpu_id;
     char *name;
     size_t n_elements;
-    stream_t& stream;
+    stream_t &stream;
     bool manual_drop;
     dev_ptr_t(size_t nelems) : d_ptr(nullptr)
     {
@@ -465,7 +424,7 @@ public:
         }
     }
     // TODO: `manual_drop` and `alloc` can be reduced to one flag
-    dev_ptr_t(size_t nelems, stream_t &s, bool alloc,  bool manual_drop = false) : d_ptr(nullptr), stream(s), manual_drop(manual_drop)
+    dev_ptr_t(size_t nelems, stream_t &s, bool alloc, bool manual_drop = false) : d_ptr(nullptr), stream(s), manual_drop(manual_drop)
     {
         // printf("construct pointer on device: %d, nelems: %d, alloc: %d, manual_drop:%d\n",s.gpu_id, nelems, alloc, manual_drop);
         // manual_drop=false;
@@ -473,14 +432,15 @@ public:
         {
             n_elements = (nelems + WARP_SZ - 1) & ((size_t)0 - WARP_SZ); // make n multiples of 32
 
-            if (alloc) {
+            if (alloc)
+            {
                 this->alloc();
             }
         }
-
     }
     dev_ptr_t(const dev_ptr_t &r) = delete; // Copy constructor explicitly deleted
-    void set_device_ptr(T* ptr) {
+    void set_device_ptr(T *ptr)
+    {
         d_ptr = ptr;
     }
     dev_ptr_t &operator=(const dev_ptr_t &r) = delete; // Copy assignment operator explicitly deleted
@@ -489,7 +449,7 @@ public:
 
         if (d_ptr && !manual_drop)
         {
-            // printf("drop device pointer, named: %s, on device: %d\n", name, stream.gpu_id);
+            // printf("drop device pointer,  on device: %d\n", stream.gpu_id);
             cudaFree((void *)d_ptr);
         }
     }

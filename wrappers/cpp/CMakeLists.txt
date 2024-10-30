@@ -21,9 +21,15 @@ include(cmake/platform.cmake)
 
 set(USE_ASM    ON CACHE BOOL "Use asm implementation for Fr and Fq")
 set(USE_OPENMP ON CACHE BOOL "Use OpenMP")
+set(BUILD_MSM OFF CACHE BOOL "Build MSM")
 set(G2_ENABLED OFF CACHE BOOL "enable G2 curve")
 
+if(BUILD_MSM)
+    message("Build MSM")
+    add_definitions(-DBUILD_MSM)
+endif()
 if(G2_ENABLED)
+    message("Build MSM G2 Enabled")
     add_definitions(-DG2_ENABLED)
 endif()
 
@@ -97,7 +103,6 @@ include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
 set(IS_CURVE_SUPPORTED FALSE)
 set(SUPPORTED_CURVES BN254;GOLDILOCKS)
 foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
-
   if (CURVE STREQUAL SUPPORTED_CURVE)
     add_definitions(-DFEATURE_${CURVE})
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DFEATURE_${CURVE}")
@@ -111,7 +116,13 @@ else()
 endif ()
 
 add_subdirectory(${PROJECT_CUDA_SOURCE_DIR} zeknox)
-target_compile_definitions(cryptocuda PRIVATE -DBUILD_MSM=ON -DCURVE=BN254 -DG2_ENABLED=ON)
+target_compile_definitions(cryptocuda PRIVATE CURVE=${CURVE})
+if (BUILD_MSM)
+    target_compile_definitions(cryptocuda PRIVATE BUILD_MSM)
+endif()
+if (G2_ENABLED)
+    target_compile_definitions(cryptocuda PRIVATE G2_ENABLED)
+endif()
 
 ##============================Build Test & Bench==============================================##
 enable_testing()
