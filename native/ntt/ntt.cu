@@ -142,7 +142,10 @@ namespace ntt {
     }
 
     /**
-     * @brief calculate twiddle factors
+     * @brief calculate twiddle factors and stores them in memory on the GPU.
+     * @param d_twiddles this is the memory location to store the twiddle factors
+     * @param n_twiddles number of twiddle factors to generate
+     * @param omega root of unity that is used to generate all twiddle factors
      */
     void fill_twiddle_factors_array(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega, stream_t &stream) {
         size_t size_twiddles = n_twiddles * sizeof(fr_t);
@@ -216,6 +219,12 @@ namespace ntt {
         return;
     }
 
+    /**
+     * @brief initiates the twiddle factors for both directions of the NTT. Stores the pointers of the memory
+     * location in gpu where factors are stored.
+     * @param gpu the gpu to init the factors at.
+     * @param lg_domain_size the number of factors in lg form
+     */
     RustError init_twiddle_factors(const gpu_t &gpu, size_t lg_domain_size) {
         gpu.select();
         size_t size = static_cast<size_t>(1 << lg_domain_size);
@@ -312,11 +321,12 @@ namespace ntt {
 
     /**
      * A batch NTT operation on multiple GPUs. Depending on the config, can be a iNTT or NTT and with or without coset.
-     * \param num_gpu, number of gpus being used for the multigpu lde.
-     * \param inputs, input and output fr array
-     * \param lg_n 2^{lg_n} = N, where N is size of input array
-     * \param direction, direction of NTT, farward, or inverse, default is farward
-     * \param cfg NTT_config for the ntt operation
+     *  @param num_gpu, number of gpus being used for the multigpu lde.
+     *  @param output, output fr array
+     *  @param inputs, input fr array
+     *  @param lg_n 2^{lg_n} = N, where N is size of input array
+     *  @param direction, direction of NTT, farward, or inverse, default is farward
+     *  @param cfg NTT_config for the ntt operation
      */
     RustError batch_lde_multi_gpu(fr_t *output, fr_t *inputs, size_t num_gpu, NTT_Direction direction, NTT_Config cfg, size_t lg_n) {
         if (cfg.batches == 0 || lg_n == 0 || cfg.extension_rate_bits < 1) {
@@ -354,8 +364,6 @@ namespace ntt {
 
                 size_t total_input_elements = (static_cast<size_t>(1 << lg_n)) * batches;
 
-                // printf("Allocating input memory %ld B (log %ld, batches %ld) on GPU %d\n", total_input_elements, lg_n, batches, gpu.id());
-
                 dev_ptr_t<fr_t> input_data{
                     total_input_elements,
                     gpu,
@@ -368,8 +376,6 @@ namespace ntt {
                 input_pointers.emplace_back(&input_data[0]);
 
                 size_t total_output_elements = size * batches;
-
-                // printf("Allocating output memory %ld B on GPU %d\n", total_output_elements, gpu.id());
 
                 dev_ptr_t<fr_t> output_data{
                     total_output_elements,
@@ -415,31 +421,25 @@ namespace ntt {
             d_buffer.set_device_ptr(output);
 
             for (size_t i = 0; i < num_gpu; i++) {
-                // printf("Multi-GPU memory movement starting \n");
                 auto &gpu = select_gpu(i);
 
                 fr_t *output_data = output_pointers.at(i);
 
                 size_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
-                // printf("Num batches:%d on GPU: %d\n", batches, gpu.id());
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = static_cast<size_t>(1 << lg_output_domain_size);
                 size_t total_output_elements = size * batches;
                 size_t total_output_bytes = total_output_elements * sizeof(fr_t);
-                // printf("Bytes:%d on GPU: %d\n", total_output_bytes, gpu.id());
 
                 if (i == 0) {
-                    // printf("Offset:0 on GPU: %d\n", gpu.id());
                     CUDA_OK(cudaMemcpyAsync(&d_buffer[0], output_data, total_output_bytes, cudaMemcpyDeviceToDevice, gpu));
-                    // printf("GPU 0 memory moved\n");
                 } else {
                     int canAccessPeer = 0;
+
                     CUDA_OK(cudaDeviceCanAccessPeer(&canAccessPeer, 0, gpu.id()));
+
                     if (canAccessPeer) {
-                        // printf("Peer copy can access gpu\n");
                         size_t offset = i * num_batches_per_gpu * (static_cast<size_t>(1 << lg_output_domain_size));
-                        // printf("Offset:%d on GPU: %d\n", offset, gpu.id());
-                        // printf("The pointer value: %d\n", &d_buffer[offset]);
                         CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, gpu.id(), total_output_bytes, gpu));
                     }
                 }
@@ -449,7 +449,7 @@ namespace ntt {
                 fr_t *output_data = output_pointers.at(i);
                 fr_t *input_data = input_pointers.at(i);
                 auto &gpu = select_gpu(i);
-                // printf("Syncing gpu %d\n", gpu.id());
+
                 gpu.sync();
                 CUDA_OK(cudaFree(reinterpret_cast<void *>(output_data)));
                 CUDA_OK(cudaFree(reinterpret_cast<void *>(input_data)));
@@ -467,8 +467,13 @@ namespace ntt {
     }
 
     /**
-     * assume with coset
-     * \param lg_n , logn before extension
+     * A batch lde on one gpu with coset.
+     * @param lg_n , logn before extension
+     * @param gpu , which gpu the lde is on
+     * @param output output array for lde (size 2^(lg_n+extension_bits)
+     * @param input input array for lde (size 2^lg_n)
+     * @param direction, direction of NTT, farward, or inverse, default is farward
+     * @param cfg NTT_config for the ntt operation
      */
     RustError batch_lde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_Direction direction, NTT_Config cfg) {
         if (lg_n == 0 || cfg.extension_rate_bits < 1) {
