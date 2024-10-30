@@ -2,8 +2,8 @@ use std::ops::Mul;
 
 use cryptography_cuda::device::memory::HostOrDeviceSlice;
 use cryptography_cuda::{
-    init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch, lde_batch_multi_gpu,
-    ntt_batch, transpose_rev_batch, types::*,
+    init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch, lde_batch_multi_gpu, ntt_batch,
+    transpose_rev_batch, types::*,
 };
 use plonky2_field::fft::{fft, ifft};
 use plonky2_field::goldilocks_field::GoldilocksField;
@@ -470,7 +470,7 @@ fn test_compute_batched_lde_coeff_form() {
     let mut gpu_lde_output = vec![0; (1 << lg_domain_size) * batches];
     if cfg_lde.is_coeffs {
         println!("is coeff form!");
-    }else{
+    } else {
         println!("is point value form!");
     }
     lde_batch(
@@ -516,9 +516,7 @@ fn test_compute_batched_lde_value_form() {
     let input_coeffs = input_values
         .clone()
         .into_par_iter()
-        .map(|p| {
-            p.ifft()
-        })
+        .map(|p| p.ifft())
         .collect::<Vec<_>>();
 
     let mut cpu_polys_coeffs: Vec<GoldilocksField> = input_coeffs
@@ -679,6 +677,10 @@ fn test_compute_batched_lde_data_on_device_coeff_form() {
 
 #[test]
 fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_coeff_form() {
+    let num_gpus: usize = std::env::var("NUM_OF_GPUS")
+        .expect("NUM_OF_GPUS should be set")
+        .parse()
+        .unwrap();
     let lg_n: usize = 17;
     let rate_bits = 3;
     let lg_domain_size = lg_n + rate_bits;
@@ -686,33 +688,14 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_coeff_form() {
     let output_domain_size = 1usize << (lg_n + rate_bits);
     let batches = 30;
 
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
-    init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
-    init_twiddle_factors_rs(DEFAULT_GPU3 as usize, lg_domain_size);
-    init_twiddle_factors_rs(DEFAULT_GPU4 as usize, lg_domain_size);
-
-    init_coset_rs(
-        DEFAULT_GPU as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
-    init_coset_rs(
-        DEFAULT_GPU2 as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
-
-    init_coset_rs(
-        DEFAULT_GPU3 as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
-
-    init_coset_rs(
-        DEFAULT_GPU4 as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
+    for i in 0..num_gpus {
+        init_twiddle_factors_rs(i as usize, lg_domain_size);
+        init_coset_rs(
+            i,
+            lg_domain_size,
+            GoldilocksField::coset_shift().to_canonical_u64(),
+        );
+    }
 
     for i in 0..10 {
         println!("Starting test: {:?}", i + 1);
@@ -747,7 +730,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_coeff_form() {
         lde_batch_multi_gpu(
             device_output_data.as_mut_ptr(),
             host_inputs.as_mut_ptr(),
-            4,
+            num_gpus,
             cfg_lde.clone(),
             lg_n,
         );
@@ -784,9 +767,13 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_coeff_form() {
     }
 }
 
-
 #[test]
 fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_value_form() {
+    let num_gpus: usize = std::env::var("NUM_OF_GPUS")
+        .expect("NUM_OF_GPUS should be set")
+        .parse()
+        .unwrap();
+
     let lg_n: usize = 17;
     let rate_bits = 3;
     let lg_domain_size = lg_n + rate_bits;
@@ -794,38 +781,15 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_value_form() {
     let output_domain_size = 1usize << (lg_n + rate_bits);
     let batches = 30;
 
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
-    init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_domain_size);
-    init_twiddle_factors_rs(DEFAULT_GPU3 as usize, lg_domain_size);
-    init_twiddle_factors_rs(DEFAULT_GPU4 as usize, lg_domain_size);
-
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_n);
-    init_twiddle_factors_rs(DEFAULT_GPU2 as usize, lg_n);
-    init_twiddle_factors_rs(DEFAULT_GPU3 as usize, lg_n);
-    init_twiddle_factors_rs(DEFAULT_GPU4 as usize, lg_n);
-
-    init_coset_rs(
-        DEFAULT_GPU as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
-    init_coset_rs(
-        DEFAULT_GPU2 as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
-
-    init_coset_rs(
-        DEFAULT_GPU3 as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
-
-    init_coset_rs(
-        DEFAULT_GPU4 as usize,
-        lg_domain_size,
-        GoldilocksField::coset_shift().to_canonical_u64(),
-    );
+    for i in 0..num_gpus {
+        init_twiddle_factors_rs(i as usize, lg_domain_size);
+        init_twiddle_factors_rs(i as usize, lg_n);
+        init_coset_rs(
+            i,
+            lg_domain_size,
+            GoldilocksField::coset_shift().to_canonical_u64(),
+        );
+    }
 
     for i in 0..10 {
         println!("Starting test: {:?}", i + 1);
@@ -861,7 +825,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu_value_form() {
         lde_batch_multi_gpu(
             device_output_data.as_mut_ptr(),
             host_inputs.as_mut_ptr(),
-            4,
+            num_gpus,
             cfg_lde.clone(),
             lg_n,
         );
