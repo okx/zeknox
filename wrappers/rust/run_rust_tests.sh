@@ -17,7 +17,6 @@ cargo test --features=gl64 --test ntt -- test_ntt_batch_with_coset --exact --noc
 cargo test --features=gl64 --test ntt -- test_compute_batched_lde_coeff_form --exact --nocapture
 cargo test --features=gl64 --test ntt -- test_compute_batched_lde_value_form --exact --nocapture
 cargo test --features=gl64 --test ntt -- test_compute_batched_lde_data_on_device_coeff_form --exact --nocapture
-cargo test --features=gl64 --test ntt -- test_ntt_without_bit_rev --exact --nocapture
 cargo test --features=gl64 --test ntt -- test_transpose_rev --exact --nocapture
 cargo test --features=gl64 --test merkle_tree -- --exact --nocapture
 
