@@ -48,7 +48,6 @@ typedef struct
     _BOOL are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     _BOOL with_coset;
     _BOOL is_multi_gpu;
-    _BOOL is_coeffs;
     uint32_t salt_size;
 } NTT_Config;
 

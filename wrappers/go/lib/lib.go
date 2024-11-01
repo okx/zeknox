@@ -29,7 +29,6 @@ func toCNTTConfig(cfg NTTConfig) C.NTT_Config {
 		are_outputs_on_device: C.char(BoolToInt8(cfg.AreOutputsOnDevice)),
 		with_coset:            C.char(BoolToInt8(cfg.WithCoset)),
 		is_multi_gpu:          C.char(BoolToInt8(cfg.IsMultiGPU)),
-		is_coeffs:             C.char(BoolToInt8(cfg.IsCoeffs)),
 		salt_size:             C.uint(cfg.SaltSize),
 	}
 }

@@ -212,6 +212,7 @@ pub fn transpose_rev_batch<T>(
     }
 }
 
+
 pub fn init_twiddle_factors_rs(device_id: usize, lg_n: usize) {
     let err = unsafe { init_twiddle_factors(device_id, lg_n) };
 

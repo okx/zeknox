@@ -32,7 +32,6 @@ type NTTConfig struct {
 	AreOutputsOnDevice bool
 	WithCoset          bool
 	IsMultiGPU         bool
-	IsCoeffs           bool
 	SaltSize           uint32
 }
 
@@ -46,7 +45,6 @@ func DefaultNTTConfig() NTTConfig {
 		AreOutputsOnDevice: false,
 		WithCoset:          false,
 		IsMultiGPU:         false,
-		IsCoeffs:           true,
 		SaltSize:           0,
 	}
 }

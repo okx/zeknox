@@ -385,14 +385,6 @@ namespace ntt {
 
                 output_pointers.emplace_back(&output_data[0]);
 
-                // If the form is in point value form, we first do a ifft
-                if (!cfg.is_coeffs) {
-                    fr_t *d_twiddle_ifft;
-                    d_twiddle_ifft = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_n);
-                    uint32_t n_twiddles_ifft = (1 << lg_n);
-                    ntt_inplace_batch_template(input_data, d_twiddle_ifft, n_twiddles_ifft, batches, true, false, coset_ptr_arr[gpu.id()], gpu);
-                }
-
                 extend_inputs_batch(&output_data[0], &input_data[0], static_cast<size_t>(1 << lg_n), lg_n, cfg.extension_rate_bits, batches, gpu);
 
                 if (direction == NTT_Direction::inverse) {
@@ -525,14 +517,6 @@ namespace ntt {
 
             if (cfg.are_outputs_on_device) {
                 d_output.set_device_ptr(output);
-            }
-
-            // If the form is in point value form, we first
-            if (!cfg.is_coeffs) {
-                fr_t *d_twiddle_ifft;
-                d_twiddle_ifft = all_gpus_twiddle_inverse_arr[gpu.id()].at(lg_n);
-                uint32_t n_twiddles_ifft = (1 << lg_n);
-                ntt_inplace_batch_template(d_input, d_twiddle_ifft, n_twiddles_ifft, cfg.batches, true, false, coset_ptr_arr[gpu.id()], gpu);
             }
 
             extend_inputs_batch(&d_output[0], &d_input[0], static_cast<size_t>(1 << lg_n), lg_n, cfg.extension_rate_bits, cfg.batches, gpu);
