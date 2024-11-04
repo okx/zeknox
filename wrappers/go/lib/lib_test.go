@@ -9,7 +9,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/okx/cryptography_cuda/wrappers/go/device"
+	"github.com/okx/zeknox/wrappers/go/device"
 )
 
 func TestListDevicesInfo(t *testing.T) {

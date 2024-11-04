@@ -37,9 +37,9 @@ set(CMAKE_DEBUG_POSTFIX d)
 
 find_package(OpenMP)
 
-set(LIB_CXX_NAME "cryptocudacpp")
-set(LIB_CUDA_NAME "cryptocudacuda")
-set(LIB_NAME "cryptocuda")
+set(LIB_CXX_NAME "zeknox_cpp")
+set(LIB_CUDA_NAME "zeknox_cuda")
+set(LIB_NAME "zeknox")
 set(EXE_TESTS_CUDA_NAME "tests.exe")
 set(EXE_TESTS_CXX_NAME "tests_cpp.exe")
 
@@ -71,7 +71,7 @@ if(NOT CMAKE_CUDA_ARCHITECTURES)
 endif()
 check_language(CUDA)
 enable_language(CUDA)
-project(cryptocuda VERSION 1.0.0 LANGUAGES CUDA CXX)
+project(${LIB_NAME} VERSION 1.0.0 LANGUAGES CUDA CXX)
 
 # specify cuda runtime lib
 set(CMAKE_CUDA_RUNTIME_LIBRARY, "Static")
@@ -190,7 +190,7 @@ else() # USE_CUDA
 set(LIB_INC
 ${PROJECT_SOURCE_DIR})
 
-project(cryptocudacxx VERSION 1.0.0 LANGUAGES CXX)
+project(${LIB_CXX_NAME} VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_FLAGS "-Wall -I${PROJECT_SOURCE_DIR} ${EXTRA_DEFAULT_FLAGS}")
 

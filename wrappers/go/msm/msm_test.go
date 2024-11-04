@@ -13,7 +13,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/okx/cryptography_cuda/wrappers/go/device"
+	"github.com/okx/zeknox/wrappers/go/device"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/consensys/gnark-crypto/ecc"

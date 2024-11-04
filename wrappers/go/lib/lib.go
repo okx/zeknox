@@ -5,7 +5,7 @@
 package lib
 
 /*
-#cgo LDFLAGS: -L/usr/local/lib -L/usr/local/cuda/lib64 -lcryptocuda -lblst -lcuda -lcudart -lm -lstdc++ -lgomp
+#cgo LDFLAGS: -L/usr/local/lib -L/usr/local/cuda/lib64 -lzeknox -lblst -lcuda -lcudart -lm -lstdc++ -lgomp
 #cgo CFLAGS: -I../../../native -I/usr/local/cuda/include -DFEATURE_BN254 -D__ADX__ -fopenmp
 #include "lib.h"
 #include "msm/msm.h"

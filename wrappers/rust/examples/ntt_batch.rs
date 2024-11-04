@@ -5,7 +5,7 @@
 #[allow(dead_code)]
 #[allow(unused_imports)]
 extern crate criterion;
-use cryptography_cuda::{
+use zeknox::{
     device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt_batch, types::NTTConfig,
 };
 use rand::random;

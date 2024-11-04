@@ -5,7 +5,7 @@
 use core::mem::MaybeUninit;
 use core::slice;
 
-use cryptography_cuda::{
+use zeknox::{
     device::{memory::HostOrDeviceSlice, stream::CudaStream},
     fill_digests_buf_linear_gpu_with_gpu_ptr, fill_digests_buf_linear_multigpu_with_gpu_ptr,
 };

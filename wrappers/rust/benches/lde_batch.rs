@@ -6,7 +6,7 @@ extern crate criterion;
 use std::env;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{
+use zeknox::{
     device::memory::HostOrDeviceSlice, get_number_of_gpus_rs, init_coset_rs,
     init_twiddle_factors_rs, lde_batch_multi_gpu, types::NTTConfig,
 };

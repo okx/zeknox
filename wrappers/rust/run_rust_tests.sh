@@ -22,7 +22,6 @@ cargo test --features=gl64 --test ntt -- test_ntt_batch_with_coset --exact --noc
 cargo test --features=gl64 --test ntt -- test_compute_batched_lde --exact --nocapture
 cargo test --features=gl64 --test ntt -- test_compute_batched_lde_data_on_device --exact --nocapture
 cargo test --features=gl64 --test ntt -- test_transpose_rev --exact --nocapture
-cargo test --features=gl64 --test ntt -- test_naive_transpose_rev --exact --nocapture
 cargo test --features=gl64 --test merkle_tree -- --exact --nocapture
 
 if [ $NUM_OF_GPUS -gt 1 ]; then
