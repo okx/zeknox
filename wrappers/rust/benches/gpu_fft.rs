@@ -1,3 +1,7 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 use cryptography_cuda::{ntt, types::NTTInputOutputOrder};

@@ -1,3 +1,9 @@
+"""
+Copyright 2024 OKX Group
+Licensed under the Apache License, Version 2.0, see LICENSE for details.
+SPDX-License-Identifier: Apache-2.0
+"""
+
 import os
 # import blst
 import itertools
@@ -7,8 +13,8 @@ from time import time
 import random
 from typing import Tuple, List
 
-from arithmetic import (    
-    get_root_of_unity, 
+from arithmetic import (
+    get_root_of_unity,
     count_trailing_zeros,
     div
 )
@@ -27,10 +33,10 @@ n = 1 << 0
 m = 1 << 3
 MAX_DEGREE_POLY = MODULUS-1
 
-# def test_fft(): 
+# def test_fft():
 #     # random input
 #     D_in = [[random.randint(1, MAX_DEGREE_POLY) for _ in range(m)] for _ in range(n)]
-    
+
 #     # saved input
 #     with open(f'test_data/D_in_{n}_{m}.csv') as file:
 #         reader = csv.reader(file)
@@ -59,4 +65,4 @@ if __name__ == "__main__":
     # out = div(MODULUS, 1<<32)
     # # out2 = pow(PRIMITIVE_ROOT, out, MODULUS)
     # print(out)
-    
+

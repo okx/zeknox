@@ -1,9 +1,9 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __MERKLE_H__
-#define __MERKLE_H__
+#ifndef __ZEKNOX_MERKLE_H__
+#define __ZEKNOX_MERKLE_H__
 
 #include <stdint.h>
 #include "types/int_types.h"
@@ -87,4 +87,4 @@ EXTERNC void fill_digests_buf_linear_cpu_avx512(
     u64 hash_type);
 #endif // __AVX512__
 
-#endif // __MERKEL_H__
+#endif // __ZEKNOX_MERKLE_H__

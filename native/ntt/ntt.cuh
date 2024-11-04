@@ -1,6 +1,9 @@
-// Copyright 2024 OKX
-#ifndef ZEKNOX_CUDA_NTT_NTT_CUH_
-#define ZEKNOX_CUDA_NTT_NTT_CUH_
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef __ZEKNOX_NTT_NTT_CUH__
+#define __ZEKNOX_NTT_NTT_CUH__
 
 #if defined(FEATURE_GOLDILOCKS)
 #include <ff/goldilocks.hpp>

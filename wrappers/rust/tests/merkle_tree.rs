@@ -1,3 +1,7 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 use core::mem::MaybeUninit;
 use core::slice;
 
@@ -7,13 +11,12 @@ use cryptography_cuda::{
 };
 use plonky2::{
     hash::{
-        poseidon_bn128::PoseidonBN128GoldilocksConfig,
         hash_types::{RichField, NUM_HASH_OUT_ELTS},
-        merkle_tree::MerkleTree
+        merkle_tree::MerkleTree,
+        poseidon_bn128::PoseidonBN128GoldilocksConfig,
     },
     plonk::config::{
-        GenericConfig, Hasher, HasherType, Poseidon2GoldilocksConfig,
-        PoseidonGoldilocksConfig,
+        GenericConfig, Hasher, HasherType, Poseidon2GoldilocksConfig, PoseidonGoldilocksConfig,
     },
 };
 use plonky2_field::types::Field;
@@ -156,7 +159,8 @@ fn capacity_up_to_mut<T>(v: &mut Vec<T>, len: usize) -> &mut [MaybeUninit<T>] {
 }
 
 fn test_merkle_trees_consistency_with_plonky2<C>()
-where C: GenericConfig<2>
+where
+    C: GenericConfig<2>,
 {
     let leaves_count = 1 << 12; // number of leaves
     let leaf_size = 7; // leaf size

@@ -1,4 +1,7 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef ZEKNOX_CUDA_NTT_NTT_H_
 #define ZEKNOX_CUDA_NTT_NTT_H_
 
