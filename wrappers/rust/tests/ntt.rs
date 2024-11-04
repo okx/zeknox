@@ -23,7 +23,7 @@ const DEFAULT_GPU: i32 = 0;
 
 #[test]
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
-    let lg_domain_size: usize = 4;
+    let lg_domain_size: usize = 15;
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     let domain_size = 1usize << lg_domain_size;
 
@@ -104,7 +104,7 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
 
 #[test]
 fn test_intt_batch_gl64_consistency_with_plonky2() {
-    let lg_domain_size: usize = 4;
+    let lg_domain_size: usize = 10;
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
 
     let batches = 2;
@@ -388,10 +388,10 @@ fn test_ntt_batch_with_coset() {
 
 #[test]
 fn test_compute_batched_lde_coeff_form() {
-    let lg_n: usize = 1;
-    let rate_bits = 1;
+    let lg_n: usize = 15;
+    let rate_bits = 3;
     let lg_domain_size = lg_n + rate_bits;
-    let batches = 2;
+    let batches = 10;
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     init_coset_rs(
         DEFAULT_GPU as usize,
@@ -480,7 +480,7 @@ fn test_compute_batched_lde_data_on_device_coeff_form() {
     let lg_domain_size = lg_n + rate_bits;
     let input_domain_size = 1usize << lg_n;
     let output_domain_size = 1usize << (lg_n + rate_bits);
-    let batches = 2;
+    let batches = 10;
 
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     init_coset_rs(
