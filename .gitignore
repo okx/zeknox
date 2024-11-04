@@ -2,6 +2,15 @@
 node_modules/
 target/
 build/
+docs/worklog/
 package/
-depends/gmp/
-depends/*.tar*
+native/utils/deviceQuery/CudaArch.mk
+native/utils/deviceQuery/deviceQuery
+*.o
+*.so
+*.a
+*.exe
+Cargo.lock
+wrappers/rust/src/device/bindings.rs
+wrappers/cpp/depends/gmp
+wrappers/cpp/depends/*.xz

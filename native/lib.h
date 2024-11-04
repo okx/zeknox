@@ -1,0 +1,53 @@
+// Copyright 2024 OKX
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef ZEKNOX_CUDA_LIB_H_
+#define ZEKNOX_CUDA_LIB_H_
+
+#ifdef __cplusplus
+#define EXTERN extern "C"
+#else
+#define EXTERN
+#endif
+#include <stdio.h>
+#include <utils/rusterror.h>
+#include <ntt/ntt.h>
+#ifdef BUILD_MSM
+#include <msm/msm.h>
+#endif
+#include <merkle/merkle.h>
+
+EXTERN RustError get_number_of_gpus(size_t *ngpus);
+
+EXTERN RustError list_devices_info();
+
+EXTERN void init_cuda();
+
+EXTERN void init_cuda_degree(const uint32_t max_degree);
+
+EXTERN RustError init_twiddle_factors(size_t device_id, size_t lg_n);
+
+EXTERN RustError init_coset(size_t device_id, size_t lg_domain_size, const uint64_t coset_gen);
+
+EXTERN RustError compute_batched_ntt(size_t device_id, void *inout, uint32_t lg_domain_size,
+                                     NTT_Direction ntt_direction,
+                                     NTT_Config cfg);
+
+EXTERN RustError compute_batched_lde(size_t device_id, void *output, void *input, uint32_t lg_domain_size,
+                                     NTT_Direction ntt_direction,
+                                     NTT_Config cfg);
+
+EXTERN RustError compute_batched_lde_multi_gpu(void *output, void *input, uint32_t num_gpu, NTT_Direction ntt_direction,
+                                               NTT_Config cfg,
+                                               uint32_t lg_domain_size,
+                                               size_t total_num_input_elements,
+                                               size_t total_num_output_elements);
+
+EXTERN RustError compute_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
+                                       NTT_TransposeConfig cfg);
+
+EXTERN RustError compute_naive_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
+                                             NTT_TransposeConfig cfg);
+
+#endif // ZEKNOX_CUDA_LIB_H_

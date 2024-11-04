@@ -1,0 +1,110 @@
+# This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
+# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
+name: CMake Cuda Build
+
+on:
+  push:
+    branches: [ "master", "dev", "ci" ]
+  pull_request:
+  workflow_dispatch:  # Add this to enable manual triggers
+    inputs:
+      cpp_changes:
+        description: 'Cpp Wrapper'
+        required: false
+        type: boolean
+        default: false
+      go_changes:
+        description: 'Go Wrapper'
+        required: false
+        type: boolean
+        default: false
+      rust_changes:
+        description: 'Rust Wrapper'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+    env:
+      CPP_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/cpp/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/cpp/') }}
+      GO_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/go/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/go/') }}
+      RUST_CHANGES: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.files.*.path, 'wrappers/rust/') || github.event_name == 'push' && contains(github.event.commits.*.modified, 'wrappers/rust/') }}
+
+    steps:
+      - uses: Jimver/cuda-toolkit@v0.2.18
+        id: cuda-toolkit
+        with:
+          cuda: '12.3.0'
+          method: 'network'
+          sub-packages: '["nvcc", "cudart", "toolkit"]'
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build blst
+        working-directory: native/depends/blst
+        run: ./build.sh
+      - name: Configure default goldilocks
+        working-directory: native
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      - name: Build default and install
+        working-directory: native
+        run: sudo cmake --build build --config ${{env.BUILD_TYPE}} --target install
+
+      - name: Configure bn254 & MSM
+        working-directory: native
+        run: cmake -B build-bn254 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_MSM=ON -DCURVE=BN254
+      - name: Build bn254 & MSM
+        working-directory: native
+        run: cmake --build build-bn254 --config ${{env.BUILD_TYPE}}
+
+      - name: Install dependencies for cpp wrapper
+        working-directory: wrappers/cpp
+        if: env.CPP_CHANGES == 'true'
+        run: ./build_gmp.sh host && sudo apt install libgtest-dev nasm
+      - name: Configure cpp wrapper
+        working-directory: wrappers/cpp
+        if: env.CPP_CHANGES == 'true'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254 -DBUILD_MSM=ON
+      - name: Build cpp wrapper
+        working-directory: wrappers/cpp
+        if: env.CPP_CHANGES == 'true'
+        run: cmake --build build --config ${{env.BUILD_TYPE}}
+
+      - name: Check Go formatting
+        working-directory: wrappers/go
+        if: env.GO_CHANGES == 'true'
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go code is not properly formatted:"
+            gofmt -l .
+            exit 1
+          fi
+      - name: Build Go wrapper
+        working-directory: wrappers/go
+        if: env.GO_CHANGES == 'true'
+        run: go build -v ./...
+
+      - uses: moonrepo/setup-rust@v1
+        name: Setup Rust Toolchain
+        if: env.RUST_CHANGES == 'true'
+        with:
+          components: rustfmt
+          cache: false
+      - name: Build Rust wrapper
+        working-directory: wrappers/rust
+        if: env.RUST_CHANGES == 'true'
+        run: cargo build
+      - name: Check Rust Format
+        working-directory: wrappers/rust
+        if: env.RUST_CHANGES == 'true'
+        run: cargo fmt --check
