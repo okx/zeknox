@@ -142,9 +142,9 @@ public:
 #pragma unroll
 #endif
 #endif
-    for (int i = 0; i < SCALAR_FF::NBITS; i++) {
+    for (int i = 0; i < SCALAR_FF::nbits; i++) {
       if (i > 0) { res = res + res; }
-      if (scalar.get_scalar_digit(SCALAR_FF::NBITS - i - 1, 1)) { res = res + point; }
+      if (scalar.get_scalar_digit(SCALAR_FF::nbits - i - 1, 1)) { res = res + point; }
     }
     return res;
   }

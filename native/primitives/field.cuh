@@ -39,7 +39,7 @@ class Field
 {
 public:
   static constexpr unsigned TLC = CONFIG::limbs_count;
-  static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
+  static constexpr unsigned nbits = CONFIG::modulus_bit_count;
 
   static constexpr HOST_DEVICE_INLINE Field zero() { return Field{CONFIG::zero}; }
 
@@ -98,7 +98,7 @@ public:
    */
   static constexpr HOST_DEVICE_INLINE unsigned num_of_reductions() { return CONFIG::num_of_reductions; }
 
-  static constexpr unsigned slack_bits = 32 * TLC - NBITS;
+  static constexpr unsigned slack_bits = 32 * TLC - nbits;
 
   struct Wide {
     ff_wide_storage limbs_storage;

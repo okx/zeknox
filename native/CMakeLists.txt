@@ -15,7 +15,8 @@ endif()
 
 # Options
 option(USE_CUDA "Enable CUDA code (ON by default)" ON)
-set(CUDA_ARCH "86;89" CACHE STRING "CUDA architecture")
+set(CUDA_ARCH "89" CACHE STRING "CUDA architecture")
+message("CUDA_ARCH=${CUDA_ARCH}")
 option(USE_AVX "Enable AVX acceleration" OFF)
 option(USE_AVX512 "Enable AVX512 (and AVX) acceleration" OFF)
 option(BUILD_TESTS "Build tests" OFF)
@@ -56,9 +57,9 @@ if(USE_CUDA)
 
 # enable CUDA debug
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-message("debug mode (enable CUDA debug)")
-set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G -maxrregcount=168")
-set(CUDA_NVCC_FLAGS "-g -G -maxrregcount=168")
+    message("debug mode (enable CUDA debug)")
+    set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G -maxrregcount=168")
+    set(CUDA_NVCC_FLAGS "-g -G -maxrregcount=168")
 endif()
 
 if(NOT CMAKE_CUDA_TOOLKIT_ROOT_DIR)
@@ -125,7 +126,6 @@ set(LIB_CUDA_SRC
 
 if (BUILD_MSM)
     list(APPEND LIB_CUDA_SRC msm/msm.cu)
-    list(APPEND LIB_CUDA_SRC msm/sort.cu)
 endif()
 
 add_library(${LIB_CUDA_NAME} OBJECT ${LIB_CUDA_SRC})
@@ -180,6 +180,9 @@ if(USE_AVX512)
     target_compile_options(${EXE_TESTS_CUDA_NAME} PRIVATE -march=native)
 endif()
 endif() # BUILD_TESTS
+
+install(TARGETS ${LIB_NAME} DESTINATION /usr/local/lib)
+install(FILES ${PROJECT_SOURCE_DIR}/depends/blst/libblst.a DESTINATION /usr/local/lib)
 
 else() # USE_CUDA
 # only C++ support
