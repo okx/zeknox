@@ -1,4 +1,4 @@
-# Description
+# ZEKNOX - ZEro KNOwledge Xcelerated
 
 This repo implements primitives used in Zero Knowledge Proofs accelerated with CUDA for Nvidia GPUs. In particular, this repo is used by OKX Plonky2 [fork](https://github.com/okx/plonky2).
 
