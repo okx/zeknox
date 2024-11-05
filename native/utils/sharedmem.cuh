@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Ingonyama
+// under MIT License
+
 // based on https://leimao.github.io/blog/CUDA-Shared-Memory-Templated-Kernel/
 // may be outdated, but only worked like that
 

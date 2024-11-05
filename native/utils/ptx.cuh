@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Ingonyama
+// under MIT License
+
 #ifndef __CRYPTO_UTIL_PTX_CUH__
 #define __CRYPTO_UTIL_PTX_CUH__
 #include <stdint.h>

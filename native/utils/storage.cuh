@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Ingonyama
+// under MIT License
+
 #ifndef __CRYOPTO_UTIL_GPU_T_CUH__
 #define __CRYOPTO_UTIL_GPU_T_CUH__
 
