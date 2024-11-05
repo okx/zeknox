@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __ELEMENT_BN128_CUH__
-#define __ELEMENT_BN128_CUH__
+#ifndef __ZEKNOX_ELEMENT_BN128_CUH__
+#define __ZEKNOX_ELEMENT_BN128_CUH__
 
 #include "utils/cuda_utils.cuh"
 #include "types/int_types.h"
@@ -137,4 +137,4 @@ public:
     }
 };
 
-#endif // __ELEMENT_BN128_CUH__
+#endif // __ZEKNOX_ELEMENT_BN128_CUH__

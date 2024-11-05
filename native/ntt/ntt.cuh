@@ -33,4 +33,4 @@ RustError compute_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uin
 RustError compute_naive_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg);
 }
 
-#endif  // ZEKNOX_CUDA_NTT_NTT_CUH_
+#endif  // __ZEKNOX_NTT_NTT_CUH__

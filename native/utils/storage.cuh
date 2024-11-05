@@ -1,8 +1,8 @@
 // Copyright (c) 2023 Ingonyama
 // under MIT License
 
-#ifndef __CRYOPTO_UTIL_GPU_T_CUH__
-#define __CRYOPTO_UTIL_GPU_T_CUH__
+#ifndef __CRYOPTO_UTIL_STORAGE_CUH__
+#define __CRYOPTO_UTIL_STORAGE_CUH__
 
 #include <stdint.h>
 
@@ -22,4 +22,4 @@ struct __align__(LIMBS_ALIGNMENT(LIMBS_COUNT)) storage_array
 {
   storage<LIMBS_COUNT> storages[OMEGAS_COUNT];
 };
-#endif
+#endif  // __CRYOPTO_UTIL_STORAGE_CUH__

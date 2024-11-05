@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef ZEKNOX_CUDA_LIB_H_
-#define ZEKNOX_CUDA_LIB_H_
+#ifndef __ZEKNOX_CUDA_LIB_H__
+#define __ZEKNOX_CUDA_LIB_H__
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
@@ -50,4 +50,4 @@ EXTERN RustError compute_transpose_rev(size_t device_id, void *output, void *inp
 EXTERN RustError compute_naive_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
                                              NTT_TransposeConfig cfg);
 
-#endif // ZEKNOX_CUDA_LIB_H_
+#endif // __ZEKNOX_CUDA_LIB_H__

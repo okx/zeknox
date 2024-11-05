@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __TYPES_H__
-#define __TYPES_H__
+#ifndef __ZEKNOX_TYPES_H__
+#define __ZEKNOX_TYPES_H__
 
 #include <stdint.h>
 #include <assert.h>
@@ -20,4 +20,4 @@ typedef __uint128_t u128;
 typedef __uint128_t uint128_t;
 #endif
 
-#endif // __TYPES_H__
+#endif // __ZEKNOX_TYPES_H__

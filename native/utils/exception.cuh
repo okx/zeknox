@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef ZEKNOX_CUDA_UTIL_EXCEPTION_CUH_
-#define ZEKNOX_CUDA_UTIL_EXCEPTION_CUH_
+#ifndef __ZEKNOX_CUDA_UTIL_EXCEPTION_CUH__
+#define __ZEKNOX_CUDA_UTIL_EXCEPTION_CUH__
 
 #include "exception.hpp"
 #include <iostream>
@@ -32,4 +32,4 @@ void inline checkLast(const char* const file, const int line)
   }
 }
 
-#endif
+#endif // __ZEKNOX_CUDA_UTIL_EXCEPTION_CUH__

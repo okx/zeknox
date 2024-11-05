@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __UTILS_BATCH_MUL_CU__
-#define __UTILS_BATCH_MUL_CU__
+#ifndef __ZEKNOX_UTILS_BATCH_MUL_CU__
+#define __ZEKNOX_UTILS_BATCH_MUL_CU__
 
 #if defined(FEATURE_GOLDILOCKS)
 #include <ff/goldilocks.hpp>
@@ -26,4 +26,4 @@ __global__ void batchVectorMult(fr_t *scalar_vec, fr_t *element_vec, unsigned n_
     //
   }
 }
-#endif
+#endif // __ZEKNOX_UTILS_BATCH_MUL_CU__

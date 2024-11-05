@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef ZEKNOX_CUDA_NTTT_KERNELS_CU_
-#define ZEKNOX_CUDA_NTTT_KERNELS_CU_
+#ifndef __ZEKNOX_CUDA_NTTT_KERNELS_CU__
+#define __ZEKNOX_CUDA_NTTT_KERNELS_CU__
 
 #include <cooperative_groups.h>
 #include <utils/sharedmem.cuh>
@@ -435,4 +435,4 @@ __device__ __forceinline__ void transpose(fr_t r[z_count])
         r[z] = xchg[y + x][z];
 }
 
-#endif /**ZEKNOX_CUDA_NTTT_KERNELS_CU_ */
+#endif // __ZEKNOX_CUDA_NTTT_KERNELS_CU__

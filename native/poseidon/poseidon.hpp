@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __POSEIDON_HPP__
-#define __POSEIDON_HPP__
+#ifndef __ZEKNOX_POSEIDON_HPP__
+#define __ZEKNOX_POSEIDON_HPP__
 
 // Based on the Poseidon implementation from Plonky2
 // (https://github.com/okx/plonky2/blob/main/plonky2/src/hash/poseidon.rs)
@@ -1202,4 +1202,4 @@ public:
 #endif
 };
 
-#endif // __POSEIDON_HPP__
+#endif // __ZEKNOX_POSEIDON_HPP__

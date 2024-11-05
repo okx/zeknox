@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __CUDA_UTILS_H__
-#define __CUDA_UTILS_H__
+#ifndef __ZEKNOX_CUDA_UTILS_CUH__
+#define __ZEKNOX_CUDA_UTILS_CUH__
 
 #include <stdio.h>
 
@@ -37,11 +37,9 @@ __host__ inline void checkCudaError(cudaError_t code, const char *file, int line
 
 #endif // USE_CUDA
 
-#define PASTER(x,y) x ## _ ## y
-#define EVALUATOR(x,y)  PASTER(x,y)
+#define PASTER(x, y) x##_##y
+#define EVALUATOR(x, y) PASTER(x, y)
 #define FUNC(name) EVALUATOR(LOCATION, name)
 #define VAR(name) EVALUATOR(LOCATION, name)
 
-
-
-#endif  // __CUDA_UTILS_H__
+#endif // __ZEKNOX_CUDA_UTILS_CUH__

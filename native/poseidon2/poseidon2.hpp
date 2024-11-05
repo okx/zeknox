@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __POSEIDON2_HPP__
-#define __POSEIDON2_HPP__
+#ifndef __ZEKNOX_POSEIDON2_HPP__
+#define __ZEKNOX_POSEIDON2_HPP__
 
 #include "types/int_types.h"
 #include "ff/goldilocks.hpp"
@@ -48,4 +48,4 @@ public:
 };
 #endif // USE_CUDA
 
-#endif // __POSEIDON2_HPP__
+#endif // __ZEKNOX_POSEIDON2_HPP__

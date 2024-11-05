@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __POSEIDON_V2_CUH__
-#define __POSEIDON_V2_CUH__
+#ifndef __ZEKNOX_POSEIDON_V2_CUH__
+#define __ZEKNOX_POSEIDON_V2_CUH__
 
 #include "types/int_types.h"
 #include "ff/gl64_t.cuh"
@@ -140,4 +140,4 @@ DEVICE void print_perm(gl64_t *data, int cnt);
 
 #endif // USE_CUDA
 
-#endif // __POSEIDON_V2_CUH__
+#endif // __ZEKNOX_POSEIDON_V2_CUH__

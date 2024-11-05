@@ -2,30 +2,37 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef ZEKNOX_CUDA_UTIL_RUSTERROR_H_
-#define ZEKNOX_CUDA_UTIL_RUSTERROR_H_
+#ifndef __ZEKNOX_CUDA_UTIL_RUSTERROR_H__
+#define __ZEKNOX_CUDA_UTIL_RUSTERROR_H__
 
 #ifdef __cplusplus
-# include <string>
-# include <cstring>
+#include <string>
+#include <cstring>
 #else
-# include <string.h>
+#include <string.h>
 #endif
 
-
-struct RustError { /* to be returned exclusively by value */
+struct RustError
+{ /* to be returned exclusively by value */
     int code;
     char *message;
 #ifdef __cplusplus
     RustError(int e = 0) : code(e)
-    {   message = nullptr;   }
-    RustError(int e, const std::string& str) : code(e)
-    {   message = str.empty() ? nullptr : strdup(str.c_str());   }
+    {
+        message = nullptr;
+    }
+    RustError(int e, const std::string &str) : code(e)
+    {
+        message = str.empty() ? nullptr : strdup(str.c_str());
+    }
     RustError(int e, const char *str) : code(e)
-    {   message = str==nullptr ? nullptr : strdup(str);   }
+    {
+        message = str == nullptr ? nullptr : strdup(str);
+    }
     // no destructor[!], Rust takes care of the |message|
 
-    struct by_value {
+    struct by_value
+    {
         int code;
         char *message;
     };
@@ -36,4 +43,4 @@ struct RustError { /* to be returned exclusively by value */
 typedef struct RustError RustError;
 #endif
 
-#endif
+#endif // __ZEKNOX_CUDA_UTIL_RUSTERROR_H__

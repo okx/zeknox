@@ -479,4 +479,4 @@ private:
     }
 };
 
-#endif
+#endif  // __ZEKNOX_UTIL_GPU_T_CUH__
