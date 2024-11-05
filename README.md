@@ -10,8 +10,8 @@ The following primitives are implemented:
 - Keccak hashing over Goldilocks elements (in C/C++ and CUDA) - see [native/keccak](native/keccak).
 - Monolith hashing over Goldilocks elements (in C/C++ and CUDA) - see [native/monolith](native/monolith).
 - Merkle Tree building (Plonky2 version) using any of the above hashing methods - see [native/merkle](native/merkle).
-- NTT (including LDE and transpose) over Goldilocks & BN254 elements - see [native/ntt](native/ntt).
-- MSM over Goldilocks & BN254 elements - see [native/msm](native/msm).
+- NTT (including LDE and transpose) over Goldilocks field - see [native/ntt](native/ntt).
+- MSM over BN254 - see [native/msm](native/msm).
 
 # Building and Testing
 ## Prerequisites
@@ -46,8 +46,10 @@ sudo apt-get install -y cuda-drivers
 mkdir -p native/build
 cd native/build
 cmake ..
-make -j4
+make -j
 ```
+
+Note: the steps above build the library with Goldilocks support, without MSM.
 
 ## Build and run CUDA tests
 Note: this requires an Nvidia GPU.
@@ -56,7 +58,7 @@ Note: this requires an Nvidia GPU.
 mkdir -p native/build
 cd native/build
 cmake .. -DBUILD_TESTS=ON
-make -j4
+make -j
 ./tests.exe
 ```
 
@@ -76,16 +78,10 @@ python gen_field_params.py configs/gl64_v2.json
 ```
 Then re-build the CUDA library as described above.
 
-## lint
-```
-find cuda -name '*.cpp' -o -name '*.h' | xargs cpplint
-cpplint --filter=-build/header_guard,-legal/copyright,-build/include,-whitespace/line_length
-```
-
 # Examples and Benchmarks
 Next, we present three examples of integrating this library to speedup ZK primitives and applications.
 
-## Plonky2
+## E1. Plonky2
 
 In Plonky2, we offload Merkle Tree building (with hashing) and Low Degree Extention (LDE) with Number Theoretic Transform (NTT) to a GPU (or multiple GPUs) (more details [here](native/README.md#algorithms-and-data-structures)). Next, we list the steps needed to build Plonky2 with GPU acceleration:
 
@@ -139,7 +135,7 @@ LDE size (log) | CPU-only | CPU+GPU | Speedup
   15 | 22.0 ms | 6.0 ms | 3.7 X
 
 
-## zk_evm (Type 1 ZK EVM from 0xPolygonZero)
+## E2. zk_evm (Type 1 ZK EVM from 0xPolygonZero)
 
 ```
 sudo apt install -y librust-openssl-dev bc
@@ -158,7 +154,7 @@ Input | CPU-only |	CPU+GPU | Speedup
 witness_b3_b6.json     | 193.7 ms |  111.1 ms | 1.74 X
 witness_b19807080.json | 294.6 ms |	 174.5 ms | 1.69 X
 
-## Proof-of-Reserves-v2 (OKX)
+## E3. Proof-of-Reserves-v2 (OKX)
 
 ```
 git clone https://github.com/okx/proof-of-reserves-v2.git
