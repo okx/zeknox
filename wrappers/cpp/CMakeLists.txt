@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 set(LIB_NAME "zeknox")
+set(PROJ_NAME "zeknox_cpp")
+
 
 if(NOT CMAKE_CUDA_TOOLKIT_ROOT_DIR)
   set(CMAKE_CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
@@ -12,7 +14,7 @@ endif()
 set(CUDA_INCLUDE_DIRS ${CMAKE_CUDA_TOOLKIT_ROOT_DIR}/include)
 enable_language(CUDA)
 
-project(zeknox_cpp LANGUAGES CXX CUDA ASM)
+project(${PROJ_NAME} LANGUAGES CXX CUDA ASM)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
@@ -117,7 +119,7 @@ else()
     message("value of CURVE is ${CURVE}")
 endif ()
 
-add_subdirectory(${PROJECT_CUDA_SOURCE_DIR} zeknox)
+add_subdirectory(${PROJECT_CUDA_SOURCE_DIR} ${LIB_NAME})
 target_compile_definitions(${LIB_NAME} PRIVATE CURVE=${CURVE})
 if (BUILD_MSM)
     target_compile_definitions(${LIB_NAME} PRIVATE BUILD_MSM)
