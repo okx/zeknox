@@ -8,25 +8,25 @@ on:
   pull_request:
   workflow_dispatch:  # Add this to enable manual triggers
     inputs:
-      cpp_changes:
+      trigger_cpp:
         description: 'Cpp Wrapper'
         required: false
         type: boolean
-        default: false
-      go_changes:
+        default: true
+      trigger_go:
         description: 'Go Wrapper'
         required: false
         type: boolean
-        default: false
-      rust_changes:
+        default: true
+      trigger_rust:
         description: 'Rust Wrapper'
         required: false
         type: boolean
-        default: false
+        default: true
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   build:
@@ -69,20 +69,20 @@ jobs:
 
       - name: Install dependencies for cpp wrapper
         working-directory: wrappers/cpp
-        if: env.CPP_CHANGES == 'true'
+        if: env.CPP_CHANGES == 'true' || inputs.trigger_cpp == 'true'
         run: ./build_gmp.sh host && sudo apt install libgtest-dev nasm
       - name: Configure cpp wrapper
         working-directory: wrappers/cpp
-        if: env.CPP_CHANGES == 'true'
+        if: env.CPP_CHANGES == 'true' || inputs.trigger_cpp == 'true'
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCURVE=BN254 -DBUILD_MSM=ON
       - name: Build cpp wrapper
         working-directory: wrappers/cpp
-        if: env.CPP_CHANGES == 'true'
+        if: env.CPP_CHANGES == 'true' || inputs.trigger_cpp == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Check Go formatting
         working-directory: wrappers/go
-        if: env.GO_CHANGES == 'true'
+        if: env.GO_CHANGES == 'true' || inputs.trigger_go == 'true'
         run: |
           if [ -n "$(gofmt -l .)" ]; then
             echo "Go code is not properly formatted:"
@@ -91,20 +91,20 @@ jobs:
           fi
       - name: Build Go wrapper
         working-directory: wrappers/go
-        if: env.GO_CHANGES == 'true'
+        if: env.GO_CHANGES == 'true' || inputs.trigger_go == 'true'
         run: go build -v ./...
 
       - uses: moonrepo/setup-rust@v1
         name: Setup Rust Toolchain
-        if: env.RUST_CHANGES == 'true'
+        if: env.RUST_CHANGES == 'true' || inputs.trigger_rust == 'true'
         with:
           components: rustfmt
           cache: false
       - name: Build Rust wrapper
         working-directory: wrappers/rust
-        if: env.RUST_CHANGES == 'true'
+        if: env.RUST_CHANGES == 'true' || inputs.trigger_rust == 'true'
         run: cargo build
       - name: Check Rust Format
         working-directory: wrappers/rust
-        if: env.RUST_CHANGES == 'true'
+        if: env.RUST_CHANGES == 'true' || inputs.trigger_rust == 'true'
         run: cargo fmt --check
