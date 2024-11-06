@@ -3,10 +3,10 @@
 We use ``cmake`` and ``make`` to build the static library and the tests.
 
 ```
-mkdir build
-cd build
-cmake ..
-make -j4
+cd native
+rm -rf build
+cmake -B build
+cmake --build build -j
 ```
 
 ## cmake options

@@ -1,7 +1,7 @@
 # Go Wrapper
 Download prebuilt files to `/usr/local/lib/`, so that `#cgo LDFLAGS: -L/usr/local/lib` can work
 ```sh
-sudo cp libblst.a libcryptocuda.a /usr/local/lib/
+sudo cp libblst.a libzeknox.a /usr/local/lib/
 ```
 
 Or, build from source
@@ -14,12 +14,12 @@ cmake --build .
 
 ## Test
 ```sh
-go test github.com/okx/cryptography_cuda/wrappers/go/msm
-go test github.com/okx/cryptography_cuda/wrappers/go/device
+go test github.com/okx/zeknox/wrappers/go/msm
+go test github.com/okx/zeknox/wrappers/go/device
 
 # Benchmark MSM
-go test -bench=Msm github.com/okx/cryptography_cuda/wrappers/go/msm
+go test -bench=Msm github.com/okx/zeknox/wrappers/go/msm
 
 # will fail, since currently LDE is not working with BN254
-# go test github.com/okx/cryptography_cuda/wrappers/go/lib
+# go test github.com/okx/zeknox/wrappers/go/lib
 ```

@@ -1,10 +1,15 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 package lib
 
 import (
-	"github.com/okx/cryptography_cuda/wrappers/go/device"
 	"math"
 	"testing"
 	"unsafe"
+
+	"github.com/okx/zeknox/wrappers/go/device"
 )
 
 func TestListDevicesInfo(t *testing.T) {

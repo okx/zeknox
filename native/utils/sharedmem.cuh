@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Ingonyama
+// under MIT License
+
 // based on https://leimao.github.io/blog/CUDA-Shared-Memory-Templated-Kernel/
 // may be outdated, but only worked like that
 
@@ -55,8 +58,8 @@
  * </pre>
  */
 
-#ifndef _SHAREDMEM_H_
-#define _SHAREDMEM_H_
+#ifndef __CRYOPTO_UTIL_SHAREDMEM_CUH__
+#define __CRYOPTO_UTIL_SHAREDMEM_CUH__
 
 
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
@@ -231,7 +234,7 @@ struct SharedMemory<fr_t> {
 //   }
 // };
 
-#endif //_SHAREDMEM_H_
+#endif // __CRYOPTO_UTIL_SHAREDMEM_CUH__
 
 // Leave this at the end of the file
 // Local Variables:

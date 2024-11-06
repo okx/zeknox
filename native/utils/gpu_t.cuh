@@ -1,4 +1,9 @@
-// the code snipet is based from Supranational sppark lib; many cusotmizations have been made
+// Copyright Supranational LLC
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+// the code is based on Supranational sppark lib. many cusotmizations have been made.
 
 #ifndef __ZEKNOX_UTIL_GPU_T_CUH__
 #define __ZEKNOX_UTIL_GPU_T_CUH__
@@ -474,4 +479,4 @@ private:
     }
 };
 
-#endif
+#endif  // __ZEKNOX_UTIL_GPU_T_CUH__

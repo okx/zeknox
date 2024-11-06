@@ -1,4 +1,6 @@
-// Copyright 2024 OKX
+// Copyright (c) 2023 Ingonyama
+// under MIT License
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 

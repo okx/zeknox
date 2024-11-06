@@ -1,6 +1,9 @@
-// Copyright 2024 OKX
-#ifndef ZEKNOX_CUDA_NTT_NTT_H_
-#define ZEKNOX_CUDA_NTT_NTT_H_
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef __ZEKNOX_CUDA_NTT_NTT_H__
+#define __ZEKNOX_CUDA_NTT_NTT_H__
 
 #include <stdint.h>
 
@@ -60,4 +63,4 @@ typedef struct
 
 #undef _BOOL
 
-#endif // ZEKNOX_CUDA_NTT_NTT_H_
+#endif // __ZEKNOX_CUDA_NTT_NTT_H__

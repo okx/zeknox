@@ -1,3 +1,7 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(not(feature = "no_cuda"))]
 use std::env;
 #[cfg(not(feature = "no_cuda"))]
@@ -81,7 +85,7 @@ fn build_lib() {
     let parent = rootdir.parent().unwrap().parent().unwrap();
     let srcdir = parent.join("native");
     let libdir = srcdir.join("build");
-    let libfile = libdir.join("libcryptocuda.a");
+    let libfile = libdir.join("libzeknox.a");
 
     if !libfile.exists() {
         assert!(env::set_current_dir(&srcdir).is_ok());
@@ -113,7 +117,7 @@ fn build_lib() {
     println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rustc-link-lib=stdc++");
-    println!("cargo:rustc-link-lib=static=cryptocuda");
+    println!("cargo:rustc-link-lib=static=zeknox");
     println!("cargo:rustc-link-lib=gomp");
 }
 

@@ -1,7 +1,11 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 use std::ops::Mul;
 
-use cryptography_cuda::device::memory::HostOrDeviceSlice;
-use cryptography_cuda::{
+use zeknox::device::memory::HostOrDeviceSlice;
+use zeknox::{
     init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch, lde_batch_multi_gpu,
     naive_transpose_rev_batch, ntt_batch, transpose_rev_batch, types::*,
 };

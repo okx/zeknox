@@ -1,5 +1,9 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #[warn(dead_code)]
-use cryptography_cuda::{get_number_of_gpus_rs, list_devices_info_rs};
+use zeknox::{get_number_of_gpus_rs, list_devices_info_rs};
 
 /// example output
 /// Device 0 - Tesla V100-SXM2-16GB
