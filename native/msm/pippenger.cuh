@@ -273,7 +273,7 @@ public:
             h_nof_large_buckets > h_nof_zero_large_buckets ? h_nof_large_buckets - h_nof_zero_large_buckets : 0;
 
         P *large_buckets;
-        printf("h_nof_large_buckets: %d, h_nof_zero_large_buckets: %d, bucket_th: %d \n", h_nof_large_buckets,h_nof_zero_large_buckets, bucket_th);
+        // printf("h_nof_large_buckets: %d, h_nof_zero_large_buckets: %d, bucket_th: %d \n", h_nof_large_buckets,h_nof_zero_large_buckets, bucket_th);
         if (large_buckets_to_compute > 0 && bucket_th > 0)
         {
             unsigned threads_per_bucket = min(MAX_TH,
