@@ -21,9 +21,12 @@
 #include <utils/gpu_t.cuh>
 #include <msm/msm.h>
 
-unsigned int nearest_power_of_two(unsigned int n) {
-    if (n == 0) return 1;
-    if ((n & (n - 1)) == 0) return n;
+unsigned int nearest_power_of_two(unsigned int n)
+{
+    if (n == 0)
+        return 1;
+    if ((n & (n - 1)) == 0)
+        return n;
 
     // Find the highest bit position (most significant bit)
     n--;
@@ -248,29 +251,42 @@ public:
         unsigned h_nof_large_buckets;
         CUDA_OK(cudaMemcpyAsync(&h_nof_large_buckets, d_nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
 
-        unsigned h_max_res[2];
-        CUDA_OK(cudaMemcpyAsync(&h_max_res[0], d_sorted_bucket_count, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
-        CUDA_OK(cudaMemcpyAsync(&h_max_res[1], d_sorted_unique_bucket_indices, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
-        unsigned h_largest_bucket_count = h_max_res[0];
-        unsigned h_nof_zero_large_buckets = h_max_res[1];
+        unsigned h_nof_zero_large_buckets = 0;
+        unsigned h_sorted_unique_bucket_indices[h_nof_large_buckets];
+        CUDA_OK(cudaMemcpyAsync(&h_sorted_unique_bucket_indices, d_sorted_unique_bucket_indices, sizeof(unsigned) * h_nof_large_buckets, cudaMemcpyDeviceToHost, gpu));
+        for (int i = 0; i < h_nof_large_buckets; i++)
+        {
+            if (h_sorted_unique_bucket_indices[i] == 0)
+            {
+                h_nof_zero_large_buckets++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        unsigned h_largest_bucket_count;
+        CUDA_OK(cudaMemcpyAsync(&h_largest_bucket_count, &d_sorted_bucket_count[0] + h_nof_zero_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, gpu));
+
         unsigned large_buckets_to_compute =
             h_nof_large_buckets > h_nof_zero_large_buckets ? h_nof_large_buckets - h_nof_zero_large_buckets : 0;
 
         P *large_buckets;
-        // printf("large_buckets_to_compute: %d, bucket_th: %d \n", large_buckets_to_compute, bucket_th);
+        // printf("h_nof_large_buckets: %d, h_nof_zero_large_buckets: %d, bucket_th: %d \n", h_nof_large_buckets,h_nof_zero_large_buckets, bucket_th);
         if (large_buckets_to_compute > 0 && bucket_th > 0)
         {
             unsigned threads_per_bucket = min(MAX_TH,
                                               1 << (unsigned)ceil(log2((h_largest_bucket_count + bucket_th - 1) / bucket_th)));
             unsigned max_bucket_size_run_length = (h_largest_bucket_count + threads_per_bucket - 1) / threads_per_bucket;
             unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
-            // printf("sizeof(P): %d, total_large_buckets_size: %d\n", sizeof(P), total_large_buckets_size);
+            // printf("threads_per_bucket: %d, sizeof(P): %d, total_large_buckets_size: %d\n", threads_per_bucket, sizeof(P), total_large_buckets_size);
             CUDA_OK(cudaMallocAsync(&large_buckets, sizeof(P) * total_large_buckets_size, gpu[2]));
 
             NUM_THREADS = min(1 << 8, total_large_buckets_size);
             NUM_BLOCKS = (total_large_buckets_size + NUM_THREADS - 1) / NUM_THREADS;
             // printf("NUM_BLOCKS: %d, NUM_THREADS: %d, h_nof_zero_large_buckets: %d, total_num_of_buckets: %d, max_bucket_size_run_length: %d\n",
-            // NUM_BLOCKS, NUM_THREADS, h_nof_zero_large_buckets, total_num_of_buckets, max_bucket_size_run_length);
+            //        NUM_BLOCKS, NUM_THREADS, h_nof_zero_large_buckets, total_num_of_buckets, max_bucket_size_run_length);
             accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
                 large_buckets, &d_sorted_bucket_offsets[0] + h_nof_zero_large_buckets, &d_sorted_bucket_count[0] + h_nof_zero_large_buckets,
                 &d_sorted_unique_bucket_indices[0] + h_nof_zero_large_buckets, &points_window_bucket_indices[0], d_points, total_num_of_buckets,
@@ -427,7 +443,6 @@ public:
             }
         }
 
-        // // printf("double and add \n");
         // launch the double and add kernel, a single thread
         dev_ptr_t<P> d_final_result{1, gpu, ALLOC_MEM};
         final_accumulation_kernel<P, S>
@@ -437,7 +452,6 @@ public:
 
         if (!on_device)
         {
-            // printf("copy final result \n");
             CUDA_OK(cudaMemcpyAsync(final_result, &d_final_result[0], sizeof(P), cudaMemcpyDeviceToHost, gpu));
         }
 
@@ -456,7 +470,7 @@ public:
  */
 template <class point_proj_t, class affine_t, class scalar_t>
 static RustError mult_pippenger_msm(point_proj_t *out, affine_t *points, size_t npoints,
-                                    scalar_t *scalars, bool are_point_in_mont,bool are_scalar_in_mont,
+                                    scalar_t *scalars, bool are_point_in_mont, bool are_scalar_in_mont,
                                     bool on_device,
                                     bool big_triangle,
                                     unsigned large_bucket_factor)
