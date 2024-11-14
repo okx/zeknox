@@ -1,8 +1,12 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #[allow(dead_code)]
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
-use cryptography_cuda::{
+use zeknox::{
     device::memory::HostOrDeviceSlice, naive_transpose_rev_batch, transpose_rev_batch,
     types::TransposeConfig,
 };

@@ -1,8 +1,13 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 use std::ops::Mul;
 
-use cryptography_cuda::device::memory::HostOrDeviceSlice;
-use cryptography_cuda::{
-    init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch, lde_batch_multi_gpu, ntt_batch, transpose_rev_batch, types::*
+use zeknox::device::memory::HostOrDeviceSlice;
+use zeknox::{
+    init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch, lde_batch_multi_gpu,
+    ntt_batch, transpose_rev_batch, types::*,
 };
 use plonky2_field::fft::{fft, ifft};
 use plonky2_field::goldilocks_field::GoldilocksField;

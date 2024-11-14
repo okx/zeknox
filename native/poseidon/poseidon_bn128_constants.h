@@ -1,9 +1,9 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __POSEIDON_BN128_CONST_H__
-#define __POSEIDON_BN128_CONST_H__
+#ifndef __ZEKNOX_POSEIDON_BN128_CONST_H__
+#define __ZEKNOX_POSEIDON_BN128_CONST_H__
 
 #include "types/int_types.h"
 
@@ -735,4 +735,4 @@ CONST u64 P[5][5][4] = {
 }
 };
 
-#endif // __POSEIDON_BN128_CONST_H__
+#endif // __ZEKNOX_POSEIDON_BN128_CONST_H__

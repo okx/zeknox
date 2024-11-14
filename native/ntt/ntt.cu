@@ -1,4 +1,7 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #include <ntt/ntt.h>
 #include <ntt/ntt.cuh>
 #include <ntt/kernels.cu>
@@ -59,8 +62,8 @@ namespace ntt {
      * @param batch_size the size of the batch.
      */
     inline void transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream) {
-        // This is the dimensions of the block, it is 64 rows and 8 cols however since each thread
-        // transposes 8 elements, we consider the block size to be 64 x 64
+        // This is the dimensions of the block, it is 32 rows and 8 cols however since each thread
+        // transposes 4 elements, we consider the block size to be 32 x 32
         int blocks_per_row = (n + TRANSPOSE_BLOCK_DIM - 1) / TRANSPOSE_BLOCK_DIM;
         int blocks_per_col = (batch_size + TRANSPOSE_BLOCK_DIM - 1) / TRANSPOSE_BLOCK_DIM;
 

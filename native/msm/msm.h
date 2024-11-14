@@ -1,9 +1,9 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef ZEKNOX_NATIVE_MSM_MSM_H_
-#define ZEKNOX_NATIVE_MSM_MSM_H_
+#ifndef __ZEKNOX_NATIVE_MSM_MSM_H__
+#define __ZEKNOX_NATIVE_MSM_MSM_H__
 
 #include <stdint.h>
 #include <utils/rusterror.h>
@@ -99,4 +99,4 @@ MSM_Config cfg
 
 #undef _BOOL
 
-#endif
+#endif  // __ZEKNOX_NATIVE_MSM_MSM_H__

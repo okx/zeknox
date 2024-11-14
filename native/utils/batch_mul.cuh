@@ -1,5 +1,9 @@
-#ifndef UTILS_KERNELS_H
-#define UTILS_KERNELS_H
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef __ZEKNOX_UTILS_BATCH_MUL_CUH__
+#define __ZEKNOX_UTILS_BATCH_MUL_CUH__
 
 #include <utils/batch_mul.cu>
 #define MAX_THREADS_PER_BLOCK 512
@@ -16,6 +20,6 @@ int batch_vector_mult(fr_t *scalar_vec, fr_t *element_vec, unsigned n_scalars, u
   return 0;
 }
 
-#endif
+#endif // __CUDA_ARCH__
 
-#endif
+#endif // __ZEKNOX_UTILS_BATCH_MUL_CUH__

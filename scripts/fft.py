@@ -1,3 +1,9 @@
+"""
+Copyright 2024 OKX Group
+Licensed under the Apache License, Version 2.0, see LICENSE for details.
+SPDX-License-Identifier: Apache-2.0
+"""
+
 import cmath
 # import numpy as np
 from math import log, ceil
@@ -28,12 +34,12 @@ def fft(x):
    for m in range(int(n/2)):
      combined[m] = Feven[m] + omega(n, -m) * Fodd[m]
      combined[m + int(n/2)] = Feven[m] - omega(n, -m) * Fodd[m]
-     print(f"i: {m}, j: {m+int(n/2)}") 
+     print(f"i: {m}, j: {m+int(n/2)}")
    return combined
 
 def ifft(X):
    ''' IFFT of 1-d signals
-   usage x = ifft(X) 
+   usage x = ifft(X)
    unpadding must be done implicitly'''
 
    x = fft([x.conjugate() for x in X])
@@ -55,7 +61,7 @@ def fft2(f):
 
 def ifft2(F, m, n):
    ''' IFFT of 2-d signals
-   usage x = ifft2(X, m, n) with unpaded, 
+   usage x = ifft2(X, m, n) with unpaded,
    where m and n are odimensions of original signal before padding'''
 
    f, M, N = fft2(np.conj(F))
@@ -109,7 +115,7 @@ def inplace_fft(x, num_of_bits):
             # print(f"first: {first}, second: {second}")
             u = A[k + j]
             t = w* A[k + j + int(m/2)]
-        
+
             A[k + j] = u + t
             A[k + j + int(m/2)] = u - t
             w = w* w_m
