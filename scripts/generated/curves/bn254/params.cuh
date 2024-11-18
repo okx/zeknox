@@ -83,7 +83,7 @@ namespace PARAMS_BN254 {
               {0x980db869, 0xa8b64ba8, 0xc9718f6c, 0x4c787f72, 0x15d27ced, 0x7746a25a, 0x435a46e9, 0x110bf78f},
               {0x9d18157e, 0x72394277, 0xfd399d5d, 0xec9d51f8, 0x49d5387f, 0x6117635d, 0x9c229cd5, 0x01b77519}
     } };
-    
+
 
     static constexpr storage_array<omegas_count, limbs_count> inv = { {
               {0xf8000001, 0xa1f0fac9, 0x3cdcb848, 0x9419f424, 0x40c0ac2e, 0xdc2822db, 0x7098d014, 0x18322739},
@@ -114,7 +114,7 @@ namespace PARAMS_BN254 {
               {0xf7829b05, 0xd585d142, 0x6cbf5e72, 0xc7ddd0fe, 0x6d6feabc, 0x6be83b48, 0xc81e0371, 0x30644e66},
               {0x73c14d83, 0x0cb3e36b, 0x733c6782, 0xf808dca3, 0x7778a18c, 0x921c407f, 0xd4a7d1cd, 0x30644e6c},
               {0xb1e0a6c2, 0xa84aec7f, 0xf67aec09, 0x101e6275, 0xfc7cfcf5, 0xa536431a, 0xdaecb8fb, 0x30644e6f}
-    } }; 
+    } };
   };
 
   struct fq_config {
@@ -132,10 +132,6 @@ namespace PARAMS_BN254 {
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> montgomery_r = {0xc58f0d9d, 0xd35d438d, 0xf5c70b3d, 0x0a78eb28, 0x7879462c, 0x666ea36f, 0x9a07df2f, 0x0e0a77c1};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x014afa37, 0xed84884a, 0x0278edf8, 0xeb202285, 0xb74492d9, 0xcf63e9cf, 0x59e5c639, 0x2e671571};
-    // i^2, the square of the imaginary unit for the extension field
-    static constexpr uint32_t i_squared = ${nonresidue};
-    // true if i^2 is negative
-    static constexpr bool i_squared_is_negative = ${nonresidue_is_negative};
   };
 
   // G1 and G2 generators
