@@ -1,6 +1,11 @@
 #!/bin/sh
 
-mkdir -p build && cd build
-rm -rf ./*
-cmake -DCMAKE_BUILD_TYPE=Debug .. -DBUILD_TESTS=ON
-make -j4
+CAP=`./configure.sh | grep capability | cut -d ' ' -f 3`
+
+rm -rf build
+if [ -z "$CAP" ]; then
+cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+else
+cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DCUDA_ARCH=$CAP
+fi
+cmake --build build -j

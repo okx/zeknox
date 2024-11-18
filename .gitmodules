@@ -3,7 +3,7 @@
 	url = https://github.com/okx/goldilocks.git
 [submodule "native/depends/blst"]
 	path = native/depends/blst
-	url = git@github.com:supranational/blst.git
+	url = https://github.com/supranational/blst.git
 [submodule "wrappers/cpp/depends/ffiasm"]
 	path = wrappers/cpp/depends/ffiasm
-	url = git@github.com:okx/ffiasm.git
+	url = https://github.com/okx/ffiasm.git

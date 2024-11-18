@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Ingonyama
+// under MIT License
+
 #ifndef __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
 #define __CRYPTO_MSM_KERNELS_PIPPENGER_CU__
 

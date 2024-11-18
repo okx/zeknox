@@ -1,3 +1,9 @@
+"""
+Copyright 2024 OKX Group
+Licensed under the Apache License, Version 2.0, see LICENSE for details.
+SPDX-License-Identifier: Apache-2.0
+"""
+
 import json
 import math
 import os
@@ -19,7 +25,7 @@ def to_hex(val: int, length):
     s = ""
     for c in chunks:
         s += f'0x{c}, '
-        
+
     return s[:-2]
 
 
@@ -130,8 +136,8 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
             omega += "\n              {"+ to_hex(omegas[k],limb_size)+"}," if k>0 else "      {"+ to_hex(omegas[k],limb_size)+"},"
             omega_inv += "\n              {"+ to_hex(omegas_inv[k],limb_size)+"}," if k>0 else "      {"+ to_hex(omegas_inv[k],limb_size)+"},"
             inv += "\n              {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),limb_size)+"}," if k>0 else "      {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),limb_size)+"},"
-  
-  
+
+
     return {
         'fp_modulus': modulus_,
         'fp_modulus_2': modulus_2,
@@ -152,7 +158,7 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
 
 
 def get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, size):
-    
+
     return {
         'weier_b': to_hex(weierstrass_b, size),
         'weier_b_g2_re': to_hex(weierstrass_b_g2_re, size),
@@ -168,7 +174,7 @@ def get_params(config):
     limb_p =  config["limb_p"]
     ntt_size = config["ntt_size"]
     modulus_q = config["modulus_q"]
-    bit_count_q = config["bit_count_q"] 
+    bit_count_q = config["bit_count_q"]
     limb_q = config["limb_q"]
     root_of_unity = config["root_of_unity"]
     if root_of_unity == modulus_p:
@@ -192,7 +198,7 @@ def get_params(config):
         'fq_modulus_bit_count': bit_count_q,
         'num_omegas': ntt_size
     }
-    
+
     fp_params = get_fp_params(modulus_p, bit_count_p, limb_p, root_of_unity, ntt_size)
 
     fq_params={}
@@ -237,16 +243,16 @@ if new_curve_args['command'] != '-update':
     # with open("./curve_template/lde.cu.tmpl", "r") as lde_file:
     #     template_content = Template(lde_file.read())
     #     lde_content = template_content.safe_substitute(
-    #         CURVE_NAME_U=curve_name_upper, 
+    #         CURVE_NAME_U=curve_name_upper,
     #         CURVE_NAME_L=curve_name_lower
     #     )
     #     with open(f'./generated/curves/{curve_name_lower}/lde.cu', 'w') as f:
     #         f.write(lde_content)
-        
+
     # with open("./curve_template/msm.cu.tmpl", "r") as msm_file:
     #     template_content = Template(msm_file.read())
     #     msm_content = template_content.safe_substitute(
-    #         CURVE_NAME_U=curve_name_upper, 
+    #         CURVE_NAME_U=curve_name_upper,
     #         CURVE_NAME_L=curve_name_lower
     #     )
     #     with open(f'./generated/curves/{curve_name_lower}/msm.cu', 'w') as f:
@@ -255,12 +261,12 @@ if new_curve_args['command'] != '-update':
 #     with open("./generated/curves/curve_template/ve_mod_mult.cu.tmpl", "r") as ve_mod_mult_file:
 #         template_content = Template(ve_mod_mult_file.read())
 #         ve_mod_mult_content = template_content.safe_substitute(
-#             CURVE_NAME_U=curve_name_upper, 
+#             CURVE_NAME_U=curve_name_upper,
 #             CURVE_NAME_L=curve_name_lower
 #         )
 #         with open(f'./generated/curves/{curve_name_lower}/ve_mod_mult.cu', 'w') as f:
 #             f.write(ve_mod_mult_content)
-        
+
 
     with open(f'./curve_template/curve_config.cuh.tmpl', 'r') as cc:
         template_content = Template(cc.read())
@@ -269,12 +275,12 @@ if new_curve_args['command'] != '-update':
         )
         with open(f'./generated/curves/{curve_name_lower}/curve_config.cuh', 'w') as f:
             f.write(cc_content)
-        
+
 
 #     with open(f'./generated/curves/curve_template/projective.cu.tmpl', 'r') as proj:
 #         template_content = Template(proj.read())
 #         proj_content = template_content.safe_substitute(
-#             CURVE_NAME_U=curve_name_upper, 
+#             CURVE_NAME_U=curve_name_upper,
 #             CURVE_NAME_L=curve_name_lower
 #         )
 #         with open(f'./generated/curves/{curve_name_lower}/projective.cu', 'w') as f:
@@ -292,12 +298,12 @@ if new_curve_args['command'] != '-update':
 #         index_text = f.read()
 #         if index_text.find(curve_name_lower) == -1:
 #             f.write(f'\n#include "{curve_name_lower}/supported_operations.cu"')
-        
+
 
 
 #     # Create Rust interface and tests
 
-#     if limb_p == limb_q: 
+#     if limb_p == limb_q:
 #         with open("./src/curve_templates/curve_same_limbs.rs", "r") as curve_file:
 #             content = curve_file.read()
 #             content = content.replace("CURVE_NAME_U",curve_name_upper)
@@ -327,7 +333,7 @@ if new_curve_args['command'] != '-update':
 #         text_file = open("./src/test_"+curve_name_lower+".rs", "w")
 #         n = text_file.write(content)
 #         text_file.close()
-        
+
 #     with open('./src/curves/mod.rs', 'r+') as f:
 #         mod_text = f.read()
 #         if mod_text.find(curve_name_lower) == -1:

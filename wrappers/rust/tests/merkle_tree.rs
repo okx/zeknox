@@ -1,7 +1,11 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 use core::mem::MaybeUninit;
 use core::slice;
 
-use cryptography_cuda::{
+use zeknox::{
     device::{memory::HostOrDeviceSlice, stream::CudaStream},
     fill_digests_buf_linear_gpu_with_gpu_ptr, fill_digests_buf_linear_multigpu_with_gpu_ptr,
 };

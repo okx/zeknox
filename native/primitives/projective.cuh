@@ -1,6 +1,5 @@
-// Copyright 2024 OKX
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2023 Ingonyama
+// under MIT License
 
 #ifndef __CRYPTO_PRIMITIVES_PROJECTIVE_CUH__
 #define __CRYPTO_PRIMITIVES_PROJECTIVE_CUH__
