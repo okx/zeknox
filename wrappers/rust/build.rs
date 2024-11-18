@@ -103,6 +103,7 @@ fn build_lib() {
             .output()
             .expect("failed to execute process");
         Command::new("make")
+            .arg("-j")
             .output()
             .expect("failed to execute process");
         assert!(env::set_current_dir(&rootdir).is_ok());
