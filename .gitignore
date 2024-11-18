@@ -14,3 +14,4 @@ Cargo.lock
 wrappers/rust/src/device/bindings.rs
 wrappers/cpp/depends/gmp
 wrappers/cpp/depends/*.xz
+scripts/generated/
