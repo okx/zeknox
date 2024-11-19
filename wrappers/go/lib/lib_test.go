@@ -206,7 +206,7 @@ func TestMerkleTreeBuildingOutputMultiGpu(t *testing.T) {
 	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
 
 	leafSize := len(leaf)
-	nLeaves := 4
+	nLeaves := num
 	nCaps := nLeaves
 	hashSize := 4
 	nDigests := 2 * (nLeaves - nCaps)
@@ -231,6 +231,7 @@ func TestMerkleTreeBuildingOutputMultiGpu(t *testing.T) {
 		for i := 0; i < len(expHash); i++ {
 			if caps[4*j+i] != expHash[i] {
 				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
+				return
 			}
 		}
 	}

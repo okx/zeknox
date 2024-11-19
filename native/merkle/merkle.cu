@@ -328,7 +328,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr_template(
 #pragma omp parallel for num_threads(nDevices)
         for (int i = 1; i < nDevices; i++)
         {
-            CHECKCUDAERR(cudaMemcpyPeerAsync(cap_buf_gpu_ptr, 0, gpu_caps_ptrs[i], i, caps_per_gpu * HASH_SIZE_U64 * sizeof(u64), gpu_stream[i]));
+            CHECKCUDAERR(cudaMemcpyPeerAsync((u64*)cap_buf_gpu_ptr + i * caps_per_gpu * HASH_SIZE_U64, 0, gpu_caps_ptrs[i], i, caps_per_gpu * HASH_SIZE_U64 * sizeof(u64), gpu_stream[i]));
         }
 #pragma omp parallel for num_threads(nDevices)
         for (int i = 0; i < nDevices; i++)
