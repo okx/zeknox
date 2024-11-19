@@ -651,7 +651,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
     let lg_domain_size = lg_n + rate_bits;
     let input_domain_size = 1usize << lg_n;
     let output_domain_size = 1usize << (lg_n + rate_bits);
-    let batches = 10;
+    let max_batches = 10;
 
     let ngpus = get_number_of_gpus_rs();
     assert!(ngpus > 1, "Number of GPUs must be greater than 1");
@@ -664,11 +664,11 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
             GoldilocksField::coset_shift().to_canonical_u64(),
         );
     }
+    // lde rust allocate to gpu prior to api call
+    let mut device_output_data: HostOrDeviceSlice<'_, u64> =
+        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, max_batches * output_domain_size).unwrap();
 
-    let total_num_input_elements = input_domain_size * batches;
-    let total_num_output_elements = output_domain_size * batches;
-
-    let mut host_inputs: Vec<u64> = (0..batches)
+    let mut host_inputs: Vec<u64> = (0..max_batches)
         .collect::<Vec<usize>>()
         .iter()
         .map(|_| {
@@ -680,54 +680,54 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
         .collect();
     let mut host_inputs_copy = host_inputs.clone();
 
-    // println!("Length of inputs: {:?}", host_inputs.len());
+    for batches in 1..max_batches {
+        println!("Run with batches={}", batches);
+        let total_num_input_elements = input_domain_size * batches;
+        let total_num_output_elements = output_domain_size * batches;
 
-    // lde rust allocate to gpu prior to api call
-    let mut device_output_data: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_num_output_elements).unwrap();
+        let mut cfg_lde = NTTConfig::default();
+        cfg_lde.batches = batches as u32;
+        cfg_lde.extension_rate_bits = rate_bits as u32;
+        cfg_lde.with_coset = true;
+        cfg_lde.are_inputs_on_device = true;
+        cfg_lde.are_outputs_on_device = true;
+        cfg_lde.is_multi_gpu = true;
 
-    let mut cfg_lde = NTTConfig::default();
-    cfg_lde.batches = batches as u32;
-    cfg_lde.extension_rate_bits = rate_bits as u32;
-    cfg_lde.with_coset = true;
-    cfg_lde.are_inputs_on_device = true;
-    cfg_lde.are_outputs_on_device = true;
-    cfg_lde.is_multi_gpu = true;
+        lde_batch_multi_gpu(
+            device_output_data.as_mut_ptr(),
+            host_inputs.as_mut_ptr(),
+            ngpus,
+            cfg_lde.clone(),
+            lg_n,
+            total_num_input_elements,
+            total_num_output_elements,
+        );
 
-    lde_batch_multi_gpu(
-        device_output_data.as_mut_ptr(),
-        host_inputs.as_mut_ptr(),
-        ngpus,
-        cfg_lde.clone(),
-        lg_n,
-        total_num_input_elements,
-        total_num_output_elements,
-    );
+        // println!("LDE completed");
 
-    // println!("LDE completed");
+        let mut lde_multi_output = vec![0; batches * output_domain_size];
+        let _ = device_output_data.copy_to_host_offset(
+            lde_multi_output.as_mut_slice(),
+            0,
+            output_domain_size * batches,
+        );
+        println!("LDE completed, copied from gpu");
 
-    let mut lde_multi_output = vec![0; batches * output_domain_size];
-    let _ = device_output_data.copy_to_host_offset(
-        lde_multi_output.as_mut_slice(),
-        0,
-        output_domain_size * batches,
-    );
-    println!("LDE completed, copied from gpu");
+        // GPU LDE in 1 GPU
+        let mut cfg_lde_copy = NTTConfig::default();
+        cfg_lde_copy.batches = batches as u32;
+        cfg_lde_copy.extension_rate_bits = rate_bits as u32;
+        cfg_lde_copy.with_coset = true;
 
-    // GPU LDE in 1 GPU
-    let mut cfg_lde_copy = NTTConfig::default();
-    cfg_lde_copy.batches = batches as u32;
-    cfg_lde_copy.extension_rate_bits = rate_bits as u32;
-    cfg_lde_copy.with_coset = true;
+        let mut lde_single_output = vec![0; total_num_output_elements];
+        lde_batch(
+            DEFAULT_GPU as usize,
+            lde_single_output.as_mut_ptr(),
+            host_inputs_copy.as_mut_ptr(),
+            lg_n,
+            cfg_lde_copy,
+        );
 
-    let mut lde_single_output = vec![0; total_num_output_elements];
-    lde_batch(
-        DEFAULT_GPU as usize,
-        lde_single_output.as_mut_ptr(),
-        host_inputs_copy.as_mut_ptr(),
-        lg_n,
-        cfg_lde_copy,
-    );
-
-    assert!(lde_single_output == lde_multi_output);
+        assert!(lde_single_output == lde_multi_output);
+    }
 }
