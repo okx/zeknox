@@ -387,13 +387,9 @@ namespace ntt {
         try {
             // printf("Multi-GPU LDE-starting\n");
 
-            uint32_t num_batches_per_gpu = (cfg.batches + num_gpu - 1) / num_gpu;
-            uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu - 1));
-            if (cfg.batches < num_gpu) {
-                num_gpu = cfg.batches;
-                num_batches_per_gpu = 1;
-                num_batches_last_gpu = 0;
-            }
+            uint32_t num_batches_per_gpu = cfg.batches / num_gpu;
+            uint32_t rem = cfg.batches % num_gpu;
+
 
             std::vector<fr_t *> output_pointers;
             std::vector<fr_t *> input_pointers;
@@ -401,7 +397,10 @@ namespace ntt {
             for (size_t i = 0; i < num_gpu; i++) {
                 auto &gpu = select_gpu(i);
 
-                size_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
+                size_t batches = (i <= rem) ? num_batches_per_gpu + 1 : num_batches_per_gpu;
+                if (batches == 0) {
+                    continue;
+                }
                 // printf("Num batches:%d\n", batches);
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = static_cast<size_t>(1 << lg_output_domain_size);
@@ -470,12 +469,15 @@ namespace ntt {
             d_buffer.set_device_ptr(output);
 
             for (size_t i = 0; i < num_gpu; i++) {
+                size_t batches = (i <= rem) ? num_batches_per_gpu + 1 : num_batches_per_gpu;
+                if (batches == 0) {
+                    continue;
+                }
+
                 // printf("Multi-GPU memory movement starting \n");
                 auto &gpu = select_gpu(i);
 
                 fr_t *output_data = output_pointers.at(i);
-
-                size_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
                 // printf("Num batches:%d on GPU: %d\n", batches, gpu.id());
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = static_cast<size_t>(1 << lg_output_domain_size);
