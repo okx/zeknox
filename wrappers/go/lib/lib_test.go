@@ -161,6 +161,10 @@ func caseTestMerkleTreeBuildingOutputGpu(t *testing.T, nLeaves int, nCaps int, l
 	hashSize := 4
 	nDigests := 2 * (nLeaves - nCaps)
 	capHeight := int(math.Log2(float64(nCaps)))
+	nDigestsAlloc := nDigests
+	if nDigests == 0 {
+		nDigestsAlloc = 1
+	}
 
 	leaves := make([]uint64, nLeaves*leafSize)
 	for i := 0; i < nLeaves; i++ {
@@ -170,7 +174,7 @@ func caseTestMerkleTreeBuildingOutputGpu(t *testing.T, nLeaves int, nCaps int, l
 
 	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, nLeaves*leafSize)
 	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
-	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nDigestsAlloc*hashSize)
 
 	gpuLeavesBuff.CopyFromHost(leaves)
 
@@ -214,6 +218,10 @@ func caseTestMerkleTreeBuildingOutputMultiGpu(t *testing.T, nLeaves int, nCaps i
 	leafSize := len(leaf)
 	nDigests := 2 * (nLeaves - nCaps)
 	capHeight := int(math.Log2(float64(nCaps)))
+	nDigestsAlloc := nDigests
+	if nDigests == 0 {
+		nDigestsAlloc = 1
+	}
 
 	leaves := make([]uint64, nLeaves*leafSize)
 	for i := 0; i < nLeaves; i++ {
@@ -223,7 +231,7 @@ func caseTestMerkleTreeBuildingOutputMultiGpu(t *testing.T, nLeaves int, nCaps i
 
 	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, nLeaves*leafSize)
 	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
-	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nDigestsAlloc*hashSize)
 
 	gpuLeavesBuff.CopyFromHost(leaves)
 
@@ -275,14 +283,19 @@ func caseTestMerkleTreeBuildingOutputCpu(t *testing.T, nLeaves int, nCaps int, l
 	hashSize := 4
 	nDigests := 2 * (nLeaves - nCaps)
 	capHeight := int(math.Log2(float64(nCaps)))
+	nDigestsAlloc := nDigests
+	if nDigests == 0 {
+		nDigestsAlloc = 1
+	}
 
 	leaves := make([]uint64, nLeaves*leafSize)
 	for i := 0; i < nLeaves; i++ {
 		copy(leaves[i*leafSize:], leaf)
 	}
 	caps := make([]uint64, nCaps*hashSize)
+	digests := make([]uint64, nDigestsAlloc*hashSize)
 
-	FillDigestsBufLinearCPU(unsafe.Pointer(&caps[0]), unsafe.Pointer(&caps[0]), unsafe.Pointer(&leaves[0]), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
+	FillDigestsBufLinearCPU(unsafe.Pointer(&digests[0]), unsafe.Pointer(&caps[0]), unsafe.Pointer(&leaves[0]), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
 
 	for j := 0; j < nCaps; j++ {
 		for i := 0; i < len(expHash); i++ {
