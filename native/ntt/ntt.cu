@@ -75,19 +75,6 @@ namespace ntt {
         transpose_rev_kernel<<<blocks_dim, threads_dim, BLOCK_DIM*(BLOCK_DIM + 1)*sizeof(fr_t), stream>>>(in_arr, out_arr, n, lg_n, batch_size);
     }
 
-    /**
-     * Transposes a matrix into a new matrix and performs a bit rev on the new matrix
-     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
-     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
-     * @param n length of `arr`.
-     * @param batch_size the size of the batch.
-     */
-    inline void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream) {
-        int number_of_threads = MAX_THREADS_BATCH;
-        int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
-        naive_transpose_rev_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
-    }
-
     inline void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream) {
         int number_of_threads = MAX_THREADS_BATCH;
         size_t n_extend = static_cast<size_t>(1 << (logn + extension_rate_bits));
@@ -221,59 +208,6 @@ namespace ntt {
             }
 
             transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
-            if (!cfg.are_outputs_on_device) {
-                gpu.DtoH(output, &d_transpose_output[0], total_elements);
-            }
-
-            gpu.sync();
-        }
-        catch (const cuda_error &e) {
-#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-            return RustError{e.code(), e.what()};
-#else
-            return RustError{e.code()};
-#endif
-        }
-        return RustError{cudaSuccess};
-    }
-
-    /**
-     * Used for benchmarking and wrapping into rust
-     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
-     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
-     * @param n length of `arr`.
-     * @param batch_size the size of the batch.
-     */
-    RustError compute_naive_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg) {
-        try {
-            size_t size = static_cast<size_t>(1 << lg_n);
-            size_t total_elements = size * cfg.batches;
-
-            dev_ptr_t<fr_t> d_input{
-                total_elements,
-                gpu,
-                cfg.are_inputs_on_device ? false : true,  // if inputs are already on device, no need to alloc input memory
-                cfg.are_outputs_on_device ? true : false  // if keep output on device; let the user drop the pointer
-            };
-
-            if (cfg.are_inputs_on_device) {
-                d_input.set_device_ptr(input);
-            } else {
-                gpu.HtoD(&d_input[0], input, total_elements);
-            }
-
-            dev_ptr_t<fr_t> d_transpose_output{
-                total_elements,
-                gpu,
-                cfg.are_outputs_on_device ? false : true,
-                cfg.are_outputs_on_device ? true : false};
-
-            if (cfg.are_outputs_on_device) {
-                d_transpose_output.set_device_ptr(output);
-            }
-
-            naive_transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
 
             if (!cfg.are_outputs_on_device) {
                 gpu.DtoH(output, &d_transpose_output[0], total_elements);

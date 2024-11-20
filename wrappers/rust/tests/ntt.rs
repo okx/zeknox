@@ -12,7 +12,7 @@ use rand::random;
 use zeknox::device::memory::HostOrDeviceSlice;
 use zeknox::{
     get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch,
-    lde_batch_multi_gpu, naive_transpose_rev_batch, ntt_batch, transpose_rev_batch, types::*,
+    lde_batch_multi_gpu, ntt_batch, transpose_rev_batch, types::*,
 };
 
 use crate::utils::transpose_and_rev;
@@ -258,75 +258,6 @@ fn test_ntt_batch_on_device() {
         host_output[1 << lg_domain_size..(1 << lg_domain_size) * 2],
         cpu_results2
     );
-}
-
-#[test]
-fn test_naive_transpose_rev() {
-    let lg_domain_size = 22;
-    let domain_size = 1usize << lg_domain_size;
-    let batches = 85;
-
-    let total_elements = domain_size * batches;
-    // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
-
-    let mut input1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-    let mut input2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
-
-    let mut cpu_buffer: Vec<Vec<u64>> = Vec::new();
-    for _k in 0..batches / 2 {
-        cpu_buffer.push(input1.clone());
-        cpu_buffer.push(input2.clone());
-    }
-    if batches % 2 == 1 {
-        cpu_buffer.push(input1.clone());
-    }
-
-    let mut device_data: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
-    let mut device_data2: HostOrDeviceSlice<'_, u64> =
-        HostOrDeviceSlice::cuda_malloc(DEFAULT_GPU, total_elements).unwrap();
-    for k in 0..batches / 2 {
-        let _ = device_data.copy_from_host_offset(
-            input1.as_mut_slice(),
-            2 * k * domain_size,
-            domain_size,
-        );
-        let _ = device_data.copy_from_host_offset(
-            input2.as_mut_slice(),
-            (2 * k + 1) * domain_size,
-            domain_size,
-        );
-    }
-    if batches % 2 == 1 {
-        let _ = device_data.copy_from_host_offset(
-            input1.as_mut_slice(),
-            (batches - 1) * domain_size,
-            domain_size,
-        );
-    }
-
-    let mut cfg = TransposeConfig::default();
-    cfg.batches = batches as u32;
-    cfg.are_inputs_on_device = true;
-    cfg.are_outputs_on_device = true;
-    // println!("device data len: {:?}", device_data.len());
-    naive_transpose_rev_batch(
-        DEFAULT_GPU,
-        device_data2.as_mut_ptr(),
-        device_data.as_mut_ptr(),
-        lg_domain_size,
-        cfg.clone(),
-    );
-
-    let mut host_output = vec![0; total_elements];
-    // println!("start copy to host");
-    device_data2
-        .copy_to_host(host_output.as_mut_slice(), total_elements)
-        .unwrap();
-
-    let cpu_results_tranposed = transpose_and_rev(&cpu_buffer, lg_domain_size);
-    let cpu_results: Vec<u64> = cpu_results_tranposed.into_iter().flatten().collect();
-    assert_eq!(host_output, cpu_results);
 }
 
 #[test]

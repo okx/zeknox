@@ -116,17 +116,6 @@ extern "C"
 extern "C"
 #endif
     RustError
-    compute_naive_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
-                                NTT_TransposeConfig cfg)
-{
-    auto &gpu = select_gpu(device_id);
-    return ntt::compute_naive_transpose_rev(gpu, (fr_t*)output, (fr_t*)input, lg_n, cfg);
-}
-
-#if defined(EXPOSE_C_INTERFACE)
-extern "C"
-#endif
-    RustError
     init_twiddle_factors(size_t device_id, size_t lg_n)
 {
     auto &gpu = select_gpu(device_id);

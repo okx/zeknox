@@ -134,30 +134,6 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
     }
 }
 
-/**
- * Fast transpose from NVIDIA. Takes array and returns its transpose
- * @param in_arr input array of type E (elements).
- * @param out_arr output array of type E (elements).
- * @param n column size of in_arr.
- * @param batch_size row size of in_arr.
- * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
- */
-__global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
-{
-    // Get indexes
-    int threadId = blockIdx.x * blockDim.x + threadIdx.x;
-    if (threadId < n * batch_size)
-    {
-        int j_idx = threadId % n;
-        int i_idx = threadId / n;
-
-        j_idx = __brev(j_idx) >> (32 - lg_n);
-        int idx_swapped = j_idx * batch_size + i_idx;
-
-        out_arr[idx_swapped] = in_arr[threadId];
-    }
-}
-
 __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
 {
     for (uint32_t i = 0; i < n_twiddles; i++)
