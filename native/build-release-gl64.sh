@@ -2,7 +2,7 @@
 
 CAP=`./configure.sh | grep capability | cut -d ' ' -f 3`
 
-rm -rf build
+# rm -rf build
 if [ -z "$CAP" ]; then
     cmake -B build -DBUILD_TESTS=ON
 else
@@ -10,6 +10,6 @@ else
 fi
 cmake --build build -j
 
-if [ "$1"=="-i" ]; then
+if [ "$1" = "-i" ]; then
     sudo cmake --install build
 fi

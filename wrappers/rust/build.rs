@@ -89,25 +89,10 @@ fn build_lib() {
 
     if !libfile.exists() {
         assert!(env::set_current_dir(&srcdir).is_ok());
-        Command::new("rm")
-            .args(["-r", "-f", "build"])
-            .output()
-            .expect("failed to execute process");
-        Command::new("mkdir")
-            .arg("build")
-            .output()
-            .expect("failed to execute process");
-        assert!(env::set_current_dir(&libdir).is_ok());
-        Command::new("cmake")
-            .arg("..")
-            .output()
-            .expect("failed to execute process");
-        Command::new("make")
-            .arg("-j")
+        Command::new("./build-release-gl64.sh")
             .output()
             .expect("failed to execute process");
         assert!(env::set_current_dir(&rootdir).is_ok());
-
         println!("{:?}", libdir);
     }
 

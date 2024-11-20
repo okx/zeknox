@@ -10,6 +10,6 @@ else
 fi
 cmake --build build -j
 
-if [ "$1"=="-i" ]; then
+if [ "$1" = "-i" ]; then
     sudo cmake --install build
 fi
