@@ -1,8 +1,8 @@
 [package]
 name = "zeknox"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-authors = [""]
+authors = ["OKX"]
 description = "ZEro KNOwledge Xcelerated (accelerated ZKP)"
 homepage = ""
 repository = "https://github.com/okx/zeknox.git"
