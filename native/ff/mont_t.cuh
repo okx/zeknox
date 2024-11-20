@@ -1,3 +1,8 @@
+// Copyright Supranational LLC
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #if defined(__CUDA_ARCH__) && !defined(__CRYPTO_FF_MONT_T_CUH__)
 # define __CRYPTO_FF_MONT_T_CUH__
 

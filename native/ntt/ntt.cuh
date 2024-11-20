@@ -1,6 +1,9 @@
-// Copyright 2024 OKX
-#ifndef ZEKNOX_CUDA_NTT_NTT_CUH_
-#define ZEKNOX_CUDA_NTT_NTT_CUH_
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef __ZEKNOX_NTT_NTT_CUH__
+#define __ZEKNOX_NTT_NTT_CUH__
 
 #if defined(FEATURE_GOLDILOCKS)
 #include <ff/goldilocks.hpp>
@@ -26,8 +29,6 @@ RustError batch_lde(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, 
 RustError batch_lde_multi_gpu(fr_t *output, fr_t *inputs, size_t num_gpu, NTT_Direction direction, NTT_Config cfg, size_t lg_n, size_t total_num_input_elements, size_t total_num_output_elements);
 
 RustError compute_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg);
-
-RustError compute_naive_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg);
 }
 
-#endif  // ZEKNOX_CUDA_NTT_NTT_CUH_
+#endif  // __ZEKNOX_NTT_NTT_CUH__

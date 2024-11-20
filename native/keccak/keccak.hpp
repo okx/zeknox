@@ -1,9 +1,9 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef _KECCAK_HPP_
-#define _KECCAK_HPP_
+#ifndef __ZEKNOX_KECCAK_HPP__
+#define __ZEKNOX_KECCAK_HPP__
 
 #include "merkle/hasher.hpp"
 
@@ -23,4 +23,4 @@ static void cpu_hash_two(u64 *input1, u64 *input2, u64 *output);
 
 };
 
-#endif  // _KECCAK_HPP_
+#endif  // __ZEKNOX_KECCAK_HPP__

@@ -1,9 +1,9 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef _HASHER_CUH_
-#define _HASHER_CUH_
+#ifndef __ZEKNOX_HASHER_HPP__
+#define __ZEKNOX_HASHER_HPP__
 
 #include <stdint.h>
 #include <cstring>
@@ -15,4 +15,4 @@ class Hasher {};
 
 #define NUM_HASH_OUT_ELTS 4
 
-#endif // _HASHER_CUH_
+#endif // __ZEKNOX_HASHER_HPP__

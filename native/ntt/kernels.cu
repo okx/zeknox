@@ -1,6 +1,9 @@
-// Copyright 2024 OKX
-#ifndef ZEKNOX_CUDA_NTTT_KERNELS_CU_
-#define ZEKNOX_CUDA_NTTT_KERNELS_CU_
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef __ZEKNOX_CUDA_NTTT_KERNELS_CU__
+#define __ZEKNOX_CUDA_NTTT_KERNELS_CU__
 
 #include <cooperative_groups.h>
 #include <utils/sharedmem.cuh>
@@ -128,30 +131,6 @@ __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, ui
         {
             out_arr[idx + i] = block[threadIdx.y * BLOCK_DIM + 4 * threadIdx.x + i];
         }
-    }
-}
-
-/**
- * Fast transpose from NVIDIA. Takes array and returns its transpose
- * @param in_arr input array of type E (elements).
- * @param out_arr output array of type E (elements).
- * @param n column size of in_arr.
- * @param batch_size row size of in_arr.
- * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
- */
-__global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
-{
-    // Get indexes
-    int threadId = blockIdx.x * blockDim.x + threadIdx.x;
-    if (threadId < n * batch_size)
-    {
-        int j_idx = threadId % n;
-        int i_idx = threadId / n;
-
-        j_idx = __brev(j_idx) >> (32 - lg_n);
-        int idx_swapped = j_idx * batch_size + i_idx;
-
-        out_arr[idx_swapped] = in_arr[threadId];
     }
 }
 
@@ -432,4 +411,4 @@ __device__ __forceinline__ void transpose(fr_t r[z_count])
         r[z] = xchg[y + x][z];
 }
 
-#endif /**ZEKNOX_CUDA_NTTT_KERNELS_CU_ */
+#endif // __ZEKNOX_CUDA_NTTT_KERNELS_CU__

@@ -1,10 +1,15 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 package lib
 
 import (
-	"github.com/okx/cryptography_cuda/wrappers/go/device"
 	"math"
 	"testing"
 	"unsafe"
+
+	"github.com/okx/zeknox/wrappers/go/device"
 )
 
 func TestListDevicesInfo(t *testing.T) {
@@ -151,17 +156,15 @@ func TestTransposeRevBatch(t *testing.T) {
 	}
 }
 
-func TestMerkleTreeBuildingOutputGpu(t *testing.T) {
-	leaf := []uint64{8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027}
-
-	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
-
+func caseTestMerkleTreeBuildingOutputGpu(t *testing.T, nLeaves int, nCaps int, leaf, expHash []uint64) {
 	leafSize := len(leaf)
-	nLeaves := 4
-	nCaps := nLeaves
 	hashSize := 4
 	nDigests := 2 * (nLeaves - nCaps)
 	capHeight := int(math.Log2(float64(nCaps)))
+	nDigestsAlloc := nDigests
+	if nDigests == 0 {
+		nDigestsAlloc = 1
+	}
 
 	leaves := make([]uint64, nLeaves*leafSize)
 	for i := 0; i < nLeaves; i++ {
@@ -171,7 +174,7 @@ func TestMerkleTreeBuildingOutputGpu(t *testing.T) {
 
 	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, nLeaves*leafSize)
 	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
-	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nDigestsAlloc*hashSize)
 
 	gpuLeavesBuff.CopyFromHost(leaves)
 
@@ -182,6 +185,64 @@ func TestMerkleTreeBuildingOutputGpu(t *testing.T) {
 		for i := 0; i < len(expHash); i++ {
 			if caps[4*j+i] != expHash[i] {
 				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
+				return
+			}
+		}
+	}
+}
+
+func TestMerkleTreeBuildingOutputGpu(t *testing.T) {
+	leaf := []uint64{8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027}
+
+	// case 1: nCaps = nLeaves
+	nLeaves := 8
+	nCaps := nLeaves
+	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
+	caseTestMerkleTreeBuildingOutputGpu(t, nLeaves, nCaps, leaf, expHash)
+
+	// case 2: subtree_leaves_len = 2
+	nLeaves = 8
+	nCaps = 4
+	expHash = []uint64{7320113784629306061, 6779895905614599055, 11363085033710007978, 10376477785629036773}
+	caseTestMerkleTreeBuildingOutputGpu(t, nLeaves, nCaps, leaf, expHash)
+
+	// case 3:
+	nLeaves = 16
+	nCaps = 2
+	expHash = []uint64{15643713602922591410, 15764162833178839023, 7963799186968795376, 10933634831850922421}
+	caseTestMerkleTreeBuildingOutputGpu(t, nLeaves, nCaps, leaf, expHash)
+}
+
+func caseTestMerkleTreeBuildingOutputMultiGpu(t *testing.T, nLeaves int, nCaps int, leaf, expHash []uint64) {
+	hashSize := 4
+	leafSize := len(leaf)
+	nDigests := 2 * (nLeaves - nCaps)
+	capHeight := int(math.Log2(float64(nCaps)))
+	nDigestsAlloc := nDigests
+	if nDigests == 0 {
+		nDigestsAlloc = 1
+	}
+
+	leaves := make([]uint64, nLeaves*leafSize)
+	for i := 0; i < nLeaves; i++ {
+		copy(leaves[i*leafSize:], leaf)
+	}
+	caps := make([]uint64, nCaps*hashSize)
+
+	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, nLeaves*leafSize)
+	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
+	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nDigestsAlloc*hashSize)
+
+	gpuLeavesBuff.CopyFromHost(leaves)
+
+	FillDigestsBufLinearMultiGPUWithGPUPtr(gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
+
+	gpuCapsBuff.CopyToHost(caps)
+	for j := 0; j < nCaps; j++ {
+		for i := 0; i < len(expHash); i++ {
+			if caps[4*j+i] != expHash[i] {
+				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
+				return
 			}
 		}
 	}
@@ -198,34 +259,49 @@ func TestMerkleTreeBuildingOutputMultiGpu(t *testing.T) {
 
 	leaf := []uint64{8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027}
 
-	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
-
-	leafSize := len(leaf)
-	nLeaves := 4
+	// case 1: nCaps = nLeaves
+	nLeaves := num
 	nCaps := nLeaves
+	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
+	caseTestMerkleTreeBuildingOutputMultiGpu(t, nLeaves, nCaps, leaf, expHash)
+
+	// case 2: subtree_leaves_len = 2
+	nLeaves = 2 * num
+	nCaps = num
+	expHash = []uint64{7320113784629306061, 6779895905614599055, 11363085033710007978, 10376477785629036773}
+	caseTestMerkleTreeBuildingOutputMultiGpu(t, nLeaves, nCaps, leaf, expHash)
+
+	// case 3: 1 subtree per GPU
+	nLeaves = 16 * num
+	nCaps = 2 * num
+	expHash = []uint64{15643713602922591410, 15764162833178839023, 7963799186968795376, 10933634831850922421}
+	caseTestMerkleTreeBuildingOutputMultiGpu(t, nLeaves, nCaps, leaf, expHash)
+}
+
+func caseTestMerkleTreeBuildingOutputCpu(t *testing.T, nLeaves int, nCaps int, leaf, expHash []uint64) {
+	leafSize := len(leaf)
 	hashSize := 4
 	nDigests := 2 * (nLeaves - nCaps)
 	capHeight := int(math.Log2(float64(nCaps)))
+	nDigestsAlloc := nDigests
+	if nDigests == 0 {
+		nDigestsAlloc = 1
+	}
 
 	leaves := make([]uint64, nLeaves*leafSize)
 	for i := 0; i < nLeaves; i++ {
 		copy(leaves[i*leafSize:], leaf)
 	}
 	caps := make([]uint64, nCaps*hashSize)
+	digests := make([]uint64, nDigestsAlloc*hashSize)
 
-	gpuLeavesBuff, _ := device.CudaMalloc[uint64](0, nLeaves*leafSize)
-	gpuCapsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
-	gpuDigestsBuff, _ := device.CudaMalloc[uint64](0, nCaps*hashSize)
+	FillDigestsBufLinearCPU(unsafe.Pointer(&digests[0]), unsafe.Pointer(&caps[0]), unsafe.Pointer(&leaves[0]), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
 
-	gpuLeavesBuff.CopyFromHost(leaves)
-
-	FillDigestsBufLinearMultiGPUWithGPUPtr(gpuDigestsBuff.AsPtr(), gpuCapsBuff.AsPtr(), gpuLeavesBuff.AsPtr(), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
-
-	gpuCapsBuff.CopyToHost(caps)
 	for j := 0; j < nCaps; j++ {
 		for i := 0; i < len(expHash); i++ {
 			if caps[4*j+i] != expHash[i] {
 				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
+				return
 			}
 		}
 	}
@@ -234,28 +310,21 @@ func TestMerkleTreeBuildingOutputMultiGpu(t *testing.T) {
 func TestMerkleTreeBuildingOutputCpu(t *testing.T) {
 	leaf := []uint64{8395359103262935841, 1377884553022145855, 2370707998790318766, 3651132590097252162, 1141848076261006345, 12736915248278257710, 9898074228282442027}
 
-	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
-
-	leafSize := len(leaf)
-	nLeaves := 4
+	// case 1: nCaps = nLeaves
+	nLeaves := 8
 	nCaps := nLeaves
-	hashSize := 4
-	nDigests := 2 * (nLeaves - nCaps)
-	capHeight := int(math.Log2(float64(nCaps)))
+	expHash := []uint64{7544909477878586743, 7431000548126831493, 17815668806142634286, 13168106265494210017}
+	caseTestMerkleTreeBuildingOutputCpu(t, nLeaves, nCaps, leaf, expHash)
 
-	leaves := make([]uint64, nLeaves*leafSize)
-	for i := 0; i < nLeaves; i++ {
-		copy(leaves[i*leafSize:], leaf)
-	}
-	caps := make([]uint64, nCaps*hashSize)
+	// case 2: subtree_leaves_len = 2
+	nLeaves = 8
+	nCaps = 4
+	expHash = []uint64{7320113784629306061, 6779895905614599055, 11363085033710007978, 10376477785629036773}
+	caseTestMerkleTreeBuildingOutputCpu(t, nLeaves, nCaps, leaf, expHash)
 
-	FillDigestsBufLinearCPU(unsafe.Pointer(&caps[0]), unsafe.Pointer(&caps[0]), unsafe.Pointer(&leaves[0]), nDigests, nCaps, nLeaves, leafSize, capHeight, HashPoseidon)
-
-	for j := 0; j < nCaps; j++ {
-		for i := 0; i < len(expHash); i++ {
-			if caps[4*j+i] != expHash[i] {
-				t.Errorf("MerkleTreeBuildingOutput() = %v, want %v", caps, expHash)
-			}
-		}
-	}
+	// case 3:
+	nLeaves = 16
+	nCaps = 2
+	expHash = []uint64{15643713602922591410, 15764162833178839023, 7963799186968795376, 10933634831850922421}
+	caseTestMerkleTreeBuildingOutputCpu(t, nLeaves, nCaps, leaf, expHash)
 }

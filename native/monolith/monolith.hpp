@@ -1,9 +1,9 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __MONOLITH_HPP__
-#define __MONOLITH_HPP__
+#ifndef __ZEKNOX_MONOLITH_HPP__
+#define __ZEKNOX_MONOLITH_HPP__
 
 #include "types/int_types.h"
 #include "ff/goldilocks.hpp"
@@ -48,4 +48,4 @@ public:
 };
 #endif // USE_CUDA
 
-#endif // __MONOLITH_HPP__
+#endif // __ZEKNOX_MONOLITH_HPP__

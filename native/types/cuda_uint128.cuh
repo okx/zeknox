@@ -1,4 +1,5 @@
-// Copyright 2024 OKX
+// Copyright 2016 Curtis Seizert
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -16,8 +17,8 @@
 
 */
 
-#ifndef _UINT128_T_CUDA_H
-#define _UINT128_T_CUDA_H
+#ifndef __ZEKNOX_UINT128_T_CUDA_H__
+#define __ZEKNOX_UINT128_T_CUDA_H__
 
 #include <iostream>
 #include <iomanip>
@@ -1162,4 +1163,4 @@ __device__
   return uint128_t::_isqrt(x);
 }
 
-#endif
+#endif // __ZEKNOX_UINT128_T_CUDA_H__
