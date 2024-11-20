@@ -681,7 +681,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
     let mut host_inputs_copy = host_inputs.clone();
 
     for batches in 1..max_batches {
-        println!("Run with batches={}", batches);
+        println!("Run LDE multi-gpu with batches={}", batches);
         let total_num_input_elements = input_domain_size * batches;
         let total_num_output_elements = output_domain_size * batches;
 
@@ -703,15 +703,12 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
             total_num_output_elements,
         );
 
-        // println!("LDE completed");
-
         let mut lde_multi_output = vec![0; batches * output_domain_size];
         let _ = device_output_data.copy_to_host_offset(
             lde_multi_output.as_mut_slice(),
             0,
             output_domain_size * batches,
         );
-        println!("LDE completed, copied from gpu");
 
         // GPU LDE in 1 GPU
         let mut cfg_lde_copy = NTTConfig::default();

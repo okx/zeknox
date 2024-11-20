@@ -390,17 +390,25 @@ namespace ntt {
             uint32_t num_batches_per_gpu = cfg.batches / num_gpu;
             uint32_t rem = cfg.batches % num_gpu;
 
-
             std::vector<fr_t *> output_pointers;
             std::vector<fr_t *> input_pointers;
+            std::vector<uint32_t> batches_alloc;
+            std::vector<uint32_t> batches_till;
+            uint32_t batches_sum = 0;
+            for (size_t i = 0; i < num_gpu; i++) {
+                size_t b = (i < rem) ? num_batches_per_gpu + 1 : num_batches_per_gpu;
+                batches_alloc.push_back(b);
+                batches_till.push_back(batches_sum);
+                batches_sum += b;
+            }
 
             for (size_t i = 0; i < num_gpu; i++) {
-                auto &gpu = select_gpu(i);
-
-                size_t batches = (i <= rem) ? num_batches_per_gpu + 1 : num_batches_per_gpu;
+                size_t batches = batches_alloc.at(i);
                 if (batches == 0) {
                     continue;
                 }
+                auto &gpu = select_gpu(i);
+
                 // printf("Num batches:%d\n", batches);
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = static_cast<size_t>(1 << lg_output_domain_size);
@@ -423,7 +431,7 @@ namespace ntt {
                     true,
                     true};
 
-                void *src = (inputs + (i * num_batches_per_gpu * (static_cast<size_t>(1 << lg_n))));
+                void *src = (inputs + (batches_till.at(i) * (static_cast<size_t>(1 << lg_n))));
                 gpu.HtoD(&input_data[0], src, total_input_elements);
 
                 input_pointers.emplace_back(&input_data[0]);
@@ -469,7 +477,7 @@ namespace ntt {
             d_buffer.set_device_ptr(output);
 
             for (size_t i = 0; i < num_gpu; i++) {
-                size_t batches = (i <= rem) ? num_batches_per_gpu + 1 : num_batches_per_gpu;
+                size_t batches = batches_alloc.at(i);
                 if (batches == 0) {
                     continue;
                 }
@@ -494,7 +502,7 @@ namespace ntt {
                     CUDA_OK(cudaDeviceCanAccessPeer(&canAccessPeer, 0, gpu.id()));
                     if (canAccessPeer) {
                         // printf("Peer copy can access gpu\n");
-                        size_t offset = i * num_batches_per_gpu * (static_cast<size_t>(1 << lg_output_domain_size));
+                        size_t offset = batches_till.at(i) * (static_cast<size_t>(1 << lg_output_domain_size));
                         // printf("Offset:%d on GPU: %d\n", offset, gpu.id());
                         // printf("The pointer value: %d\n", &d_buffer[offset]);
                         CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, gpu.id(), total_output_bytes, gpu));
@@ -503,9 +511,13 @@ namespace ntt {
             }
 
             for (size_t i = 0; i < num_gpu; i++) {
+                size_t batches = batches_alloc.at(i);
+                if (batches == 0) {
+                    continue;
+                }
+                auto &gpu = select_gpu(i);
                 fr_t *output_data = output_pointers.at(i);
                 fr_t *input_data = input_pointers.at(i);
-                auto &gpu = select_gpu(i);
                 // printf("Syncing gpu %d\n", gpu.id());
                 gpu.sync();
                 CUDA_OK(cudaFree(reinterpret_cast<void *>(output_data)));
@@ -513,6 +525,7 @@ namespace ntt {
             }
         }
         catch (const cuda_error &e) {
+            printf("Err %d\n", e.code());
 #ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
             return RustError{e.code(), e.what()};
 #else
