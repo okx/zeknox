@@ -75,19 +75,6 @@ namespace ntt {
         transpose_rev_kernel<<<blocks_dim, threads_dim, BLOCK_DIM*(BLOCK_DIM + 1)*sizeof(fr_t), stream>>>(in_arr, out_arr, n, lg_n, batch_size);
     }
 
-    /**
-     * Transposes a matrix into a new matrix and performs a bit rev on the new matrix
-     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
-     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
-     * @param n length of `arr`.
-     * @param batch_size the size of the batch.
-     */
-    inline void naive_transpose_rev_batch(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size, stream_t &stream) {
-        int number_of_threads = MAX_THREADS_BATCH;
-        int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
-        naive_transpose_rev_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(in_arr, out_arr, n, lg_n, batch_size);
-    }
-
     inline void extend_inputs_batch(fr_t *output, fr_t *arr, uint32_t n, uint32_t logn, uint32_t extension_rate_bits, uint32_t batch_size, stream_t &stream) {
         int number_of_threads = MAX_THREADS_BATCH;
         size_t n_extend = static_cast<size_t>(1 << (logn + extension_rate_bits));
@@ -238,59 +225,6 @@ namespace ntt {
         return RustError{cudaSuccess};
     }
 
-    /**
-     * Used for benchmarking and wrapping into rust
-     * @param in_arr batch of input arrays of some object of type T. Should be on GPU.
-     * @param out_arr batch of out arrays of some object of type T. Should be on GPU.
-     * @param n length of `arr`.
-     * @param batch_size the size of the batch.
-     */
-    RustError compute_naive_transpose_rev(const gpu_t &gpu, fr_t *output, fr_t *input, uint32_t lg_n, NTT_TransposeConfig cfg) {
-        try {
-            size_t size = static_cast<size_t>(1 << lg_n);
-            size_t total_elements = size * cfg.batches;
-
-            dev_ptr_t<fr_t> d_input{
-                total_elements,
-                gpu,
-                cfg.are_inputs_on_device ? false : true,  // if inputs are already on device, no need to alloc input memory
-                cfg.are_outputs_on_device ? true : false  // if keep output on device; let the user drop the pointer
-            };
-
-            if (cfg.are_inputs_on_device) {
-                d_input.set_device_ptr(input);
-            } else {
-                gpu.HtoD(&d_input[0], input, total_elements);
-            }
-
-            dev_ptr_t<fr_t> d_transpose_output{
-                total_elements,
-                gpu,
-                cfg.are_outputs_on_device ? false : true,
-                cfg.are_outputs_on_device ? true : false};
-
-            if (cfg.are_outputs_on_device) {
-                d_transpose_output.set_device_ptr(output);
-            }
-
-            naive_transpose_rev_batch(d_input, d_transpose_output, size, lg_n, cfg.batches, gpu);
-
-            if (!cfg.are_outputs_on_device) {
-                gpu.DtoH(output, &d_transpose_output[0], total_elements);
-            }
-
-            gpu.sync();
-        }
-        catch (const cuda_error &e) {
-#ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
-            return RustError{e.code(), e.what()};
-#else
-            return RustError{e.code()};
-#endif
-        }
-        return RustError{cudaSuccess};
-    }
-
     RustError init_coset(const gpu_t &gpu, size_t lg_domain_size, fr_t coset_gen) {
         gpu.select();
         // printf("start init coset gpu id : %d\n", gpu.id());
@@ -387,21 +321,28 @@ namespace ntt {
         try {
             // printf("Multi-GPU LDE-starting\n");
 
-            uint32_t num_batches_per_gpu = (cfg.batches + num_gpu - 1) / num_gpu;
-            uint32_t num_batches_last_gpu = cfg.batches - (num_batches_per_gpu * (num_gpu - 1));
-            if (cfg.batches < num_gpu) {
-                num_gpu = cfg.batches;
-                num_batches_per_gpu = 1;
-                num_batches_last_gpu = 0;
-            }
+            uint32_t num_batches_per_gpu = cfg.batches / num_gpu;
+            uint32_t rem = cfg.batches % num_gpu;
 
             std::vector<fr_t *> output_pointers;
             std::vector<fr_t *> input_pointers;
+            std::vector<uint32_t> batches_alloc;
+            std::vector<uint32_t> batches_till;
+            uint32_t batches_sum = 0;
+            for (size_t i = 0; i < num_gpu; i++) {
+                size_t b = (i < rem) ? num_batches_per_gpu + 1 : num_batches_per_gpu;
+                batches_alloc.push_back(b);
+                batches_till.push_back(batches_sum);
+                batches_sum += b;
+            }
 
             for (size_t i = 0; i < num_gpu; i++) {
+                size_t batches = batches_alloc.at(i);
+                if (batches == 0) {
+                    continue;
+                }
                 auto &gpu = select_gpu(i);
 
-                size_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
                 // printf("Num batches:%d\n", batches);
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = static_cast<size_t>(1 << lg_output_domain_size);
@@ -424,7 +365,7 @@ namespace ntt {
                     true,
                     true};
 
-                void *src = (inputs + (i * num_batches_per_gpu * (static_cast<size_t>(1 << lg_n))));
+                void *src = (inputs + (batches_till.at(i) * (static_cast<size_t>(1 << lg_n))));
                 gpu.HtoD(&input_data[0], src, total_input_elements);
 
                 input_pointers.emplace_back(&input_data[0]);
@@ -470,12 +411,15 @@ namespace ntt {
             d_buffer.set_device_ptr(output);
 
             for (size_t i = 0; i < num_gpu; i++) {
+                size_t batches = batches_alloc.at(i);
+                if (batches == 0) {
+                    continue;
+                }
+
                 // printf("Multi-GPU memory movement starting \n");
                 auto &gpu = select_gpu(i);
 
                 fr_t *output_data = output_pointers.at(i);
-
-                size_t batches = i == num_gpu - 1 ? num_batches_last_gpu : num_batches_per_gpu;
                 // printf("Num batches:%d on GPU: %d\n", batches, gpu.id());
                 uint32_t lg_output_domain_size = lg_n + cfg.extension_rate_bits;
                 size_t size = static_cast<size_t>(1 << lg_output_domain_size);
@@ -492,7 +436,7 @@ namespace ntt {
                     CUDA_OK(cudaDeviceCanAccessPeer(&canAccessPeer, 0, gpu.id()));
                     if (canAccessPeer) {
                         // printf("Peer copy can access gpu\n");
-                        size_t offset = i * num_batches_per_gpu * (static_cast<size_t>(1 << lg_output_domain_size));
+                        size_t offset = batches_till.at(i) * (static_cast<size_t>(1 << lg_output_domain_size));
                         // printf("Offset:%d on GPU: %d\n", offset, gpu.id());
                         // printf("The pointer value: %d\n", &d_buffer[offset]);
                         CUDA_OK(cudaMemcpyPeerAsync(&d_buffer[offset], 0, output_data, gpu.id(), total_output_bytes, gpu));
@@ -501,9 +445,13 @@ namespace ntt {
             }
 
             for (size_t i = 0; i < num_gpu; i++) {
+                size_t batches = batches_alloc.at(i);
+                if (batches == 0) {
+                    continue;
+                }
+                auto &gpu = select_gpu(i);
                 fr_t *output_data = output_pointers.at(i);
                 fr_t *input_data = input_pointers.at(i);
-                auto &gpu = select_gpu(i);
                 // printf("Syncing gpu %d\n", gpu.id());
                 gpu.sync();
                 CUDA_OK(cudaFree(reinterpret_cast<void *>(output_data)));
@@ -511,6 +459,7 @@ namespace ntt {
             }
         }
         catch (const cuda_error &e) {
+            printf("Err %d\n", e.code());
 #ifdef TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE
             return RustError{e.code(), e.what()};
 #else
