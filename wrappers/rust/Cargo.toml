@@ -7,6 +7,8 @@ description = "ZEro KNOwledge Xcelerated (accelerated ZKP)"
 homepage = ""
 repository = "https://github.com/okx/zeknox.git"
 links = "zeknox"
+license = "Apache-2.0"
+readme = "README.md"
 include = [
     "/Cargo.toml",
     "/build.rs",
