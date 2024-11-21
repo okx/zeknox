@@ -5,10 +5,10 @@
 #[allow(dead_code)]
 #[allow(unused_imports)]
 extern crate criterion;
+use rand::random;
 use zeknox::{
     device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt_batch, types::NTTConfig,
 };
-use rand::random;
 
 const DEFAULT_GPU: usize = 0;
 fn random_fr() -> u64 {

@@ -22,7 +22,10 @@ fn build_device_wrapper() {
     println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rerun-if-changed={}", cuda_runtime_api_path);
-    println!("cargo:rerun-if-changed={}", binding_path.to_string_lossy().to_string());
+    println!(
+        "cargo:rerun-if-changed={}",
+        binding_path.to_string_lossy().to_string()
+    );
 
     let bindings = bindgen::Builder::default()
         .header(cuda_runtime_api_path)
@@ -69,11 +72,7 @@ fn build_device_wrapper() {
         .generate()
         .expect("Unable to generate bindings");
 
-    fs::write(
-        binding_path,
-        bindings.to_string(),
-    )
-    .expect("Couldn't write bindings!");
+    fs::write(binding_path, bindings.to_string()).expect("Couldn't write bindings!");
 }
 
 #[cfg(not(feature = "no_cuda"))]
