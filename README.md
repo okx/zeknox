@@ -213,6 +213,12 @@ CPU-only |	CPU+GPU | Speedup
 --- | --- | ---
  5840.96 s | 3792.48 s | 1.54 X
 
+# Contributing
+
+You are welcome to report any issue via Github repo [issues](https://github.com/okx/zeknox/issues). However, due to limited time, we may not be able to fix the issues in a fast way.
+You can also propose bug fixes or new features via [pull requests](https://github.com/okx/zeknox/pulls). Again, we may not be able to accept all the pull requests due to reasons such as limited time to review or incompatibility of the proposed code with the existing code.
+For more details, please read Plonky2 [contributing guide](https://github.com/okx/plonky2/blob/main/CONTRIBUTING.md) (we follow it for this repo as well).
+
 # License
 
 Apache License, Version 2.0 [LICENSE](LICENSE)
