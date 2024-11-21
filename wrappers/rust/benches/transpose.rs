@@ -6,10 +6,7 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
-use zeknox::{
-    device::memory::HostOrDeviceSlice, transpose_rev_batch,
-    types::TransposeConfig,
-};
+use zeknox::{device::memory::HostOrDeviceSlice, transpose_rev_batch, types::TransposeConfig};
 
 use rand::random;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -94,11 +91,7 @@ pub fn transpose<T: Send + Sync + Copy>(matrix: &Vec<Vec<T>>, len: usize) -> Vec
 }
 
 #[cfg(not(feature = "no_cuda"))]
-criterion_group!(
-    benches,
-    bench_transpose_gpu,
-    bench_transpose_cpu
-);
+criterion_group!(benches, bench_transpose_gpu, bench_transpose_cpu);
 #[cfg(feature = "no_cuda")]
 criterion_group!(benches, bench_transpose_cpu);
 criterion_main!(benches);

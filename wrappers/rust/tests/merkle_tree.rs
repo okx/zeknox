@@ -5,10 +5,6 @@
 use core::mem::MaybeUninit;
 use core::slice;
 
-use zeknox::{
-    device::{memory::HostOrDeviceSlice, stream::CudaStream},
-    fill_digests_buf_linear_gpu_with_gpu_ptr, fill_digests_buf_linear_multigpu_with_gpu_ptr,
-};
 use plonky2::{
     hash::{
         hash_types::{RichField, NUM_HASH_OUT_ELTS},
@@ -20,6 +16,10 @@ use plonky2::{
     },
 };
 use plonky2_field::types::Field;
+use zeknox::{
+    device::{memory::HostOrDeviceSlice, stream::CudaStream},
+    fill_digests_buf_linear_gpu_with_gpu_ptr, fill_digests_buf_linear_multigpu_with_gpu_ptr,
+};
 
 fn random_data<F: RichField>(n: usize, k: usize) -> Vec<Vec<F>> {
     (0..n).map(|_| F::rand_vec(k)).collect()

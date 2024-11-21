@@ -4,9 +4,6 @@
 
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use zeknox::{
-    device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt_batch, types::NTTConfig,
-};
 use plonky2_field::{
     fft::fft,
     goldilocks_field::GoldilocksField,
@@ -14,6 +11,9 @@ use plonky2_field::{
     types::{Field, PrimeField64},
 };
 use rand::random;
+use zeknox::{
+    device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt_batch, types::NTTConfig,
+};
 
 const DEFAULT_GPU: usize = 0;
 
