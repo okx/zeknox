@@ -214,14 +214,14 @@ endif()
 
 set(BN254_TEST_SOURCES
   test_bn254.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/misc.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/naf.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/splitparstr.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/alt_bn128.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/misc.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/naf.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/splitparstr.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/alt_bn128.cpp
 )
 include_directories(
   field/
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/
 )
 
 add_executable(test_bn254 ${BN254_TEST_SOURCES})
