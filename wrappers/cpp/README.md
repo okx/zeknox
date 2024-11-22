@@ -22,9 +22,9 @@ to enable G2
 ## Test
 - run test
 ```
-./test_bn254 --gtest_filter=*msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu*
-./test_bn254 --gtest_filter=*msm_inputs_on_device_bn254_g1_curve_gpu_consistency_with_cpu*
-./test_bn254
+$ ./test_bn254 --gtest_filter=*msm_inputs_not_on_device_bn254_g1_curve_gpu_consistency_with_cpu*
+$ ./test_bn254 --gtest_filter=*msm_inputs_on_device_bn254_g1_curve_gpu_consistency_with_cpu*
+$ ./test_bn254
 ```
 
 ## Remarks
