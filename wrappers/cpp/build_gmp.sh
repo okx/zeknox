@@ -258,7 +258,7 @@ build_ios_simulator()
 				echo "Incorrect iPhone Simulator arch"
 				exit 1
 		esac
-		
+
 		BUILD_DIR="build_iphone_simulator_${ARCH}"
 		PACKAGE_DIR="$GMP_DIR/package_iphone_simulator_${ARCH}"
 		libs+=("${PACKAGE_DIR}/lib/libgmp.a")
@@ -279,7 +279,7 @@ build_ios_simulator()
 					 --host ${ARCH}-apple-darwin --disable-assembly --enable-static --disable-shared --with-pic &&
 			make -j${NPROC} &&
 			make install
-		
+
 		cd ..
 	done
 
@@ -346,6 +346,7 @@ fi
 
 TARGET_PLATFORM=$(echo "$1" | tr "[:upper:]" "[:lower:]")
 
+mkdir -p depends
 cd depends
 
 get_gmp
