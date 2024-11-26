@@ -150,6 +150,7 @@ target_include_directories(${LIB_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/bls
 target_compile_definitions(${LIB_NAME} PRIVATE -D${CURVE_FEATURE} -D__ADX__) ## __ADX__ is required for blst
 target_include_directories(${LIB_NAME} PRIVATE ${LIB_INC})
 set_target_properties(${LIB_NAME} PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH}")
+set_target_properties(${LIB_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 set_target_properties(${LIB_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(${LIB_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_compile_options(${LIB_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-dc>)
