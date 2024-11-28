@@ -199,7 +199,7 @@ $ git clone https://github.com/okx/gnark.git
 $ cd gnark
 $ git checkout zeknox
 $ cd examples
-$ go build
+$ go build -tags zeknox
 $ ./examples
 ```
 
@@ -211,7 +211,7 @@ $ sudo snap install go --classic
 The following results are from an GCP g2-standard-32 instance with 32 vCPU of Intel Xeon type and one NVIDIA L4 GPU:
 CPU-only |	CPU+GPU | Speedup
 --- | --- | ---
- 5840.96 s | 3792.48 s | 1.54 X
+ 5840.96 ms | 3792.48 ms | 1.54 X
 
 # Contributing
 
