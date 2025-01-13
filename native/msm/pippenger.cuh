@@ -475,12 +475,14 @@ static RustError mult_pippenger_msm(point_proj_t *out, affine_t *points, size_t 
                                     scalar_t *scalars, bool are_point_in_mont, bool are_scalar_in_mont,
                                     bool on_device,
                                     bool big_triangle,
-                                    unsigned large_bucket_factor)
+                                    unsigned large_bucket_factor,
+                                    uint32_t device_id)
 {
     try
     {
         // printf("mult_pippenger_msm, npoints: %d, are_point_in_mont:%d,on_device:%d, big_triangle:%d, large_bucket_factor:%d \n", npoints, are_point_in_mont, on_device, big_triangle, large_bucket_factor);
-        msm_t<point_proj_t, affine_t, scalar_t> msm{points, scalars, npoints};
+        msm_t<point_proj_t, affine_t, scalar_t> msm{points, scalars, npoints, (int)device_id};
+
         msm.bucket_method_msm(
             out, npoints, are_point_in_mont, are_scalar_in_mont, on_device, big_triangle, large_bucket_factor);
         return RustError{0};
