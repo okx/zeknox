@@ -283,13 +283,13 @@ public:
             unsigned max_bucket_size_run_length = (h_largest_bucket_count + threads_per_bucket - 1) / threads_per_bucket;
             unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
             // printf("threads_per_bucket: %d, sizeof(P): %d, total_large_buckets_size: %d\n", threads_per_bucket, sizeof(P), total_large_buckets_size);
-            CUDA_OK(cudaMallocAsync(&large_buckets, sizeof(P) * total_large_buckets_size, gpu[2]));
+            CUDA_OK(cudaMallocAsync(&large_buckets, sizeof(P) * total_large_buckets_size, gpu));
 
             NUM_THREADS = min(1 << 8, total_large_buckets_size);
             NUM_BLOCKS = (total_large_buckets_size + NUM_THREADS - 1) / NUM_THREADS;
             // printf("NUM_BLOCKS: %d, NUM_THREADS: %d, h_nof_zero_large_buckets: %d, total_num_of_buckets: %d, max_bucket_size_run_length: %d\n",
             //        NUM_BLOCKS, NUM_THREADS, h_nof_zero_large_buckets, total_num_of_buckets, max_bucket_size_run_length);
-            accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
+            accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
                 large_buckets, &d_sorted_bucket_offsets[0] + h_nof_zero_large_buckets, &d_sorted_bucket_count[0] + h_nof_zero_large_buckets,
                 &d_sorted_unique_bucket_indices[0] + h_nof_zero_large_buckets, &points_window_bucket_indices[0], d_points, total_num_of_buckets,
                 large_buckets_to_compute, wbits + num_of_windows_bitsize, wbits, threads_per_bucket, max_bucket_size_run_length);
@@ -299,17 +299,17 @@ public:
             {
                 NUM_THREADS = min(MAX_TH, s);
                 NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
-                single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
+                single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
                     large_buckets, large_buckets, s * 2, 0, 0, s);
             }
 
             // distribute
             NUM_THREADS = min(MAX_TH, large_buckets_to_compute);
             NUM_BLOCKS = (large_buckets_to_compute + NUM_THREADS - 1) / NUM_THREADS;
-            distribute_large_buckets_kernel<P><<<NUM_BLOCKS, NUM_THREADS, 0, gpu[2]>>>(
+            distribute_large_buckets_kernel<P><<<NUM_BLOCKS, NUM_THREADS, 0, gpu>>>(
                 large_buckets, d_buckets, &d_sorted_unique_bucket_indices[0] + h_nof_zero_large_buckets, large_buckets_to_compute);
-            CUDA_OK(cudaFreeAsync(large_buckets, gpu[2]));
-            gpu[2].sync();
+            CUDA_OK(cudaFreeAsync(large_buckets, gpu));
+            gpu.sync();
         }
         else
         {
