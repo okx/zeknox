@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 #[allow(unused_imports)]
 #[cfg(not(feature = "no_cuda"))]
-use cryptography_cuda::{init_twiddle_factors_rs, intt, ntt, ntt_batch, types::*};
+use zeknox::{init_twiddle_factors_rs, intt, ntt, ntt_batch, types::*};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::PolynomialValues;
 use plonky2_field::{fft::fft, polynomial::PolynomialCoeffs, types::Field};
@@ -97,7 +97,7 @@ fn gpu_fft_concurrent_multiple_devices(
 
 #[cfg(not(feature = "no_cuda"))]
 fn gpu_fft_batch(device_id: usize, batches: usize, log_ntt_size: usize) {
-    use cryptography_cuda::device::memory::HostOrDeviceSlice;
+    use zeknox::device::memory::HostOrDeviceSlice;
 
     let domain_size = 1usize << log_ntt_size;
     let total_elements = domain_size * batches;
@@ -134,7 +134,7 @@ fn gpu_fft_batch(device_id: usize, batches: usize, log_ntt_size: usize) {
 
 #[cfg(not(feature = "no_cuda"))]
 fn gpu_fft_batch_multiple_devices(device_nums: usize, batches: usize, log_ntt_size: usize) {
-    use cryptography_cuda::device::memory::HostOrDeviceSlice;
+    use zeknox::device::memory::HostOrDeviceSlice;
 
     let domain_size = 1usize << log_ntt_size;
     let per_device_batch = (batches + device_nums - 1) / device_nums;

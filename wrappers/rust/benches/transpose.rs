@@ -2,7 +2,7 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
-use cryptography_cuda::{
+use zeknox::{
     device::memory::HostOrDeviceSlice, naive_transpose_rev_batch, transpose_rev_batch,
     types::TransposeConfig,
 };

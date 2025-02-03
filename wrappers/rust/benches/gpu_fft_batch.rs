@@ -1,6 +1,6 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{
+use zeknox::{
     device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt_batch, types::NTTConfig,
 };
 use plonky2_field::{

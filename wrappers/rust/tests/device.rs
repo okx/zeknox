@@ -1,5 +1,5 @@
 #[warn(dead_code)]
-use cryptography_cuda::{get_number_of_gpus_rs, list_devices_info_rs};
+use zeknox::{get_number_of_gpus_rs, list_devices_info_rs};
 
 /// example output
 /// Device 0 - Tesla V100-SXM2-16GB

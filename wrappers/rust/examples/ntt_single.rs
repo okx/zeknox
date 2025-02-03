@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 #[allow(unused_imports)]
-use cryptography_cuda::{init_twiddle_factors_rs, ntt, types::*};
+use zeknox::{init_twiddle_factors_rs, ntt, types::*};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::{fft::fft, polynomial::PolynomialCoeffs, types::Field};
 use rand::random;

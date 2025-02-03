@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.1)
-project(cryptography_cuda_cpp LANGUAGES CXX CUDA ASM)
+project(zeknox_cpp LANGUAGES CXX CUDA ASM)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
@@ -92,8 +92,8 @@ ${PROJECT_CUDA_SOURCE_DIR}/lib.cu
 ${PROJECT_CUDA_SOURCE_DIR}/lib.h
 ${PROJECT_CUDA_SOURCE_DIR}/utils/all_gpus.cpp
 )
-add_library(cryptography_cuda STATIC ${LIB_SOURCES} )
-target_include_directories(cryptography_cuda PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
+add_library(zeknox STATIC ${LIB_SOURCES} )
+target_include_directories(zeknox PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
 
 set(IS_CURVE_SUPPORTED FALSE)
 set(SUPPORTED_CURVES BN254;GOLDILOCKS)
@@ -111,13 +111,13 @@ else()
     message("value of CURVE is ${CURVE}")
 endif ()
 
-target_compile_definitions(cryptography_cuda PUBLIC -D__ADX__)
-# target_compile_options(cryptography_cuda PRIVATE
+target_compile_definitions(zeknox PUBLIC -D__ADX__)
+# target_compile_options(zeknox PRIVATE
 #    "-Xcompiler=-ffunction-sections"
 # )
-target_link_libraries(cryptography_cuda ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
-# set_target_properties(cryptography_cuda PROPERTIES POSITION_INDEPENDENT_CODE ON)
-# set_target_properties(cryptography_cuda PROPERTIES
+target_link_libraries(zeknox ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
+# set_target_properties(zeknox PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# set_target_properties(zeknox PROPERTIES
 #                             CUDA_SEPARABLE_COMPILATION ON)
 
 ##============================Build Test & Bench==============================================##
@@ -210,7 +210,7 @@ set(GL64_TEST_SOURCCES
 )
 add_executable(test_gl64 ${GL64_TEST_SOURCCES})
 target_include_directories(test_gl64 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
-target_link_libraries(test_gl64 cryptography_cuda)
+target_link_libraries(test_gl64 zeknox)
 target_link_libraries(
     test_gl64
   GTest::gtest_main
@@ -231,7 +231,7 @@ include_directories(
 
 add_executable(test_bn254 ${BN254_TEST_SOURCES})
 target_include_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
-target_link_libraries(test_bn254 cryptography_cuda)
+target_link_libraries(test_bn254 zeknox)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         target_link_libraries(test_bn254 OpenMP::OpenMP_CXX)
@@ -269,7 +269,7 @@ target_include_directories(
     ${CMAKE_SOURCE_DIR}/field/
 )
 
-target_link_libraries(bench_bn254 cryptography_cuda)
+target_link_libraries(bench_bn254 zeknox)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         target_link_libraries(bench_bn254 OpenMP::OpenMP_CXX)
@@ -280,7 +280,7 @@ install(TARGETS
 test_bn254
 bench_bn254
 test_gl64
-cryptography_cuda
+zeknox
     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

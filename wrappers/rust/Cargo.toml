@@ -1,17 +1,17 @@
 [package]
-name = "cryptography_cuda"
+name = "zeknox"
 version = "0.1.0"
 edition = "2021"
 authors = [ "" ]
 description = "An implementation of cryptography using cuda"
 homepage = ""
-repository = "https://github.com/okx/cryptography_cuda.git"
-links = "cryptography_cuda"
+repository = "https://github.com/okx/zeknox.git"
+links = "zeknox"
 include = [
     "/Cargo.toml",
     "/build.rs",
     "/src/**",
-    "/cryptography_cuda/native/**",
+    "/zeknox/native/**",
 ]
 
 [[bench]]

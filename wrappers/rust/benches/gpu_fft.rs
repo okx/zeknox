@@ -1,6 +1,6 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptography_cuda::{ntt, types::NTTInputOutputOrder};
+use zeknox::{ntt, types::NTTInputOutputOrder};
 use rand::random;
 
 const DEFAULT_GPU: usize = 0;
