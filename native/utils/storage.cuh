@@ -1,11 +1,14 @@
-#ifndef __CRYOPTO_UTIL_GPU_T_CUH__
-#define __CRYOPTO_UTIL_GPU_T_CUH__
+// Copyright (c) 2023 Ingonyama
+// under MIT License
 
-#include <cstdint>
+#ifndef __CRYOPTO_UTIL_STORAGE_CUH__
+#define __CRYOPTO_UTIL_STORAGE_CUH__
+
+#include <stdint.h>
 
 #define LIMBS_ALIGNMENT(x) ((x) % 4 == 0 ? 16 : ((x) % 2 == 0 ? 8 : 4))
 
-// __align(n)__ enforces that the memory for the struct begins at an address in memory that is a multiple of n bytes. 
+// __align(n)__ enforces that the memory for the struct begins at an address in memory that is a multiple of n bytes.
 
 template <unsigned LIMBS_COUNT>
 struct __align__(LIMBS_ALIGNMENT(LIMBS_COUNT)) storage
@@ -19,4 +22,4 @@ struct __align__(LIMBS_ALIGNMENT(LIMBS_COUNT)) storage_array
 {
   storage<LIMBS_COUNT> storages[OMEGAS_COUNT];
 };
-#endif
+#endif  // __CRYOPTO_UTIL_STORAGE_CUH__

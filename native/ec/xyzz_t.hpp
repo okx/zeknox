@@ -1,4 +1,5 @@
 // Copyright Supranational LLC
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -41,6 +42,7 @@ public:
             Y   = p.Y;
             ZZZ = p.ZZZ;
             ZZ  = p.ZZ;
+            return *this;
         }
         inline __device__ void inf() { ZZZ.zero(); ZZ.zero(); }
     };
@@ -78,8 +80,8 @@ public:
             Y = 1/a.ZZZ;
             X = Y * a.ZZ;   // 1/Z
             X = X^2;        // 1/Z^2
-            X *= a.X;       // X/Z^2
-            Y *= a.Y;       // Y/Z^3
+            X *= a.X;       // a.X/Z^2
+            Y *= a.Y;       // a.Y/Z^3
             return *this;
         }
         inline __host__ affine_t(const xyzz_t& a)  { *this = a; }

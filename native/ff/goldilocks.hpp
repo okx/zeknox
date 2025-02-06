@@ -1,5 +1,5 @@
 // Copyright Supranational LLC
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -37,16 +37,16 @@ public:
 
   static inline cpp_gl64_t omega(uint32_t logn)
   {
-    return omegas[logn];
+    return OMEGA[logn];
   }
   static inline cpp_gl64_t omega_inv(uint32_t logn)
   {
-    return omegas_inv[logn];
+    return OMEGA_INV[logn];
   }
 
   static inline const cpp_gl64_t inv_log_size(uint32_t logn)
   {
-    return domain_size_inv[logn];
+    return DOMAIN_SIZE_INV[logn];
   }
 
   cpp_gl64_t add_canonical_u64(const u64 &rhs)

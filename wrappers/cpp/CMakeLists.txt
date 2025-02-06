@@ -1,5 +1,19 @@
 cmake_minimum_required(VERSION 3.22.1)
-project(zeknox_cpp LANGUAGES CXX CUDA ASM)
+
+set(LIB_NAME "zeknox")
+set(PROJ_NAME "zeknox_cpp")
+
+if(NOT CMAKE_CUDA_TOOLKIT_ROOT_DIR)
+  set(CMAKE_CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
+  set(CMAKE_CUDA_COMPILER "${CMAKE_CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
+endif()
+if(NOT CMAKE_CUDA_ARCHITECTURES)
+  set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
+endif()
+set(CUDA_INCLUDE_DIRS ${CMAKE_CUDA_TOOLKIT_ROOT_DIR}/include)
+enable_language(CUDA)
+
+project(${PROJ_NAME} LANGUAGES CXX CUDA ASM)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
@@ -10,9 +24,15 @@ include(cmake/platform.cmake)
 
 set(USE_ASM    ON CACHE BOOL "Use asm implementation for Fr and Fq")
 set(USE_OPENMP ON CACHE BOOL "Use OpenMP")
+set(BUILD_MSM OFF CACHE BOOL "Build MSM")
 set(G2_ENABLED OFF CACHE BOOL "enable G2 curve")
 
+if(BUILD_MSM)
+    message("Build MSM")
+    add_definitions(-DBUILD_MSM)
+endif()
 if(G2_ENABLED)
+    message("Build MSM G2 Enabled")
     add_definitions(-DG2_ENABLED)
 endif()
 
@@ -32,7 +52,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_CUDA_FLAGS_RELEASE "")  # without this setting, the msm_g2 will panic with memory segmentation
 else()
     message("Build on Debug Mode")
-    set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
+    set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -G -O0")
 endif()
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 
@@ -64,8 +84,6 @@ if(USE_OPENMP)
         endif()
     endif()
 endif()
-find_package(CUDA REQUIRED)
-enable_language("CUDA")
 
 get_filename_component(CPP_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
 get_filename_component(PROJECT_DIR ${CPP_DIR} DIRECTORY)
@@ -81,24 +99,13 @@ message("CMAKE_SOURCE_DIR=: ${CMAKE_SOURCE_DIR}")
 message("PROJECT_CUDA_SOURCE_DIR=: ${PROJECT_CUDA_SOURCE_DIR}")
 
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
-include_directories("depends/blst/src")  # the cuda library is dependent on blst
-
-message(STATUS "Include directory: ${INCLUDE_DIR}")
+# include_directories("depends/blst/src")  # the cuda library is dependent on blst
+# message(STATUS "Include directory: ${INCLUDE_DIR}")
 
 ##============================Build CUDA Lib==============================================##
-set(LIB_SOURCES
-${PROJECT_CUDA_SOURCE_DIR}/utils/gpu_t.cuh
-${PROJECT_CUDA_SOURCE_DIR}/lib.cu
-${PROJECT_CUDA_SOURCE_DIR}/lib.h
-${PROJECT_CUDA_SOURCE_DIR}/utils/all_gpus.cpp
-)
-add_library(zeknox STATIC ${LIB_SOURCES} )
-target_include_directories(zeknox PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
-
 set(IS_CURVE_SUPPORTED FALSE)
 set(SUPPORTED_CURVES BN254;GOLDILOCKS)
 foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
-
   if (CURVE STREQUAL SUPPORTED_CURVE)
     add_definitions(-DFEATURE_${CURVE})
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DFEATURE_${CURVE}")
@@ -111,23 +118,24 @@ else()
     message("value of CURVE is ${CURVE}")
 endif ()
 
-target_compile_definitions(zeknox PUBLIC -D__ADX__)
-# target_compile_options(zeknox PRIVATE
-#    "-Xcompiler=-ffunction-sections"
-# )
-target_link_libraries(zeknox ${CMAKE_SOURCE_DIR}/depends/blst/libblst.a)
-# set_target_properties(zeknox PROPERTIES POSITION_INDEPENDENT_CODE ON)
-# set_target_properties(zeknox PROPERTIES
-#                             CUDA_SEPARABLE_COMPILATION ON)
+add_subdirectory(${PROJECT_CUDA_SOURCE_DIR} ${LIB_NAME})
+target_compile_definitions(${LIB_NAME} PRIVATE CURVE=${CURVE})
+if (BUILD_MSM)
+    target_compile_definitions(${LIB_NAME} PRIVATE BUILD_MSM)
+endif()
+if (G2_ENABLED)
+    target_compile_definitions(${LIB_NAME} PRIVATE G2_ENABLED)
+endif()
 
 ##============================Build Test & Bench==============================================##
 enable_testing()
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-)
-FetchContent_MakeAvailable(googletest)
+#include(FetchContent)
+#FetchContent_Declare(
+#  googletest
+#  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+#)
+#FetchContent_MakeAvailable(googletest)
+find_package(GTest REQUIRED)
 
 link_libraries(${GMP_LIB})
 add_definitions(${GMP_DEFINIONS})
@@ -178,8 +186,6 @@ set_target_properties(fr PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 link_libraries(fr)
 
-
-
 set(FQ_SOURCES
     field/fq.hpp
     field/fq.cpp
@@ -205,33 +211,23 @@ if(OpenMP_CXX_FOUND)
     add_compile_options(${OpenMP_CXX_FLAGS})
 endif()
 
-set(GL64_TEST_SOURCCES
-    test_gl64.cpp
-)
-add_executable(test_gl64 ${GL64_TEST_SOURCCES})
-target_include_directories(test_gl64 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
-target_link_libraries(test_gl64 zeknox)
-target_link_libraries(
-    test_gl64
-  GTest::gtest_main
-)
-include(GoogleTest)
-
 set(BN254_TEST_SOURCES
   test_bn254.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/misc.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/naf.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/splitparstr.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/alt_bn128.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/misc.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/naf.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/splitparstr.cpp
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/alt_bn128.cpp
 )
 include_directories(
   field/
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
+  ${CMAKE_SOURCE_DIR}/depends/ffiasm/
 )
 
 add_executable(test_bn254 ${BN254_TEST_SOURCES})
 target_include_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
-target_link_libraries(test_bn254 zeknox)
+target_include_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR}/depends/blst/src)
+target_link_directories(test_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR}/depends/blst)
+target_link_libraries(test_bn254 ${LIB_NAME} blst)
 if(OpenMP_CXX_FOUND)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         target_link_libraries(test_bn254 OpenMP::OpenMP_CXX)
@@ -245,45 +241,11 @@ include(GoogleTest)
 
 gtest_discover_tests(test_bn254)
 
-set(BN254_BENCH_SOURCES
-  bench_bn254.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/misc.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/naf.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/splitparstr.cpp
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c/alt_bn128.cpp
-)
+# install(TARGETS
+# test_bn254
+#     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+#     BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
-
-add_executable(bench_bn254 ${BN254_BENCH_SOURCES})
-include_directories(
-  field/
-  ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
-)
-target_include_directories(bench_bn254 PRIVATE ${PROJECT_CUDA_SOURCE_DIR})
-target_include_directories(
-    bench_bn254 PRIVATE
-    ${CMAKE_SOURCE_DIR}/depends/ffiasm/c
-)
-target_include_directories(
-    bench_bn254 PRIVATE
-    ${CMAKE_SOURCE_DIR}/field/
-)
-
-target_link_libraries(bench_bn254 zeknox)
-if(OpenMP_CXX_FOUND)
-    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-        target_link_libraries(bench_bn254 OpenMP::OpenMP_CXX)
-    endif()
-endif()
-
-install(TARGETS
-test_bn254
-bench_bn254
-test_gl64
-zeknox
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-    BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/app
-    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-
-install(FILES src/lib.h
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+# install(FILES src/lib.h
+#     DESTINATION ${CMAKE_INSTALL_PREFIX}/include)

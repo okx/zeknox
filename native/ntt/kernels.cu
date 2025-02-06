@@ -1,14 +1,18 @@
-// Copyright 2024 OKX
-#ifndef ZEKNOX_CUDA_NTTT_KERNELS_CU_
-#define ZEKNOX_CUDA_NTTT_KERNELS_CU_
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef __ZEKNOX_CUDA_NTTT_KERNELS_CU__
+#define __ZEKNOX_CUDA_NTTT_KERNELS_CU__
+
 #include <cooperative_groups.h>
 #include <utils/sharedmem.cuh>
-
 #include <curand_kernel.h>
 
 #define BLOCK_DIM 32
 
-__global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size) {
+__global__ void reverse_order_kernel(fr_t *arr, uint32_t n, uint32_t logn, uint32_t batch_size)
+{
     int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (threadId < n * batch_size)
     {
@@ -90,63 +94,45 @@ __global__ void gen_random_salt_kernel(fr_t *arr, uint32_t size, uint32_t salt_s
 __global__ void transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
 {
     // We use shared memory 'cache' blocks for coalesce memory efficiency improvement
-	__shared__ fr_t block[BLOCK_DIM][BLOCK_DIM+1];
+    // use dynamically allocated shared memory: https://developer.nvidia.com/blog/using-shared-memory-cuda-cc/
+    // and https://stackoverflow.com/questions/69963358/how-to-fix-warning-dynamic-initialization-is-not-supported-for-a-function-scop
+    extern __shared__ fr_t block[];
 
     // Get indexes
-    int j_idx = blockIdx.x * BLOCK_DIM + (4*threadIdx.x);
+    int j_idx = blockIdx.x * BLOCK_DIM + (4 * threadIdx.x);
     int i_idx = blockIdx.y * BLOCK_DIM + threadIdx.y;
 
     int idx = i_idx * n + j_idx;
 
-	// read the matrix tile into shared memory in its transposed position
-    for(int i = 0; i < 4; i++){
-        if((i_idx < batch_size) && ((j_idx+i) < n)){
-            block[(4 * threadIdx.x) + i][threadIdx.y] = in_arr[idx + i];
+    // read the matrix tile into shared memory in its transposed position
+    for (int i = 0; i < 4; i++)
+    {
+        if ((i_idx < batch_size) && ((j_idx + i) < n))
+        {
+            block[((4 * threadIdx.x) + i) * BLOCK_DIM + threadIdx.y] = in_arr[idx + i];
         }
     }
 
     // synchronise to ensure all writes to block[][] have completed
-	__syncthreads();
+    __syncthreads();
 
     // calculated transposed indexes
-    j_idx = blockIdx.y * BLOCK_DIM + (4*threadIdx.x);
+    j_idx = blockIdx.y * BLOCK_DIM + (4 * threadIdx.x);
     i_idx = blockIdx.x * BLOCK_DIM + threadIdx.y;
 
     int i_idx_rev = __brev(i_idx) >> (32 - lg_n);
 
     idx = i_idx_rev * batch_size + j_idx;
 
-	// write the transposed matrix tile to global memory (out_arr) in linear order
-	for(int i = 0; i < 4; i++){
-        if((i_idx < n) && ((j_idx+i) < batch_size)){
-            out_arr[idx+ i] = block[threadIdx.y][(4 * threadIdx.x) + i];
+    // write the transposed matrix tile to global memory (out_arr) in linear order
+    for (int i = 0; i < 4; i++)
+    {
+        if ((i_idx < n) && ((j_idx + i) < batch_size))
+        {
+            out_arr[idx + i] = block[threadIdx.y * BLOCK_DIM + 4 * threadIdx.x + i];
         }
     }
 }
-
-/**
- * Fast transpose from NVIDIA. Takes array and returns its transpose
- * @param in_arr input array of type E (elements).
- * @param out_arr output array of type E (elements).
- * @param n column size of in_arr.
- * @param batch_size row size of in_arr.
- * @param blocks_per_row number of blocks operating on each row (equal to n/block_dim)
- */
- __global__ void naive_transpose_rev_kernel(fr_t *in_arr, fr_t *out_arr, uint32_t n, uint32_t lg_n, uint32_t batch_size)
- {
-     // Get indexes
-     int threadId = blockIdx.x * blockDim.x + threadIdx.x;
-     if (threadId < n * batch_size)
-     {
-        int j_idx = threadId % n;
-        int i_idx = threadId / n;
-
-        j_idx = __brev(j_idx) >> (32 - lg_n);
-        int idx_swapped = j_idx * batch_size + i_idx;
-
-        out_arr[idx_swapped] = in_arr[threadId];
-     }
- }
 
 __global__ void twiddle_factors_kernel(fr_t *d_twiddles, uint32_t n_twiddles, fr_t omega)
 {
@@ -176,7 +162,7 @@ ntt_template_kernel(fr_t *arr, uint32_t n, fr_t *twiddles, uint32_t n_twiddles, 
 {
     // if (threadIdx.x == 0 && blockIdx.x == 0)
     // {
-        // printf("inside ntt_template_kernel blk.idx: %d, thread.idx: %d\n", blockIdx.x, threadIdx.x );
+    // printf("inside ntt_template_kernel blk.idx: %d, thread.idx: %d\n", blockIdx.x, threadIdx.x );
     // }
 
     int task = blockIdx.x;
@@ -425,4 +411,4 @@ __device__ __forceinline__ void transpose(fr_t r[z_count])
         r[z] = xchg[y + x][z];
 }
 
-#endif /**ZEKNOX_CUDA_NTTT_KERNELS_CU_ */
+#endif // __ZEKNOX_CUDA_NTTT_KERNELS_CU__

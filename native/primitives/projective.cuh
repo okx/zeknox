@@ -1,6 +1,5 @@
-// Copyright 2024 OKX
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2023 Ingonyama
+// under MIT License
 
 #ifndef __CRYPTO_PRIMITIVES_PROJECTIVE_CUH__
 #define __CRYPTO_PRIMITIVES_PROJECTIVE_CUH__
@@ -142,9 +141,9 @@ public:
 #pragma unroll
 #endif
 #endif
-    for (int i = 0; i < SCALAR_FF::NBITS; i++) {
+    for (int i = 0; i < SCALAR_FF::nbits; i++) {
       if (i > 0) { res = res + res; }
-      if (scalar.get_scalar_digit(SCALAR_FF::NBITS - i - 1, 1)) { res = res + point; }
+      if (scalar.get_scalar_digit(SCALAR_FF::nbits - i - 1, 1)) { res = res + point; }
     }
     return res;
   }

@@ -1,3 +1,7 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 use types::{NTTConfig, TransposeConfig};
 
 #[cfg(feature = "cuda")]
@@ -46,14 +50,6 @@ extern "C" {
     ) -> error::Error;
 
     fn compute_transpose_rev(
-        device_id: i32,
-        output: *mut core::ffi::c_void,
-        input: *mut core::ffi::c_void,
-        lg_n: usize,
-        cfg: types::TransposeConfig,
-    ) -> error::Error;
-
-    fn compute_naive_transpose_rev(
         device_id: i32,
         output: *mut core::ffi::c_void,
         input: *mut core::ffi::c_void,
@@ -213,28 +209,6 @@ pub fn transpose_rev_batch<T>(
 ) {
     let err = unsafe {
         compute_transpose_rev(
-            device_id,
-            output as *mut core::ffi::c_void,
-            input as *mut core::ffi::c_void,
-            log_n_size,
-            cfg,
-        )
-    };
-
-    if err.code != 0 {
-        panic!("{}", String::from(err));
-    }
-}
-
-pub fn naive_transpose_rev_batch<T>(
-    device_id: i32,
-    output: *mut T,  // &mut [T],
-    input: *const T, // &mut [T],
-    log_n_size: usize,
-    cfg: TransposeConfig,
-) {
-    let err = unsafe {
-        compute_naive_transpose_rev(
             device_id,
             output as *mut core::ffi::c_void,
             input as *mut core::ffi::c_void,
