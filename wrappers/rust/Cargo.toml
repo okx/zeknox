@@ -34,8 +34,8 @@ bit_reverse = "=0.1.1"
 
 
 [dev-dependencies]
-rand = "*"
-criterion = "*"
+rand = "0.9.0"
+criterion = "0.5.1"
 rayon = "1.8.1"
 rustacuda = "0.1"
 rustacuda_core = "0.1"
@@ -47,12 +47,11 @@ plonky2_field = "1.0.0"
 [build-dependencies]
 cc = "^1.0.70"
 which = "^4.0"
-cmake = "*"
 bindgen = "0.69.4"
-libc = "*" #TODO: move libc dependencies to build
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
+
 
 [features]
 default = ["cuda"]
