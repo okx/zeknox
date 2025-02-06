@@ -1,9 +1,9 @@
-// Copyright 2024 OKX
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __POSEIDON_PERMUTATION_HPP__
-#define __POSEIDON_PERMUTATION_HPP__
+#ifndef __ZEKNOX_POSEIDON_PERMUTATION_HPP__
+#define __ZEKNOX_POSEIDON_PERMUTATION_HPP__
 
 #include "ff/goldilocks.hpp"
 #include "poseidon/poseidon.hpp"
@@ -139,4 +139,4 @@ public:
     }
 };
 
-#endif // __POSEIDON_PERMUTATION_HPP__
+#endif // __ZEKNOX_POSEIDON_PERMUTATION_HPP__

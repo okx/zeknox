@@ -1,26 +1,19 @@
 [package]
 name = "zeknox"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-authors = [ "" ]
-description = "An implementation of cryptography using cuda"
+authors = ["OKX"]
+description = "ZEro KNOwledge Xcelerated (accelerated ZKP)"
 homepage = ""
 repository = "https://github.com/okx/zeknox.git"
 links = "zeknox"
+license = "Apache-2.0"
+readme = "README.md"
 include = [
     "/Cargo.toml",
     "/build.rs",
     "/src/**",
-    "/zeknox/native/**",
 ]
-
-[[bench]]
-name = "gpu_fft"
-harness = false
-
-[[bench]]
-name = "cpu_fft"
-harness = false
 
 [[bench]]
 name = "gpu_fft_batch"
@@ -47,7 +40,8 @@ rayon = "1.8.1"
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
-plonky2_field = {git="https://github.com/0xPolygonZero/plonky2.git", rev="80386f3bdb83dc5387e68873b33549fbc871a4fa"}
+plonky2 = {git="https://github.com/okx/plonky2.git", rev="9a917ba27c26aca6d0e5d9760e8575cd5fc8dd0a"}
+plonky2_field = {git="https://github.com/okx/plonky2.git", rev="9a917ba27c26aca6d0e5d9760e8575cd5fc8dd0a"}
 
 [build-dependencies]
 cc = "^1.0.70"

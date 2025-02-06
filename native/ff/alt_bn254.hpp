@@ -1,4 +1,5 @@
-// Copyright 2024 OKX
+// Copyright Supranational LLC
+// Copyright 2024 OKX Group
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -99,11 +100,15 @@ struct fr_t : public fr_mont
  * define fp_t, fr_t in host code
  */
 #ifndef __CUDA_ARCH__ // host-side field types
+#ifdef __cplusplus
 #include <blst_t.hpp>
+#endif
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsubobject-linkage"
 #endif
+
+#ifdef __cplusplus
 // TO_LIMB_T is defined in blst_t.hpp, # define TO_LIMB_T(limb64)     (limb_t)limb64,(limb_t)(limb64>>32)
 // vec256, blst_256_t is a type defined in blst_t.hpp also
 // the int value of P is 21888242871839275222246405745257275088696311157297823662689037894645226208583
@@ -134,15 +139,26 @@ struct fp_t : public fp_mont
     inline fp_t(const fp_mont &a) : fp_mont(a) {}
 };
 
+
+// Fr element, Field modulus q;
+// In decimal format, it is 21888242871839275222246405745257275088548364400416034343698204186575808495617
 static const vec256 ALT_BN128_r = {
     TO_LIMB_T(0x43e1f593f0000001), TO_LIMB_T(0x2833e84879b97091),
     TO_LIMB_T(0xb85045b68181585d), TO_LIMB_T(0x30644e72e131a029)};
+
+// The square of Montgomery Constant
 static const vec256 ALT_BN128_rRR = {/* (1<<512)%r */
                                      TO_LIMB_T(0x1bb8e645ae216da7), TO_LIMB_T(0x53fe3ab1e35c59e3),
                                      TO_LIMB_T(0x8c49833d53bb8085), TO_LIMB_T(0x0216d0b17f4e44a5)};
+
+// Fr ONE in montgomery form; The Montgomery Constant
 static const vec256 ALT_BN128_rONE = {/* (1<<256)%r */
                                       TO_LIMB_T(0xac96341c4ffffffb), TO_LIMB_T(0x36fc76959f60cd29),
                                       TO_LIMB_T(0x666ea36f7879462e), TO_LIMB_T(0x0e0a77c19a07df2f)};
+/**
+ * 254 is number of bits
+ * 0xc2e1f593efffffffu is q + r'.r = 1, i.e., qInvNeg = - q⁻¹ mod r, used for Montgomery reduction; In decimal it is 14042775128853446655
+ */
 typedef blst_256_t<254, ALT_BN128_r, 0xc2e1f593efffffffu,
                    ALT_BN128_rRR, ALT_BN128_rONE>
     fr_mont;
@@ -175,6 +191,8 @@ struct fr_t : public fr_mont
     }
     //**********************************************************
 };
+
+#endif
 
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop

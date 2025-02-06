@@ -1,6 +1,9 @@
+// Copyright (c) 2023 Ingonyama
+// under MIT License
+
 #ifndef __CRYPTO_UTIL_PTX_CUH__
 #define __CRYPTO_UTIL_PTX_CUH__
-#include <cstdint>
+#include <stdint.h>
 #include <cuda_runtime.h>
 
 namespace ptx {

@@ -1,6 +1,5 @@
-// Copyright 2024 OKX
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2023 Ingonyama
+// under MIT License
 
 /**
  * This file contains methods for working with elements of a prime field. It is based on and evolved from Matter Labs'
@@ -21,12 +20,7 @@
 #include "utils/host_math.cuh"
 #include "utils/ptx.cuh"
 #include "utils/storage.cuh"
-#include <iomanip>
-#include <iostream>
-#include <random>
-#include <sstream>
-#include <string>
-
+#include <time.h>
 
 #ifndef CUDA_DEBUG
 #define HOST_INLINE        __host__ __forceinline__
@@ -44,7 +38,7 @@ class Field
 {
 public:
   static constexpr unsigned TLC = CONFIG::limbs_count;
-  static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
+  static constexpr unsigned nbits = CONFIG::modulus_bit_count;
 
   static constexpr HOST_DEVICE_INLINE Field zero() { return Field{CONFIG::zero}; }
 
@@ -103,7 +97,7 @@ public:
    */
   static constexpr HOST_DEVICE_INLINE unsigned num_of_reductions() { return CONFIG::num_of_reductions; }
 
-  static constexpr unsigned slack_bits = 32 * TLC - NBITS;
+  static constexpr unsigned slack_bits = 32 * TLC - nbits;
 
   struct Wide {
     ff_wide_storage limbs_storage;
@@ -702,12 +696,10 @@ public:
 
   static HOST_INLINE Field rand_host()
   {
-    std::random_device rd;
-    std::mt19937_64 generator(rd());
-    std::uniform_int_distribution<unsigned> distribution;
+    srand((unsigned int)time(NULL));
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
-      value.limbs_storage.limbs[i] = distribution(generator);
+      value.limbs_storage.limbs[i] = (unsigned int)rand();
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
     return value;
@@ -720,19 +712,6 @@ public:
     const ff_storage modulus = get_modulus<REDUCTION_SIZE>();
     Field rs = {};
     return sub_limbs<true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
-  }
-
-  friend std::ostream& operator<<(std::ostream& os, const Field& xs)
-  {
-    std::stringstream hex_string;
-    hex_string << std::hex << std::setfill('0');
-
-    for (int i = 0; i < TLC; i++) {
-      hex_string << std::setw(8) << xs.limbs_storage.limbs[TLC - i - 1];
-    }
-
-    os << "0x" << hex_string.str();
-    return os;
   }
 
   friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys)

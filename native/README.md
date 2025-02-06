@@ -3,10 +3,10 @@
 We use ``cmake`` and ``make`` to build the static library and the tests.
 
 ```
-mkdir build
-cd build
-cmake ..
-make -j4
+cd native
+rm -rf build
+cmake -B build
+cmake --build build -j
 ```
 
 ## cmake options
@@ -17,6 +17,9 @@ set(CUDA_ARCH "86" CACHE STRING "CUDA architecture")
 option(USE_AVX "Enable AVX acceleration" OFF)
 option(USE_AVX512 "Enable AVX512 (and AVX) acceleration" OFF)
 option(BUILD_TESTS "Build tests" OFF)
+CURVE BN254    # indicate which curve to use, default is GL64; supported values are: BN254, etc
+BUILD_MSM      # whether build MSM
+G2_ENABLED     # whether enable msm on G2 curve; it takes very long to build; OFF by default
 ```
 
 ## Other flags
@@ -47,6 +50,14 @@ cmake .. -DBUILD_TESTS=ON
 make -j4
 ./tests.exe
 ```
+
+# Debug with VsCode + CUDA-GDB
+1. Install [Nsight extension](https://marketplace.visualstudio.com/items?itemName=NVIDIA.nsight-vscode-edition)
+2. Build tests in debug mode `./build-debug.sh`
+3. Set breakpoints in the code [tests.cu](tests/tests.cu)
+4. Enjoy VsCode debugging!
+
+<img width="1775" alt="image" src="https://github.com/user-attachments/assets/39319eae-3de8-49a7-b5cd-5f1fad7d5531">
 
 # Algorithms and Data Structures
 

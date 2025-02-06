@@ -1,3 +1,7 @@
+// Copyright 2024 OKX Group
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(not(feature = "no_cuda"))]
 use std::env;
 #[cfg(not(feature = "no_cuda"))]
@@ -14,9 +18,14 @@ fn build_device_wrapper() {
         .join("cuda_runtime_api.h")
         .to_string_lossy()
         .to_string();
+    let binding_path = PathBuf::from("src/device").join("bindings.rs");
     println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rerun-if-changed={}", cuda_runtime_api_path);
+    println!(
+        "cargo:rerun-if-changed={}",
+        binding_path.to_string_lossy().to_string()
+    );
 
     let bindings = bindgen::Builder::default()
         .header(cuda_runtime_api_path)
@@ -63,11 +72,7 @@ fn build_device_wrapper() {
         .generate()
         .expect("Unable to generate bindings");
 
-    fs::write(
-        PathBuf::from("src/device").join("bindings.rs"),
-        bindings.to_string(),
-    )
-    .expect("Couldn't write bindings!");
+    fs::write(binding_path, bindings.to_string()).expect("Couldn't write bindings!");
 }
 
 #[cfg(not(feature = "no_cuda"))]
@@ -79,28 +84,14 @@ fn build_lib() {
     let parent = rootdir.parent().unwrap().parent().unwrap();
     let srcdir = parent.join("native");
     let libdir = srcdir.join("build");
-    let libfile = libdir.join("libcryptocuda.a");
+    let libfile = libdir.join("libzeknox.a");
 
     if !libfile.exists() {
         assert!(env::set_current_dir(&srcdir).is_ok());
-        Command::new("rm")
-            .args(["-r", "-f", "build"])
-            .output()
-            .expect("failed to execute process");
-        Command::new("mkdir")
-            .arg("build")
-            .output()
-            .expect("failed to execute process");
-        assert!(env::set_current_dir(&libdir).is_ok());
-        Command::new("cmake")
-            .arg("..")
-            .output()
-            .expect("failed to execute process");
-        Command::new("make")
+        Command::new("./build-release-gl64.sh")
             .output()
             .expect("failed to execute process");
         assert!(env::set_current_dir(&rootdir).is_ok());
-
         println!("{:?}", libdir);
     }
 
@@ -111,7 +102,7 @@ fn build_lib() {
     println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rustc-link-lib=stdc++");
-    println!("cargo:rustc-link-lib=static=cryptocuda");
+    println!("cargo:rustc-link-lib=static=zeknox");
     println!("cargo:rustc-link-lib=gomp");
 }
 
