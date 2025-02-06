@@ -9,8 +9,8 @@ use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::polynomial::{PolynomialCoeffs, PolynomialValues};
 use plonky2_field::types::{Field, PrimeField64};
 use rand::random;
-use zeknox::device::memory::HostOrDeviceSlice;
-use zeknox::{
+use zeknox_p2::device::memory::HostOrDeviceSlice;
+use zeknox_p2::{
     get_number_of_gpus_rs, init_coset_rs, init_twiddle_factors_rs, intt_batch, lde_batch,
     lde_batch_multi_gpu, ntt_batch, transpose_rev_batch, types::*,
 };
@@ -333,7 +333,8 @@ fn test_transpose_rev() {
 fn test_ntt_batch_with_coset() {
     let lg_domain_size = 4;
     let domain_size = 1usize << lg_domain_size;
-    // let batches = 2;
+
+    println!("Gen {}", GoldilocksField::coset_shift().to_canonical_u64());
 
     init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
     init_coset_rs(

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[warn(dead_code)]
-use zeknox::{get_number_of_gpus_rs, list_devices_info_rs};
+use zeknox_p2::{get_number_of_gpus_rs, list_devices_info_rs};
 
 /// example output
 /// Device 0 - Tesla V100-SXM2-16GB

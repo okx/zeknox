@@ -11,7 +11,7 @@ use plonky2_field::{
     types::{Field, PrimeField64},
 };
 use rand::random;
-use zeknox::{
+use zeknox_p2::{
     device::memory::HostOrDeviceSlice, get_number_of_gpus_rs, init_coset_rs,
     init_twiddle_factors_rs, lde_batch_multi_gpu, types::NTTConfig,
 };

@@ -6,7 +6,7 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(not(feature = "no_cuda"))]
-use zeknox::{device::memory::HostOrDeviceSlice, transpose_rev_batch, types::TransposeConfig};
+use zeknox_p2::{device::memory::HostOrDeviceSlice, transpose_rev_batch, types::TransposeConfig};
 
 use rand::random;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};

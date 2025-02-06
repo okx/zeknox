@@ -11,7 +11,7 @@ use plonky2_field::{
     types::{Field, PrimeField64},
 };
 use rand::random;
-use zeknox::{
+use zeknox_p2::{
     device::memory::HostOrDeviceSlice, init_twiddle_factors_rs, ntt_batch, types::NTTConfig,
 };
 
