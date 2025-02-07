@@ -1,13 +1,19 @@
 # Run and Test
 
 ## Prerequisites
-- rust. To install Rust, run:
+- **rust**: to install Rust, run:
 ```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 Also, set Rust nighly:
 ```
 rustup override set nightly
+```
+
+- **libzeknox.a**: please download ``gl64-86-89-90-libzeknox.a`` from the Github [release page](https://github.com/okx/zeknox/releases), then run:
+```
+sudo cp gl64-86-89-90-libzeknox.a /usr/local/lib/libzeknox.a
+sudo cp libblst.a /usr/local/lib/
 ```
 
 ## Rust Tests
