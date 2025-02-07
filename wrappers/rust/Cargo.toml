@@ -4,7 +4,7 @@ version = "1.0.0"
 edition = "2021"
 authors = ["OKX"]
 description = "ZEro KNOwledge Xcelerated (accelerated ZKP)"
-homepage = ""
+homepage = "https://github.com/okx/zeknox.git"
 repository = "https://github.com/okx/zeknox.git"
 links = "zeknox"
 license = "Apache-2.0"
@@ -34,8 +34,8 @@ bit_reverse = "=0.1.1"
 
 
 [dev-dependencies]
-rand = "*"
-criterion = "*"
+rand = "0.9.0"
+criterion = "0.5.1"
 rayon = "1.8.1"
 rustacuda = "0.1"
 rustacuda_core = "0.1"
@@ -46,9 +46,7 @@ plonky2_field = {git="https://github.com/okx/plonky2.git", rev="9a917ba27c26aca6
 [build-dependencies]
 cc = "^1.0.70"
 which = "^4.0"
-cmake = "*"
 bindgen = "0.69.4"
-libc = "*" #TODO: move libc dependencies to build
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
