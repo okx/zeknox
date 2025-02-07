@@ -83,16 +83,24 @@ fn build_lib() {
     let rootdir = PathBuf::from(rootdirstr);
     let parent = rootdir.parent().unwrap().parent().unwrap();
     let srcdir = parent.join("native");
-    let libdir = srcdir.join("build");
+    let mut libdir = srcdir.join("build");
     let libfile = libdir.join("libzeknox.a");
 
     if !libfile.exists() {
-        assert!(env::set_current_dir(&srcdir).is_ok());
-        Command::new("./build-release-gl64.sh")
-            .output()
-            .expect("failed to execute process");
-        assert!(env::set_current_dir(&rootdir).is_ok());
-        println!("{:?}", libdir);
+        // try to find the lib in /usr/local/lib
+        let altlibdir = PathBuf::from("/usr/local/lib");
+        let altlibfile = altlibdir.join("libzeknox.a");
+        if !altlibfile.exists() {
+            // build the lib
+            assert!(env::set_current_dir(&srcdir).is_ok());
+            Command::new("./build-release-gl64.sh")
+                .output()
+                .expect("failed to execute process");
+            assert!(env::set_current_dir(&rootdir).is_ok());
+            println!("{:?}", libdir);
+        } else {
+            libdir = altlibdir;
+        }
     }
 
     // Tell cargo to look for shared libraries in the specified directory

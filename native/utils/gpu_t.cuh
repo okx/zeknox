@@ -263,7 +263,7 @@ public:
     inline int sm_count() const { return prop.multiProcessorCount; }
     inline void select() const
     {
-        // printf("cuda_id: %d\n", cuda_id);
+        // printf("select GPU id: %d\n", cuda_id);
         cudaSetDevice(cuda_id);
     }
     stream_t &operator[](size_t i) const { return flipflop[i % FLIP_FLOP]; }
@@ -367,10 +367,16 @@ public:
             int current_id;
             cudaGetDevice(&current_id);
             if (current_id != ptr->real_id)
+            {
+                // printf("select GPU id: %d\n", ptr->real_id);
                 cudaSetDevice(ptr->real_id);
+            }
             cudaFree(ptr->ptr);
             if (current_id != ptr->real_id)
+            {
+                // printf("select GPU id: %d\n", current_id);
                 cudaSetDevice(current_id);
+            }
             delete ptr;
         }
     }
