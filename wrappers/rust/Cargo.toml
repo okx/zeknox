@@ -1,6 +1,6 @@
 [package]
 name = "zeknox_p2"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["OKX"]
 description = "ZEro KNOwledge Xcelerated (accelerated ZKP) compatible with 0xPolygonZero/plonky2"
@@ -43,7 +43,6 @@ rustacuda_derive = "0.1"
 plonky2 = "1.0.2"
 plonky2_field = "1.0.0"
 
-
 [build-dependencies]
 cc = "^1.0.70"
 which = "^4.0"
@@ -51,7 +50,6 @@ bindgen = "0.69.4"
 rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
-
 
 [features]
 default = ["cuda"]

@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 set(LIB_NAME "zeknox")
 set(PROJ_NAME "zeknox_cpp")
 
+
 if(NOT CMAKE_CUDA_TOOLKIT_ROOT_DIR)
   set(CMAKE_CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
   set(CMAKE_CUDA_COMPILER "${CMAKE_CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")

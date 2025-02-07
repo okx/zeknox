@@ -43,7 +43,7 @@ jobs:
       - uses: Jimver/cuda-toolkit@v0.2.18
         id: cuda-toolkit
         with:
-          cuda: '12.3.0'
+          cuda: '12.6.0'
           method: 'network'
           sub-packages: '["nvcc", "cudart", "toolkit"]'
       - uses: actions/checkout@v4

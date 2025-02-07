@@ -19,10 +19,12 @@ gpus_t::gpus_t()
         if (cudaGetDeviceProperties(&prop, id) == cudaSuccess &&
             prop.major >= 7)
         {
+            // printf("select GPU id: %d\n", id);
             cudaSetDevice(id);
             gpus.push_back(new gpu_t(gpus.size(), id, prop));
         }
     }
+    // printf("select GPU id: %d\n", 0);
     cudaSetDevice(0);
 }
 gpus_t::~gpus_t()
@@ -171,6 +173,7 @@ void list_all_gpus_prop()
         int *canAccessPeer = new int;
         int device = gpu->id();
         int peerDevice = (device + 1) % gpus.size();
+        // printf("select GPU id: %d\n", device);
         cudaSetDevice(device);
         cudaDeviceEnablePeerAccess(peerDevice, 0);
         cudaDeviceCanAccessPeer(canAccessPeer, device, peerDevice);

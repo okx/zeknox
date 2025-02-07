@@ -162,10 +162,12 @@ LDE size (log) | CPU-only | CPU+GPU | Speedup
 $ sudo apt install -y librust-openssl-dev bc
 $ git clone https://github.com/okx/zk_evm.git
 $ cd zk_evm
-$ git checkout dev
+$ git checkout dev-dumi
+$ cargo build --release --features=cuda
 $ cd scripts
-$ ./prove_stdio.sh ../artifacts/witness_b3_b6.json
-$ ./prove_stdio.sh ../artifacts/witness_b19807080.json
+$ export NUM_OF_GPUS=1
+$ ./benchmark_input.sh ../artifacts/witness_b3_b6.json
+$ ./benchmark_input.sh ../artifacts/witness_b19807080.json
 ```
 
 The following results are from an GCP g2-standard-32 instance with 32 vCPU of Intel Xeon type and one NVIDIA L4 GPU.
@@ -199,7 +201,7 @@ $ git clone https://github.com/okx/gnark.git
 $ cd gnark
 $ git checkout zeknox
 $ cd examples
-$ go build
+$ go build -tags zeknox
 $ ./examples
 ```
 
@@ -211,7 +213,7 @@ $ sudo snap install go --classic
 The following results are from an GCP g2-standard-32 instance with 32 vCPU of Intel Xeon type and one NVIDIA L4 GPU:
 CPU-only |	CPU+GPU | Speedup
 --- | --- | ---
- 5840.96 s | 3792.48 s | 1.54 X
+ 5840.96 ms | 3792.48 ms | 1.54 X
 
 # Contributing
 
