@@ -48,7 +48,8 @@ EXTERNC void fill_digests_buf_linear_multigpu_with_gpu_ptr(
     u64 leaves_buf_size,
     u64 leaf_size,
     u64 cap_height,
-    u64 hash_type);
+    u64 hash_type,
+    u64 gpu_id);
 
 EXTERNC void fill_digests_buf_linear_cpu(
     void *digests_buf_ptr,
