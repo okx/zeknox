@@ -32,6 +32,8 @@
 #include <sys/time.h>
 #endif // TIMING
 
+#define HASH_SIZE_U64 4
+
 #ifdef DEBUG
 void printhash(u64 *h)
 {
@@ -50,7 +52,7 @@ void printhash(u64 *h)
 __global__ void keccak_gpu_driver(u64 *input, u32 size, u64 *hash)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= 1)
+    if (tid > 0)
         return;
 
     KeccakHasher::gpu_hash_one((gl64_t *)input, size, (gl64_t *)hash);
@@ -60,10 +62,10 @@ void keccak_hash_on_gpu(u64 *input, u32 size, u64 *hash)
 {
     u64 *gpu_data, *gpu_hash;
     CHECKCUDAERR(cudaMalloc(&gpu_data, size * sizeof(u64)));
-    CHECKCUDAERR(cudaMalloc(&gpu_hash, 4 * sizeof(u64)));
+    CHECKCUDAERR(cudaMalloc(&gpu_hash, HASH_SIZE_U64 * sizeof(u64)));
     CHECKCUDAERR(cudaMemcpy(gpu_data, input, size * sizeof(u64), cudaMemcpyHostToDevice));
     keccak_gpu_driver<<<1, 1>>>(gpu_data, size, gpu_hash);
-    CHECKCUDAERR(cudaMemcpy(hash, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
+    CHECKCUDAERR(cudaMemcpy(hash, gpu_hash, HASH_SIZE_U64 * sizeof(u64), cudaMemcpyDeviceToHost));
     CHECKCUDAERR(cudaFree(gpu_data));
     CHECKCUDAERR(cudaFree(gpu_hash));
 }
@@ -83,7 +85,7 @@ __global__ void monolith_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
     if (tid >= len)
         return;
 
-    MonolithHasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    MonolithHasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + HASH_SIZE_U64 * tid));
 }
 
 __global__ void monolith_hash_step2(u64 *in, u64 *out, u32 len)
@@ -110,7 +112,7 @@ __global__ void poseidon_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
     if (tid >= len)
         return;
 
-    PoseidonHasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    PoseidonHasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + HASH_SIZE_U64 * tid));
 }
 
 __global__ void poseidon_hash_step2(u64 *in, u64 *out, u32 len)
@@ -137,7 +139,7 @@ __global__ void poseidon2_hash_step1(u64 *in, u64 *out, u32 n, u32 len)
     if (tid >= len)
         return;
 
-    Poseidon2Hasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + 4 * tid));
+    Poseidon2Hasher::gpu_hash_one((gl64_t *)(in + n * tid), n, (gl64_t *)(out + HASH_SIZE_U64 * tid));
 }
 
 __global__ void poseidon2_hash_step2(u64 *in, u64 *out, u32 len)
@@ -163,7 +165,7 @@ TEST(LIBCUDA, keccak_test)
 {
     u64 data[6] = {13421290117754017454ul, 7401888676587830362ul, 15316685236050041751ul, 13588825262671526271ul, 13421290117754017454ul, 7401888676587830362ul};
 
-    [[maybe_unused]] u64 expected[7][4] = {
+    u64 expected[7][HASH_SIZE_U64] = {
         {0ull},
         {13421290117754017454ul, 0, 0, 0ull},
         {13421290117754017454ul, 7401888676587830362ul, 0, 0ull},
@@ -172,9 +174,9 @@ TEST(LIBCUDA, keccak_test)
         {708367124667950404ul, 17208681281141108820ul, 8334320481120086961ul, 134ull},
         {16109761546392287110ul, 4918745475135463511ul, 17110319063854316944ul, 103}};
 
-    u64 h1[4] = {0u};
+    u64 h1[HASH_SIZE_U64] = {0u};
 #ifdef USE_CUDA
-    u64 h2[4] = {0u};
+    u64 h2[HASH_SIZE_U64] = {0u};
 #endif
 
     for (int size = 1; size <= 6; size++)
@@ -188,7 +190,7 @@ TEST(LIBCUDA, keccak_test)
         printhash(h1);
         printhash(h2);
 #endif
-        for (int j = 0; j < 4; j++)
+        for (int j = 0; j < HASH_SIZE_U64; j++)
         {
             assert(h1[j] == expected[size][j]);
 #ifdef USE_CUDA
@@ -201,9 +203,9 @@ TEST(LIBCUDA, keccak_test)
 TEST(LIBCUDA, monolith_test1)
 {
     u64 inp[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    [[maybe_unused]] u64 expected[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
+    u64 expected[HASH_SIZE_U64] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
 
-    u64 h1[4] = {0u};
+    u64 h1[HASH_SIZE_U64] = {0u};
 
     MonolithHasher::cpu_hash_one(inp, 12, h1);
 #ifdef DEBUG
@@ -215,14 +217,14 @@ TEST(LIBCUDA, monolith_test1)
     assert(h1[3] == expected[3]);
 
 #ifdef USE_CUDA
-    u64 h2[4] = {0u};
+    u64 h2[HASH_SIZE_U64] = {0u};
     u64 *gpu_data;
     u64 *gpu_hash;
     CHECKCUDAERR(cudaMalloc(&gpu_data, 12 * sizeof(u64)));
-    CHECKCUDAERR(cudaMalloc(&gpu_hash, 4 * sizeof(u64)));
+    CHECKCUDAERR(cudaMalloc(&gpu_hash, HASH_SIZE_U64 * sizeof(u64)));
     CHECKCUDAERR(cudaMemcpy(gpu_data, inp, 12 * sizeof(u64), cudaMemcpyHostToDevice));
     monolith_hash<<<1, 1>>>(gpu_data, gpu_hash, 12);
-    CHECKCUDAERR(cudaMemcpy(h2, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
+    CHECKCUDAERR(cudaMemcpy(h2, gpu_hash, HASH_SIZE_U64 * sizeof(u64), cudaMemcpyDeviceToHost));
 #ifdef DEBUG
     printhash(h2);
 #endif
@@ -278,7 +280,7 @@ TEST(LIBCUDA, poseidon_test1)
 {
     u64 leaf[9] = {8395359103262935841ull, 1377884553022145855ull, 2370707998790318766ull, 3651132590097252162ull, 1141848076261006345ull, 12736915248278257710ull, 9898074228282442027ull, 16154511938222758243ull, 3651132590097252162ull};
 
-    [[maybe_unused]] u64 expected[11][4] = {
+    u64 expected[11][HASH_SIZE_U64] = {
         {0ull},
         {8395359103262935841ull, 0ull, 0ull, 0ull},
         {8395359103262935841ull, 1377884553022145855ull, 0ull, 0ull},
@@ -291,7 +293,7 @@ TEST(LIBCUDA, poseidon_test1)
         {9429914239539731992ull, 14881719063945231827ull, 15528667124986963891ull, 16465743531992249573ull},
         {16643938361881363776ull, 6653675298471110559ull, 12562058402463703932ull, 16154511938222758243ull}};
 
-    u64 h1[4] = {0u};
+    u64 h1[HASH_SIZE_U64] = {0u};
 
     for (int k = 1; k <= 9; k++)
     {
@@ -306,22 +308,22 @@ TEST(LIBCUDA, poseidon_test1)
     }
 
 #ifdef USE_CUDA
-    u64 h2[4] = {0u};
+    u64 h2[HASH_SIZE_U64] = {0u};
 
     u64 *gpu_leaf;
     u64 *gpu_hash;
     CHECKCUDAERR(cudaMalloc(&gpu_leaf, 9 * sizeof(u64)));
-    CHECKCUDAERR(cudaMalloc(&gpu_hash, 4 * sizeof(u64)));
+    CHECKCUDAERR(cudaMalloc(&gpu_hash, HASH_SIZE_U64 * sizeof(u64)));
     CHECKCUDAERR(cudaMemcpy(gpu_leaf, leaf, 9 * sizeof(u64), cudaMemcpyHostToDevice));
 
     for (int k = 1; k <= 9; k++)
     {
         poseidon_hash<<<1, 1>>>(gpu_leaf, gpu_hash, k);
-        CHECKCUDAERR(cudaMemcpy(h2, gpu_hash, 4 * sizeof(u64), cudaMemcpyDeviceToHost));
+        CHECKCUDAERR(cudaMemcpy(h2, gpu_hash, HASH_SIZE_U64 * sizeof(u64), cudaMemcpyDeviceToHost));
 #ifdef DEBUG
         printhash(h2);
 #endif // DEBUG
-        for (int j = 0; j < 4; j++)
+        for (int j = 0; j < HASH_SIZE_U64; j++)
         {
             assert(h2[j] == expected[k][j]);
         }
@@ -378,8 +380,8 @@ TEST(LIBCUDA, poseidon_test2)
 TEST(LIBCUDA, monolith_test3)
 {
     u64 inp[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    u64 hash[4] = {0};
-    [[maybe_unused]] u64 expected[4] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
+    u64 hash[HASH_SIZE_U64] = {0};
+    u64 expected[HASH_SIZE_U64] = {0xCB4EF9B3FE5BCA9E, 0xE03C9506D19C8216, 0x2F05CFB355E880C, 0xF614E84BF4DF8342};
 
     MonolithHasher::cpu_hash_one(inp, 12, hash);
     for (int i = 0; i < 4; i++)
@@ -414,7 +416,7 @@ TEST(LIBCUDA, poseidon2_test1)
         inp[i] = inp[i - 2] + inp[i - 1];
     }
 
-    u64 h1[4] = {0u};
+    u64 h1[HASH_SIZE_U64] = {0u};
 
     Poseidon2Hasher hasher;
     hasher.cpu_hash_one(inp, 12, h1);
@@ -428,7 +430,7 @@ TEST(LIBCUDA, poseidon2_test1)
     assert(h1[3] == 0xd16e53672c9832a4);
 
 #ifdef USE_CUDA
-    u64 h2[4] = {0u};
+    u64 h2[HASH_SIZE_U64] = {0u};
     u64 *gpu_inp;
     u64 *gpu_hash;
     CHECKCUDAERR(cudaMalloc(&gpu_inp, 12 * sizeof(u64)));
@@ -498,7 +500,7 @@ TEST(LIBCUDA, poseidonbn128_test1)
                    1441151880423231822ull,
                    0ull, 0ull, 0ull, 0ull, 0ull, 0ull, 0ull};
 
-    [[maybe_unused]] u64 expected[4] = {2163910501769503938ull, 9976732063159483418ull, 662985512748194034ull, 3626198389901409849ull};
+    u64 expected[HASH_SIZE_U64] = {2163910501769503938ull, 9976732063159483418ull, 662985512748194034ull, 3626198389901409849ull};
 
     u64 cpu_out[HASH_SIZE_U64];
 
