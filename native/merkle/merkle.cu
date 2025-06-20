@@ -307,6 +307,7 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr_template(
     // (special case) compute leaf hashes on GPU
     if (cap_buf_size == leaves_buf_size)
     {
+        CHECKCUDAERR(cudaSetDevice(gpu_id));
         CHECKCUDAERR(cudaStreamCreate(gpu_stream));
         gpu_leaves_ptrs[gpu_id] = (u64 *)leaves_buf_gpu_ptr;
         gpu_caps_ptrs[gpu_id] = (u64 *)cap_buf_gpu_ptr;
