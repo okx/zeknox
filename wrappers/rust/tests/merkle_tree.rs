@@ -78,6 +78,7 @@ fn fill_digests_buf_gpu_ptr<F: RichField, H: Hasher<F>>(
                 leaf_size,
                 cap_height,
                 H::HASHER_TYPE as u64,
+                gpu_id
             );
         } else {
             // println!("Single GPU");

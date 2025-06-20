@@ -80,6 +80,7 @@ extern "C" {
         leaf_size: u64,
         cap_height: u64,
         hash_type: u64,
+        gpu_id: u64,
     );
 
     pub fn fill_digests_buf_linear_cpu(
