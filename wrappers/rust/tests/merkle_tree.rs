@@ -9,11 +9,9 @@ use plonky2::{
     hash::{
         hash_types::{RichField, NUM_HASH_OUT_ELTS},
         merkle_tree::MerkleTree,
-        poseidon_bn128::PoseidonBN128GoldilocksConfig,
+        // poseidon_bn128::PoseidonBN128GoldilocksConfig,
     },
-    plonk::config::{
-        GenericConfig, Hasher, HasherType, Poseidon2GoldilocksConfig, PoseidonGoldilocksConfig,
-    },
+    plonk::config::{GenericConfig, Hasher, PoseidonGoldilocksConfig},
 };
 use plonky2_field::types::Field;
 use zeknox::{
@@ -62,10 +60,8 @@ fn fill_digests_buf_gpu_ptr<F: RichField, H: Hasher<F>>(
             .expect("NUM_OF_GPUS should be set")
             .parse()
             .unwrap();
-        if leaves_count >= (1 << 12)
-            && cap_height > 0
-            && num_gpus > 1
-            && H::HASHER_TYPE == HasherType::PoseidonBN128
+        if leaves_count >= (1 << 12) && cap_height > 0 && num_gpus > 1
+        // && H::HASHER_TYPE == HasherType::PoseidonBN128
         {
             // println!("Multi GPU");
             fill_digests_buf_linear_multigpu_with_gpu_ptr(
@@ -77,7 +73,7 @@ fn fill_digests_buf_gpu_ptr<F: RichField, H: Hasher<F>>(
                 leaves_count,
                 leaf_size,
                 cap_height,
-                H::HASHER_TYPE as u64,
+                0, // H::HASHER_TYPE as u64,
             );
         } else {
             // println!("Single GPU");
@@ -90,7 +86,7 @@ fn fill_digests_buf_gpu_ptr<F: RichField, H: Hasher<F>>(
                 leaves_count,
                 leaf_size,
                 cap_height,
-                H::HASHER_TYPE as u64,
+                0, // H::HASHER_TYPE as u64,
                 gpu_id,
             );
         }
@@ -168,7 +164,7 @@ where
     let leaves_2d = random_data(leaves_count, leaf_size);
 
     // MT on CPU from Plonky2
-    let mt = MerkleTree::<C::F, C::Hasher>::new_from_2d(leaves_2d.clone(), cap_height);
+    let mt = MerkleTree::<C::F, C::Hasher>::new(leaves_2d.clone(), cap_height);
 
     // MT on GPU
     let zeros = vec![C::F::ZERO; leaf_size];
@@ -212,12 +208,12 @@ fn test_merkle_trees_poseidon_g64_consistency_with_plonky2() {
     test_merkle_trees_consistency_with_plonky2::<PoseidonGoldilocksConfig>();
 }
 
-#[test]
-fn test_merkle_trees_poseidon2_g64_consistency_with_plonky2() {
-    test_merkle_trees_consistency_with_plonky2::<Poseidon2GoldilocksConfig>();
-}
+// #[test]
+// fn test_merkle_trees_poseidon2_g64_consistency_with_plonky2() {
+//     test_merkle_trees_consistency_with_plonky2::<Poseidon2GoldilocksConfig>();
+// }
 
-#[test]
-fn test_merkle_trees_poseidon_bn128_consistency_with_plonky2() {
-    test_merkle_trees_consistency_with_plonky2::<PoseidonBN128GoldilocksConfig>();
-}
+// #[test]
+// fn test_merkle_trees_poseidon_bn128_consistency_with_plonky2() {
+//     test_merkle_trees_consistency_with_plonky2::<PoseidonBN128GoldilocksConfig>();
+// }

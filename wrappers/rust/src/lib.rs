@@ -21,6 +21,8 @@ extern "C" {
 
     fn init_cuda_degree(max_degree: usize);
 
+    fn clear_cuda_errors_all_devices();
+
     fn compute_batched_ntt(
         device_id: usize,
         inout: *mut core::ffi::c_void,
@@ -168,6 +170,7 @@ pub fn ntt_batch<T>(
     log_n_size: usize,
     cfg: NTTConfig,
 ) {
+    println!("log n size: {log_n_size}");
     let err = unsafe {
         compute_batched_ntt(
             device_id,
@@ -185,6 +188,7 @@ pub fn ntt_batch<T>(
 }
 
 pub fn intt_batch<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NTTConfig) {
+    println!("log n size: {log_n_size}");
     let err = unsafe {
         compute_batched_ntt(
             device_id,
@@ -247,5 +251,21 @@ pub fn init_cuda_rs() {
 pub fn init_cuda_degree_rs(max_degree: usize) {
     unsafe {
         init_cuda_degree(max_degree);
+    }
+}
+
+/// Clears CUDA error state across all devices.
+///
+/// This function should be called between tests or after failed operations
+/// to prevent error state propagation. CUDA errors are "sticky" - once an error
+/// occurs, it persists until explicitly cleared with cudaGetLastError().
+///
+/// This function:
+/// - Iterates through all available GPUs
+/// - Clears the error queue on each device
+/// - Synchronizes all streams to ensure operations complete
+pub fn clear_cuda_errors_rs() {
+    unsafe {
+        clear_cuda_errors_all_devices();
     }
 }

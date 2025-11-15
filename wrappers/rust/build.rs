@@ -14,12 +14,15 @@ extern crate rustacuda;
 // based on: https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/cudart-sys/build.rs
 #[cfg(not(feature = "no_cuda"))]
 fn build_device_wrapper() {
-    let cuda_runtime_api_path = PathBuf::from("/usr/local/cuda/include")
+    let cuda_runtime_api_path = PathBuf::from("/usr/include")
         .join("cuda_runtime_api.h")
         .to_string_lossy()
         .to_string();
     let binding_path = PathBuf::from("src/device").join("bindings.rs");
-    println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
+    println!(
+        "cargo:rustc-link-search=native={}",
+        "/usr/lib/x86_64-linux-gnu"
+    );
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rerun-if-changed={}", cuda_runtime_api_path);
     println!(
@@ -107,7 +110,10 @@ fn build_lib() {
     println!("cargo:rustc-link-search={}", libdir.to_str().unwrap());
 
     // Static lib
-    println!("cargo:rustc-link-search=native={}", "/usr/local/cuda/lib64");
+    println!(
+        "cargo:rustc-link-search=native={}",
+        "/usr/lib/x86_64-linux-gnu"
+    );
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rustc-link-lib=stdc++");
     println!("cargo:rustc-link-lib=static=zeknox");
