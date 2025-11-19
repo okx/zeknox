@@ -1,3 +1,0 @@
-- p2p memory access
-- p2p memory copy
-- page-locked host memory

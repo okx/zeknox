@@ -1,9 +1,6 @@
-[submodule "depends/blst"]
-	path = depends/blst
-	url = git@github.com:supranational/blst.git
-[submodule "depends/ffiasm"]
-	path = depends/ffiasm
-	url = git@github.com:okx/ffiasm.git
-[submodule "depends/goldilocks"]
-	path = depends/goldilocks
+[submodule "native/depends/goldilocks"]
+	path = native/depends/goldilocks
 	url = https://github.com/okx/goldilocks.git
+[submodule "native/depends/blst"]
+	path = native/depends/blst
+	url = https://github.com/supranational/blst.git
