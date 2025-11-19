@@ -158,7 +158,7 @@ inline
 #else
         GoldilocksField prev = GoldilocksField(sl[i - 1]);
         GoldilocksField tmp1 = prev * prev;
-        u64 tmp2 = tmp1.value();
+        u64 tmp2 = tmp1.get_val();
 #endif
         sl[i] += tmp2;
         sh[i] = (sl[i] < tmp2);

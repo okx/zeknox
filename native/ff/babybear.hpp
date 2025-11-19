@@ -2,7 +2,7 @@
 #define __BABYBEAR_HPP__
 
 #include "types/int_types.h"
-#include "types/monty31.hpp"
+#include "ff/monty31.hpp"
 
 typedef MontyField31<BabyBearParameters> BabyBearField;
 

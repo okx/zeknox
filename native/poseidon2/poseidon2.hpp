@@ -7,6 +7,7 @@
 
 #include "types/int_types.h"
 #include "ff/goldilocks.hpp"
+#include "ff/babybear.hpp"
 #ifdef USE_CUDA
 #include "utils/cuda_utils.cuh"
 #include "poseidon/poseidon_permutation.cuh"
@@ -484,7 +485,7 @@ DEVICE INLINE void mds_light_permutation(F *state)
         // Now, we apply the outer circulant matrix (to compute the y_i values).
 
         // We first precompute the four sums of every four elements.
-        F sums[4] = {F::Zero()};
+        F sums[4] = {F::zero()};
         for (u64 k = 0; k < 4; k++)
         {
             for (u64 i = 0; i < WIDTH; i += 4)
