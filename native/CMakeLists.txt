@@ -64,7 +64,7 @@ endif()
 
 if(NOT CMAKE_CUDA_TOOLKIT_ROOT_DIR)
   set(CMAKE_CUDA_TOOLKIT_ROOT_DIR "/usr")
-  set(CMAKE_CUDA_COMPILER "/usr/bin/nvcc")
+  set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.8/bin/nvcc")
 endif()
 if(NOT CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})

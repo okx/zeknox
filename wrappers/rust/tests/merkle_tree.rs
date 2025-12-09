@@ -164,7 +164,7 @@ where
     let leaves_2d = random_data(leaves_count, leaf_size);
 
     // MT on CPU from Plonky2
-    let mt = MerkleTree::<C::F, C::Hasher>::new(leaves_2d.clone(), cap_height);
+    let mt = MerkleTree::<C::F, C::Hasher>::new_from_2d(leaves_2d.clone(), cap_height);
 
     // MT on GPU
     let zeros = vec![C::F::ZERO; leaf_size];

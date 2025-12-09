@@ -170,7 +170,7 @@ pub fn ntt_batch<T>(
     log_n_size: usize,
     cfg: NTTConfig,
 ) {
-    println!("log n size: {log_n_size}");
+    println!("ntt_batch log n size: {log_n_size}");
     let err = unsafe {
         compute_batched_ntt(
             device_id,
@@ -188,7 +188,7 @@ pub fn ntt_batch<T>(
 }
 
 pub fn intt_batch<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NTTConfig) {
-    println!("log n size: {log_n_size}");
+    println!("intt_batch log n size: {log_n_size}");
     let err = unsafe {
         compute_batched_ntt(
             device_id,
