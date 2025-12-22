@@ -164,17 +164,28 @@ pub fn lde_batch_multi_gpu<T>(
     }
 }
 
-pub fn ntt_batch<T>(
-    device_id: usize,
-    inout: *mut T, // &mut [T],
-    log_n_size: usize,
-    cfg: NTTConfig,
-) {
-    println!("ntt_batch log n size: {log_n_size}");
+pub fn ntt_batch<T>(device_id: usize, inout: &mut [T], log_n_size: usize, cfg: NTTConfig) {
+    // println!("ntt_batch log n size: {log_n_size}");
     let err = unsafe {
         compute_batched_ntt(
             device_id,
-            // inout.as_mut_ptr() as *mut core::ffi::c_void,
+            inout.as_mut_ptr() as *mut core::ffi::c_void,
+            log_n_size,
+            types::NTTDirection::Forward,
+            cfg,
+        )
+    };
+
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+}
+
+/// NTT batch with raw pointer (for GPU-resident data)
+pub fn ntt_batch_ptr<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NTTConfig) {
+    let err = unsafe {
+        compute_batched_ntt(
+            device_id,
             inout as *mut core::ffi::c_void,
             log_n_size,
             types::NTTDirection::Forward,
@@ -188,7 +199,6 @@ pub fn ntt_batch<T>(
 }
 
 pub fn intt_batch<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NTTConfig) {
-    println!("intt_batch log n size: {log_n_size}");
     let err = unsafe {
         compute_batched_ntt(
             device_id,

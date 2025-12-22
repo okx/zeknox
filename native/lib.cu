@@ -77,6 +77,8 @@ extern "C"
                         NTT_Direction ntt_direction, NTT_Config cfg)
 {
     auto &gpu = select_gpu(device_id);
+    gpu.select();
+    cudaDeviceSynchronize();
     return ntt::batch_ntt(gpu, (fr_t *)inout, lg_domain_size, ntt_direction, cfg);
 }
 
