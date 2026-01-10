@@ -50,4 +50,6 @@ EXTERN RustError compute_transpose_rev(size_t device_id, void *output, void *inp
 EXTERN RustError compute_naive_transpose_rev(size_t device_id, void *output, void *input, uint32_t lg_n,
                                              NTT_TransposeConfig cfg);
 
+EXTERN void clear_cuda_errors_all_devices();
+
 #endif // __ZEKNOX_CUDA_LIB_H__

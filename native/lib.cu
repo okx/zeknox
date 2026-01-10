@@ -77,6 +77,8 @@ extern "C"
                         NTT_Direction ntt_direction, NTT_Config cfg)
 {
     auto &gpu = select_gpu(device_id);
+    gpu.select();
+    cudaDeviceSynchronize();
     return ntt::batch_ntt(gpu, (fr_t *)inout, lg_domain_size, ntt_direction, cfg);
 }
 
@@ -172,4 +174,21 @@ extern "C"
     init_cuda()
 {
     init_cuda_degree(24);
+}
+
+#if defined(EXPOSE_C_INTERFACE)
+extern "C"
+#endif
+    void
+    clear_cuda_errors_all_devices()
+{
+    int num_gpus = ngpus();
+    for (int i = 0; i < num_gpus; i++) {
+        auto &gpu = select_gpu(i);
+        gpu.select();
+        // Clear the sticky error state from this device
+        cudaGetLastError();
+        // Ensure all operations on the default stream complete
+        cudaStreamSynchronize(0);
+    }
 }
