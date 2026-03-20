@@ -498,7 +498,6 @@ namespace ntt {
             }
 
             size_t total_input_elements = (static_cast<size_t>(1 << lg_n)) * cfg.batches;
-            int input_size_bytes = total_input_elements * sizeof(fr_t);
 
             dev_ptr_t<fr_t> d_input{
                 total_input_elements,
@@ -515,7 +514,6 @@ namespace ntt {
             }
 
             size_t total_output_elements = size * (cfg.batches + cfg.salt_size);
-            int input_output_bytes = total_output_elements * sizeof(fr_t);
             dev_ptr_t<fr_t> d_output{
                 total_output_elements,
                 gpu,
