@@ -29,7 +29,7 @@ const DEFAULT_GPU: i32 = 0;
 #[test]
 fn test_ntt_batch_gl64_consistency_with_plonky2() {
     let lg_domain_size: usize = 4;
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size).unwrap();
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -45,7 +45,7 @@ fn test_ntt_batch_gl64_consistency_with_plonky2() {
         gpu_buffer.as_mut_ptr(),
         lg_domain_size,
         cfg,
-    );
+    ).unwrap();
 
     let plonky2_ntt_input1 = v1.clone();
     let coeffs1 = plonky2_ntt_input1
@@ -84,7 +84,7 @@ fn test_ntt_batch_gl64_consistency_with_plonky2() {
 #[test]
 fn test_ntt_batch_intt_batch_gl64_self_consistency() {
     let lg_domain_size: usize = 10;
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size).unwrap();
     let domain_size = 1usize << lg_domain_size;
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -96,21 +96,21 @@ fn test_ntt_batch_intt_batch_gl64_self_consistency() {
         gpu_buffer.as_mut_ptr(),
         lg_domain_size,
         cfg.clone(),
-    );
+    ).unwrap();
 
     intt_batch(
         DEFAULT_GPU as usize,
         gpu_buffer.as_mut_ptr(),
         lg_domain_size,
         cfg.clone(),
-    );
+    ).unwrap();
     assert_eq!(v1, gpu_buffer);
 }
 
 #[test]
 fn test_intt_batch_gl64_consistency_with_plonky2() {
     let lg_domain_size: usize = 4;
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size).unwrap();
 
     let batches = 2;
     let domain_size = 1usize << lg_domain_size;
@@ -128,7 +128,7 @@ fn test_intt_batch_gl64_consistency_with_plonky2() {
         gpu_buffer.as_mut_ptr(),
         lg_domain_size,
         cfg,
-    );
+    ).unwrap();
 
     let plonky2_intt_input1 = input1.clone();
     let values1 = plonky2_intt_input1
@@ -169,7 +169,7 @@ fn test_ntt_on_device() {
     let lg_domain_size = 10;
     let domain_size = 1usize << lg_domain_size;
 
-    init_twiddle_factors_rs(0, lg_domain_size);
+    init_twiddle_factors_rs(0, lg_domain_size).unwrap();
 
     let scalars: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
 
@@ -180,8 +180,8 @@ fn test_ntt_on_device() {
     let mut cfg = NTTConfig::default();
     cfg.are_inputs_on_device = true;
     cfg.are_outputs_on_device = true;
-    ntt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
-    intt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
+    ntt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone()).unwrap();
+    intt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone()).unwrap();
 
     let mut host_output = vec![0; domain_size];
     // println!("start copy to host");
@@ -197,7 +197,7 @@ fn test_ntt_batch_on_device() {
     let domain_size = 1usize << lg_domain_size;
     let batches = 2;
 
-    init_twiddle_factors_rs(0, lg_domain_size);
+    init_twiddle_factors_rs(0, lg_domain_size).unwrap();
 
     let total_elements = domain_size * batches;
     // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
@@ -219,7 +219,7 @@ fn test_ntt_batch_on_device() {
     cfg.are_outputs_on_device = true;
     cfg.batches = batches as u32;
     // println!("device data len: {:?}", device_data.len());
-    ntt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone());
+    ntt_batch(0, device_data.as_mut_ptr(), lg_domain_size, cfg.clone()).unwrap();
 
     let mut host_output = vec![0; total_elements];
     // println!("start copy to host");
@@ -315,7 +315,7 @@ fn test_transpose_rev() {
         device_data.as_mut_ptr(),
         lg_domain_size,
         cfg.clone(),
-    );
+    ).unwrap();
 
     let mut host_output = vec![0; total_elements];
     // println!("start copy to host");
@@ -335,12 +335,12 @@ fn test_ntt_batch_with_coset() {
     let domain_size = 1usize << lg_domain_size;
     // let batches = 2;
 
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size).unwrap();
     init_coset_rs(
         DEFAULT_GPU as usize,
         lg_domain_size,
         GoldilocksField::coset_shift().to_canonical_u64(),
-    );
+    ).unwrap();
 
     let v1: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
     let v2: Vec<u64> = (0..domain_size).map(|_| random_fr()).collect();
@@ -356,7 +356,7 @@ fn test_ntt_batch_with_coset() {
         gpu_buffer.as_mut_ptr(),
         lg_domain_size,
         cfg.clone(),
-    );
+    ).unwrap();
 
     let cpu_buffer = v1.clone();
 
@@ -397,12 +397,12 @@ fn test_compute_batched_lde() {
     let rate_bits = 1;
     let lg_domain_size = lg_n + rate_bits;
     let batches = 2;
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size).unwrap();
     init_coset_rs(
         DEFAULT_GPU as usize,
         lg_domain_size,
         GoldilocksField::coset_shift().to_canonical_u64(),
-    );
+    ).unwrap();
 
     let input_size = 1usize << lg_n;
 
@@ -442,7 +442,7 @@ fn test_compute_batched_lde() {
         cpu_polys_coeffs.as_mut_ptr(),
         lg_domain_size,
         cfg,
-    );
+    ).unwrap();
 
     let cpu_outputs = cpu_polys_coeffs
         .iter()
@@ -474,7 +474,7 @@ fn test_compute_batched_lde() {
         gpu_buffer.as_mut_ptr(),
         lg_n,
         cfg_lde,
-    );
+    ).unwrap();
     assert_eq!(cpu_outputs, gpu_lde_output);
 }
 
@@ -487,12 +487,12 @@ fn test_compute_batched_lde_data_on_device() {
     let output_domain_size = 1usize << (lg_n + rate_bits);
     let batches = 2;
 
-    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size);
+    init_twiddle_factors_rs(DEFAULT_GPU as usize, lg_domain_size).unwrap();
     init_coset_rs(
         DEFAULT_GPU as usize,
         lg_domain_size,
         GoldilocksField::coset_shift().to_canonical_u64(),
-    );
+    ).unwrap();
 
     let total_num_input_elements = input_domain_size * batches;
     let total_num_output_elements = output_domain_size * batches;
@@ -531,7 +531,7 @@ fn test_compute_batched_lde_data_on_device() {
         device_input_data.as_mut_ptr(),
         lg_n,
         cfg_lde,
-    );
+    ).unwrap();
 
     let mut host_output_first = vec![0; output_domain_size];
     let mut host_output_last = vec![0; output_domain_size];
@@ -564,7 +564,7 @@ fn test_compute_batched_lde_data_on_device() {
         lde_copy_buffer.as_mut_ptr(),
         lg_n,
         cfg_lde_copy,
-    );
+    ).unwrap();
     assert_eq!(
         gpu_lde_output_copy[0..output_domain_size],
         host_output_first
@@ -584,16 +584,16 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
     let output_domain_size = 1usize << (lg_n + rate_bits);
     let max_batches = 10;
 
-    let ngpus = get_number_of_gpus_rs();
+    let ngpus = get_number_of_gpus_rs().unwrap();
     assert!(ngpus > 1, "Number of GPUs must be greater than 1");
 
     for i in 0..ngpus {
-        init_twiddle_factors_rs(i as usize, lg_domain_size);
+        init_twiddle_factors_rs(i as usize, lg_domain_size).unwrap();
         init_coset_rs(
             i as usize,
             lg_domain_size,
             GoldilocksField::coset_shift().to_canonical_u64(),
-        );
+        ).unwrap();
     }
     // lde rust allocate to gpu prior to api call
     let mut device_output_data: HostOrDeviceSlice<'_, u64> =
@@ -632,7 +632,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
             lg_n,
             total_num_input_elements,
             total_num_output_elements,
-        );
+        ).unwrap();
 
         let mut lde_multi_output = vec![0; batches * output_domain_size];
         let _ = device_output_data.copy_to_host_offset(
@@ -654,7 +654,7 @@ fn test_compute_batched_lde_multi_gpu_data_on_one_gpu() {
             host_inputs_copy.as_mut_ptr(),
             lg_n,
             cfg_lde_copy,
-        );
+        ).unwrap();
 
         assert!(lde_single_output == lde_multi_output);
     }

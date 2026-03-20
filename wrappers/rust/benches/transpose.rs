@@ -54,7 +54,7 @@ fn bench_transpose_gpu(c: &mut Criterion) {
                         device_data2.as_mut_ptr(),
                         log_ntt_size,
                         cfg.clone(),
-                    )
+                    ).unwrap()
                 })
             },
         );

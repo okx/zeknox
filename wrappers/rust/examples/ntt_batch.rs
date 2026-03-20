@@ -45,7 +45,7 @@ fn ntt_batch_with_lg(batches: usize, log_ntt_size: usize) {
         device_data.as_mut_ptr(),
         log_ntt_size,
         cfg.clone(),
-    );
+    ).unwrap();
 
     println!("total time spend: {:?}", start.elapsed());
 }
@@ -54,7 +54,7 @@ fn main() {
     let start = std::time::Instant::now();
     println!("total time spend init context: {:?}", start.elapsed());
     let log_ntt_size = 19;
-    init_twiddle_factors_rs(0, log_ntt_size);
+    init_twiddle_factors_rs(0, log_ntt_size).unwrap();
 
     let batches = 10;
 
