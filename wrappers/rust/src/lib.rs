@@ -106,23 +106,23 @@ pub fn list_devices_info_rs() {
     }
 }
 
-pub fn get_number_of_gpus_rs() -> usize {
+pub fn get_number_of_gpus_rs() -> Result<usize, String> {
     let mut nums = 0;
     let err = unsafe { get_number_of_gpus(&mut nums) };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
-    return nums;
+    Ok(nums)
 }
 
 pub fn lde_batch<T>(
     device_id: usize,
-    output: *mut T,  // &mut [T],
-    input: *const T, // &mut [T],
+    output: *mut T,
+    input: *const T,
     log_n_size: usize,
     cfg: NTTConfig,
-) {
+) -> Result<(), String> {
     let err = unsafe {
         compute_batched_lde(
             device_id,
@@ -135,21 +135,21 @@ pub fn lde_batch<T>(
     };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
+    Ok(())
 }
 
 pub fn lde_batch_multi_gpu<T>(
-    output: *mut T,  // &mut [T],
-    input: *const T, // &mut [T],
+    output: *mut T,
+    input: *const T,
     num_gpu: usize,
     cfg: NTTConfig,
     log_n_size: usize,
     total_num_input_elements: usize,
     total_num_output_elements: usize,
-) {
+) -> Result<(), String> {
     let err = unsafe {
-        // println!("In compute_batched_lde_multi_gpu {:?}", total_num_input_elements);
         compute_batched_lde_multi_gpu(
             output as *mut core::ffi::c_void,
             input as *mut core::ffi::c_void,
@@ -163,20 +163,20 @@ pub fn lde_batch_multi_gpu<T>(
     };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
+    Ok(())
 }
 
 pub fn ntt_batch<T>(
     device_id: usize,
-    inout: *mut T, // &mut [T],
+    inout: *mut T,
     log_n_size: usize,
     cfg: NTTConfig,
-) {
+) -> Result<(), String> {
     let err = unsafe {
         compute_batched_ntt(
             device_id,
-            // inout.as_mut_ptr() as *mut core::ffi::c_void,
             inout as *mut core::ffi::c_void,
             log_n_size,
             types::NTTDirection::Forward,
@@ -185,11 +185,12 @@ pub fn ntt_batch<T>(
     };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
+    Ok(())
 }
 
-pub fn intt_batch<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NTTConfig) {
+pub fn intt_batch<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NTTConfig) -> Result<(), String> {
     let err = unsafe {
         compute_batched_ntt(
             device_id,
@@ -201,17 +202,18 @@ pub fn intt_batch<T>(device_id: usize, inout: *mut T, log_n_size: usize, cfg: NT
     };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
+    Ok(())
 }
 
 pub fn transpose_rev_batch<T>(
     device_id: i32,
-    output: *mut T,  // &mut [T],
-    input: *const T, // &mut [T],
+    output: *mut T,
+    input: *const T,
     log_n_size: usize,
     cfg: TransposeConfig,
-) {
+) -> Result<(), String> {
     let err = unsafe {
         compute_transpose_rev(
             device_id,
@@ -223,24 +225,27 @@ pub fn transpose_rev_batch<T>(
     };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
+    Ok(())
 }
 
-pub fn init_twiddle_factors_rs(device_id: usize, lg_n: usize) {
+pub fn init_twiddle_factors_rs(device_id: usize, lg_n: usize) -> Result<(), String> {
     let err = unsafe { init_twiddle_factors(device_id, lg_n) };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
+    Ok(())
 }
 
-pub fn init_coset_rs(device_id: usize, lg_n: usize, coset_gen: u64) {
+pub fn init_coset_rs(device_id: usize, lg_n: usize, coset_gen: u64) -> Result<(), String> {
     let err = unsafe { init_coset(device_id, lg_n, coset_gen) };
 
     if err.code != 0 {
-        panic!("{}", String::from(err));
+        return Err(String::from(err));
     }
+    Ok(())
 }
 
 pub fn init_cuda_rs() {

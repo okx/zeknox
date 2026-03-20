@@ -30,7 +30,7 @@ fn bench_gpu_ntt_batch(c: &mut Criterion) {
         let domain_size = 1usize << log_ntt_size;
         let batches = 200;
 
-        init_twiddle_factors_rs(0, log_ntt_size);
+        init_twiddle_factors_rs(0, log_ntt_size).unwrap();
 
         let total_elements = domain_size * batches;
         // let scalars: Vec<u64> = (0..(total_elements)).map(|_| random_fr()).collect();
@@ -64,7 +64,7 @@ fn bench_gpu_ntt_batch(c: &mut Criterion) {
                         device_data.as_mut_ptr(),
                         log_ntt_size,
                         cfg.clone(),
-                    )
+                    ).unwrap()
                 })
             },
         );

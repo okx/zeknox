@@ -23,19 +23,19 @@ fn random_fr() -> u64 {
 
 fn init_twiddle_gpu(lg_domain_size: usize, ngpus: usize) {
     for i in 0..ngpus {
-        init_twiddle_factors_rs(i, lg_domain_size);
+        init_twiddle_factors_rs(i, lg_domain_size).unwrap();
     }
 }
 
 fn init_coset(ngpus: usize) {
     for i in 0..ngpus {
-        init_coset_rs(i, 23, GoldilocksField::coset_shift().to_canonical_u64());
+        init_coset_rs(i, 23, GoldilocksField::coset_shift().to_canonical_u64()).unwrap();
     }
 }
 
 fn bench_multi_gpu_lde_batch(c: &mut Criterion) {
     let ngpus1: usize = env::var("NUM_OF_GPUS").unwrap().parse::<usize>().unwrap();
-    let ngpus2: usize = get_number_of_gpus_rs();
+    let ngpus2: usize = get_number_of_gpus_rs().unwrap();
     let ngpus = std::cmp::min(ngpus1, ngpus2);
 
     assert!(ngpus > 0);
@@ -93,7 +93,7 @@ fn bench_multi_gpu_lde_batch(c: &mut Criterion) {
                         log_n_sizes,
                         total_num_input_elements,
                         total_num_output_elements,
-                    )
+                    ).unwrap()
                 })
             },
         );
@@ -110,7 +110,7 @@ fn bench_multi_gpu_lde_batch(c: &mut Criterion) {
                         log_n_sizes,
                         total_num_input_elements,
                         total_num_output_elements,
-                    )
+                    ).unwrap()
                 })
             },
         );

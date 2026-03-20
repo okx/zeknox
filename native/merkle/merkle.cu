@@ -178,6 +178,7 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr_template(
     if (cap_buf_size == leaves_buf_size)
     {
         compute_leaves_hashes_direct<H><<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr);
+        CHECKCUDAERR(cudaGetLastError());
         return;
     }
 
@@ -195,10 +196,12 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr_template(
         if (subtree_leaves_len == 1)
         {
             compute_leaves_hashes_direct<H><<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)cap_buf_gpu_ptr);
+            CHECKCUDAERR(cudaGetLastError());
         }
         else
         {
             compute_leaves_hashes_direct<H><<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr);
+            CHECKCUDAERR(cudaGetLastError());
             if (cap_buf_size <= TPB)
             {
                 compute_caps_hashes_linear<H><<<1, cap_buf_size>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
@@ -207,12 +210,14 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr_template(
             {
                 compute_caps_hashes_linear<H><<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
             }
+            CHECKCUDAERR(cudaGetLastError());
         }
         return;
     }
 
     // (general case) compute leaf hashes on GPU
     compute_leaves_hashes_linear_all<H><<<leaves_buf_size / TPB + 1, TPB>>>((u64 *)leaves_buf_gpu_ptr, leaves_buf_size, leaf_size, (u64 *)digests_buf_gpu_ptr, subtree_leaves_len, subtree_digests_len);
+    CHECKCUDAERR(cudaGetLastError());
 
     // compute internal hashes on GPU
     u64 r = (u64)log2(subtree_leaves_len) - 1;
@@ -223,6 +228,7 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr_template(
         // printf("GPU Round (64) %u\n", r);
         last_index -= (1 << r);
         compute_internal_hashes_linear_all<H><<<((1 << r) * cap_buf_size) / TPB + 1, TPB>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len);
+        CHECKCUDAERR(cudaGetLastError());
     }
 
     for (; r > 0; r--)
@@ -230,6 +236,7 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr_template(
         // printf("GPU Round (1) %u\n", r);
         last_index -= (1 << r);
         compute_internal_hashes_linear_all<H><<<1, TPB>>>((u64 *)digests_buf_gpu_ptr, (1 << r), last_index, cap_buf_size, subtree_digests_len);
+        CHECKCUDAERR(cudaGetLastError());
     }
 
     // compute cap hashes on GPU
@@ -241,6 +248,7 @@ void fill_digests_buf_linear_gpu_with_gpu_ptr_template(
     {
         compute_caps_hashes_linear<H><<<cap_buf_size / TPB + 1, TPB>>>((u64 *)cap_buf_gpu_ptr, (u64 *)digests_buf_gpu_ptr, cap_buf_size, subtree_digests_len);
     }
+    CHECKCUDAERR(cudaGetLastError());
 }
 
 void fill_digests_buf_linear_gpu_with_gpu_ptr(
@@ -295,20 +303,28 @@ void fill_digests_buf_linear_multigpu_with_gpu_ptr_template(
     int nDevices = 0;
     CHECKCUDAERR(cudaGetDeviceCount(&nDevices));
 
-    assert(nDevices <= 16);
-    assert(gpu_id < nDevices);
+    if (nDevices > 16)
+    {
+        fprintf(stderr, "zeknox: nDevices (%d) exceeds maximum supported (16)\n", nDevices);
+        return;
+    }
+    if ((int)gpu_id >= nDevices)
+    {
+        fprintf(stderr, "zeknox: gpu_id (%llu) >= nDevices (%d)\n", (unsigned long long)gpu_id, nDevices);
+        return;
+    }
 
-    cudaStream_t gpu_stream[16];
-    u64 *gpu_leaves_ptrs[16];
-    u64 *gpu_digests_ptrs[16];
-    u64 *gpu_caps_ptrs[16];
+    cudaStream_t gpu_stream[16] = {};
+    u64 *gpu_leaves_ptrs[16] = {};
+    u64 *gpu_digests_ptrs[16] = {};
+    u64 *gpu_caps_ptrs[16] = {};
     gpu_leaves_ptrs[gpu_id] = (u64 *)leaves_buf_gpu_ptr;
 
     // (special case) compute leaf hashes on GPU
     if (cap_buf_size == leaves_buf_size)
     {
         CHECKCUDAERR(cudaSetDevice(gpu_id));
-        CHECKCUDAERR(cudaStreamCreate(gpu_stream));
+        CHECKCUDAERR(cudaStreamCreate(&gpu_stream[gpu_id]));
         gpu_leaves_ptrs[gpu_id] = (u64 *)leaves_buf_gpu_ptr;
         gpu_caps_ptrs[gpu_id] = (u64 *)cap_buf_gpu_ptr;
         u64 leaves_per_gpu = leaves_buf_size * leaf_size / nDevices;
